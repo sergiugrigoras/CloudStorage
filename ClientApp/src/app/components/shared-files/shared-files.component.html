@@ -1,0 +1,13 @@
+<div class="alert alert-success" *ngIf="shareInfo">
+    <div><u>On</u> {{ shareInfo.shareDate | date:'fullDate' }}
+        <strong>{{ shareInfo.username }} </strong>
+        <u>shared</u><strong> {{ getFoldersAndFilesDisplayText() }}. </strong>
+        Total size: <strong>{{ shareInfo.totalSize | readableBytes: 2 }} </strong>
+    </div>
+    <div>
+        <button class="btn btn-success" (click)="download()" [disabled]="content.length === 0">Download</button>
+    </div>
+</div>
+<div>
+    <shared-fso *ngFor="let fso of content" [fso]="fso"></shared-fso>
+</div>

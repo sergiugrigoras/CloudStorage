@@ -1,0 +1,29 @@
+.path-bar {
+    display: flex;
+    flex-wrap: wrap;
+    border-top: 1px solid #ced4da;
+}
+
+.path-bar-elem {
+    display: flex;
+}
+
+.path-bar-folder {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+}
+
+.path-bar-folder:hover {
+    background-color: rgba(0, 123, 255, 0.25);
+}
+
+.path-bar-folder a {
+    color: black;
+    text-decoration: none;
+}
+
+.path-bar-icon {
+    display: flex;
+    align-items: center;
+}

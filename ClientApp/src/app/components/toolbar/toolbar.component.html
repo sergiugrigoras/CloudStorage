@@ -1,0 +1,8 @@
+<div class="mat-elevation-z6 toolbar-container">
+    <button *ngFor="let button of buttons" mat-icon-button aria-label="button.label" [matTooltip]="button.label"
+        (click)="emitEvent(button.event)" [disabled]="button.isDisabled()">
+        <span class="material-icons">
+            {{button.icon}}
+        </span>
+    </button>
+</div>

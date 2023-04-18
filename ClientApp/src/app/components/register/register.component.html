@@ -1,0 +1,104 @@
+<form [formGroup]="form" #registerForm (ngSubmit)="register()">
+    <h2>Register</h2>
+    <div>
+        <mat-form-field>
+            <mat-label>Username</mat-label>
+            <input matInput formControlName="username" type="text">
+            <mat-icon matSuffix
+                matTooltip="Username starts with a letter. Contains characters a-z, 0-9, dash, underscor, period. Length 5-32.">
+                help_outline
+            </mat-icon>
+            <mat-error>
+                {{getUsernameError()}}
+            </mat-error>
+        </mat-form-field>
+    </div>
+    <div>
+        <mat-form-field>
+            <mat-label>Email</mat-label>
+            <input matInput formControlName="email" type="email">
+            <mat-error>
+                {{getEmailError()}}
+            </mat-error>
+        </mat-form-field>
+    </div>
+    <div>
+        <mat-form-field>
+            <mat-label>Password</mat-label>
+            <input matInput formControlName="password" type="password">
+            <mat-error>Password is required.</mat-error>
+        </mat-form-field>
+    </div>
+    <div>
+        <mat-form-field>
+            <mat-label>Confirm password</mat-label>
+            <input matInput formControlName="confirmPassword" type="password">
+            <mat-error>Confirming Password is required.</mat-error>
+            <mat-hint *ngIf="form.errors && confirmPassword.touched && password.touched">Passwords do not
+                match.</mat-hint>
+        </mat-form-field>
+    </div>
+    <div>
+    </div>
+    <div>
+        <button type="submit" mat-raised-button color="primary" [disabled]="form.invalid">Register</button>
+        <button type="button" mat-raised-button color="accent" (click)="registerForm.reset()">Reset</button>
+    </div>
+</form>
+
+
+<!-- <div class="row">
+    <div class="col-md-4">
+        <h2>Register</h2>
+        <form [formGroup]="form" #registerForm (ngSubmit)="register()">
+            <div class="form-group">
+                <label for="username" class="control-label">Username</label>
+                <input formControlName="username" type="text" id="username" class="form-control">
+            </div>
+            <div *ngIf="(username!.dirty || username!.touched) && username!.invalid" class="alert alert-danger">
+                <div *ngIf="username!.errors!.required"><strong>Username</strong> is required.</div>
+                <div *ngIf="username!.errors!.shouldBeUnique"><strong>Username</strong> is not unique.</div>
+                <div *ngIf="username!.errors!.invalidPattern">Wrong <strong>Username</strong> pattern<br>Start with
+                    <strong>letter</strong><br>Letters a-z, dash, underscor, period<br>
+                    5 to 32 characters long.
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="email" class="control-label">Email</label>
+                <input formControlName="email" type="email" id="email" class="form-control">
+            </div>
+            <div *ngIf="(email!.dirty || email!.touched) && email!.invalid" class="alert alert-danger">
+                <div *ngIf="email!.errors!.required"><strong>Email</strong> is required.</div>
+                <div *ngIf="email!.errors!.email">Invalid email address</div>
+                <div *ngIf="email!.errors!.shouldBeUnique"><strong>Email</strong> is not unique.</div>
+            </div>
+
+            <div class="form-group">
+                <label for="password" class="control-label">Password</label>
+                <input formControlName="password" type="password" id="password" class="form-control">
+            </div>
+            <div *ngIf="password!.touched && password!.invalid" class="alert alert-danger">
+                <div *ngIf="password!.errors!.required"><strong>Password</strong> is required</div>
+            </div>
+
+            <div class="form-group">
+                <label for="confirmPassword" class="control-label">Confirm password</label>
+                <input formControlName="confirmPassword" type="password" id="confirmPassword" class="form-control">
+            </div>
+            <div *ngIf="confirmPassword!.touched && confirmPassword!.invalid" class="alert alert-danger">
+                <div *ngIf="confirmPassword!.errors!.required"><strong>Confirm Password</strong> is required</div>
+            </div>
+            <div *ngIf="form!.errors && password!.dirty && confirmPassword!.dirty">
+                <div *ngIf="form.errors!.passwordsShouldMatch" class="alert alert-danger">Passwords don't
+                    match</div>
+            </div>
+
+            <div class="form-group">
+                <button type="button" class="btn btn-outline-success"
+                    (click)="registerForm.reset()">Reset</button>&nbsp;
+                <button type="submit" class="btn btn-primary" [disabled]="form.invalid">Register</button>&nbsp;
+            </div>
+        </form>
+    </div>
+</div> -->

@@ -1,0 +1,30 @@
+.items-box {
+    display: flex;
+    flex-flow: row wrap;
+    justify-content: center;
+}
+
+.card {
+    width: 15rem;
+    cursor: pointer;
+    margin: 1rem;
+    transition: all 300ms;
+}
+
+.card:hover {
+    transform: scale(1.02);
+}
+
+.card-content {
+    display: flex;
+    align-items: center;
+    flex-direction: column;
+}
+
+.icon-big {
+    font-size: 12rem;
+}
+
+.card-label {
+    font-size: 4rem;
+}

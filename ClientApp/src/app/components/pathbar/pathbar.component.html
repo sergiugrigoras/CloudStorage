@@ -1,0 +1,12 @@
+<div class="path-bar">
+    <div *ngFor="let fso of fullPathArr" class="path-bar-elem">
+        <div class="path-bar-folder" (click)="openFolder(fso.id)">
+            {{ fso.name }}
+        </div>
+        <div class="path-bar-icon">
+            <span class="material-icons">
+                chevron_right
+            </span>
+        </div>
+    </div>
+</div>

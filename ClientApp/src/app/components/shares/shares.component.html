@@ -1,0 +1,219 @@
+<h2>Shares</h2>
+<h5 *ngIf="shares.length === 0">No shared data</h5>
+<!-- <ngb-accordion [closeOthers]="true" #acc="ngbAccordion">
+    <ngb-panel *ngFor="let share of shares; index as i" [id]="'share-'+i">
+        <ng-template ngbPanelHeader let-opened="opened">
+            <div class="d-flex align-items-center justify-content-between" [ngStyle]="{'cursor': 'pointer'}">
+                <fa-icon [icon]="opened ? faChevronDown : faChevronRight" (click)="acc.toggle('share-'+i)"></fa-icon>
+                <h5 class="container-fluid text-left" (click)="acc.toggle('share-'+i)">{{ share.publicId }} <small>{{
+                        share.shareDate | date: 'mediumDate' }}</small></h5>
+                <button class="btn" [id]="'cancel-btn-'+i" (click)="cancelBtnClick(i)" hidden>
+                    <fa-icon [icon]="faTimes" placement="left" ngbTooltip="Cancel"></fa-icon>
+                </button>
+                <button class="btn" [id]="'confirm-btn-'+i" (click)="confirmBtnClick(i)" hidden>
+                    <fa-icon [icon]="faCheck" placement="left" ngbTooltip="Confirm"></fa-icon>
+                </button>
+                <button class="btn" [id]="'copy-btn-'+i" (click)="copyBtnClick(i)">
+                    <fa-icon [icon]="faCopy" placement="left" ngbTooltip="Copy Url"></fa-icon>
+                </button>
+                <button class="btn" [id]="'delete-btn-'+i" (click)="deleteBtnClick(i)">
+                    <fa-icon [icon]="faTrashAlt" placement="left" ngbTooltip="Delete"></fa-icon>
+                </button>
+            </div>
+        </ng-template>
+        <ng-template ngbPanelContent>
+            <shared-fso *ngFor="let fso of share.content" [fso]="fso"></shared-fso>
+        </ng-template>
+    </ngb-panel>
+</ngb-accordion> -->
+
+<div>
+    <mat-form-field appearance="fill">
+        <mat-label>Choose a date</mat-label>
+        <input matInput [matDatepicker]="picker">
+        <mat-datepicker-toggle matIconSuffix [for]="picker"></mat-datepicker-toggle>
+        <mat-datepicker #picker [calendarHeaderComponent]="exampleHeader"></mat-datepicker>
+    </mat-form-field>
+</div>
+<button mat-raised-button color="primary" (click)="logDate()">Log Date</button>
+
+
+
+<section>
+    <div class="example-label">Basic</div>
+    <div class="example-button-row">
+        <button mat-button>Basic</button>
+        <button mat-button color="primary">Primary</button>
+        <button mat-button color="accent">Accent</button>
+        <button mat-button color="warn">Warn</button>
+        <button mat-button disabled>Disabled</button>
+        <a mat-button href="https://www.google.com/" target="_blank">Link</a>
+    </div>
+</section>
+<mat-divider></mat-divider>
+<section>
+    <div class="example-label">Raised</div>
+    <div class="example-button-row">
+        <button mat-raised-button>Basic</button>
+        <button mat-raised-button color="primary">Primary</button>
+        <button mat-raised-button color="accent">Accent</button>
+        <button mat-raised-button color="warn">Warn</button>
+        <button mat-raised-button disabled>Disabled</button>
+        <a mat-raised-button href="https://www.google.com/" target="_blank">Link</a>
+    </div>
+</section>
+<mat-divider></mat-divider>
+<section>
+    <div class="example-label">Stroked</div>
+    <div class="example-button-row">
+        <button mat-stroked-button>Basic</button>
+        <button mat-stroked-button color="primary">Primary</button>
+        <button mat-stroked-button color="accent">Accent</button>
+        <button mat-stroked-button color="warn">Warn</button>
+        <button mat-stroked-button disabled>Disabled</button>
+        <a mat-stroked-button href="https://www.google.com/" target="_blank">Link</a>
+    </div>
+</section>
+<mat-divider></mat-divider>
+<section>
+    <div class="example-label">Flat</div>
+    <div class="example-button-row">
+        <button mat-flat-button>Basic</button>
+        <button mat-flat-button color="primary">Primary</button>
+        <button mat-flat-button color="accent">Accent</button>
+        <button mat-flat-button color="warn">Warn</button>
+        <button mat-flat-button disabled>Disabled</button>
+        <a mat-flat-button href="https://www.google.com/" target="_blank">Link</a>
+    </div>
+</section>
+<mat-divider></mat-divider>
+<section>
+    <div class="example-label">Icon</div>
+    <div class="example-button-row">
+        <div class="example-flex-container">
+            <button mat-icon-button aria-label="Example icon button with a vertical three dot icon">
+                <mat-icon>more_vert</mat-icon>
+            </button>
+            <button mat-icon-button color="primary" aria-label="Example icon button with a home icon">
+                <mat-icon>home</mat-icon>
+            </button>
+            <button mat-icon-button color="accent" aria-label="Example icon button with a menu icon">
+                <mat-icon>menu</mat-icon>
+            </button>
+            <button mat-icon-button color="warn" aria-label="Example icon button with a heart icon">
+                <mat-icon>favorite</mat-icon>
+            </button>
+            <button mat-icon-button disabled aria-label="Example icon button with a open in new tab icon">
+                <mat-icon>open_in_new</mat-icon>
+            </button>
+        </div>
+    </div>
+</section>
+<mat-divider></mat-divider>
+<section>
+    <div class="example-label">FAB</div>
+    <div class="example-button-row">
+        <div class="example-flex-container">
+            <div class="example-button-container">
+                <button mat-fab color="primary" aria-label="Example icon button with a delete icon">
+                    <mat-icon>delete</mat-icon>
+                </button>
+            </div>
+            <div class="example-button-container">
+                <button mat-fab color="accent" aria-label="Example icon button with a bookmark icon">
+                    <mat-icon>bookmark</mat-icon>
+                </button>
+            </div>
+            <div class="example-button-container">
+                <button mat-fab color="warn" aria-label="Example icon button with a home icon">
+                    <mat-icon>home</mat-icon>
+                </button>
+            </div>
+            <div class="example-button-container">
+                <button mat-fab disabled aria-label="Example icon button with a heart icon">
+                    <mat-icon>favorite</mat-icon>
+                </button>
+            </div>
+        </div>
+    </div>
+</section>
+<mat-divider></mat-divider>
+<section>
+    <div class="example-label">Mini FAB</div>
+    <div class="example-button-row">
+        <div class="example-flex-container">
+            <div class="example-button-container">
+                <button mat-mini-fab color="primary" aria-label="Example icon button with a menu icon">
+                    <mat-icon>menu</mat-icon>
+                </button>
+            </div>
+            <div class="example-button-container">
+                <button mat-mini-fab color="accent" aria-label="Example icon button with a plus one icon">
+                    <mat-icon>plus_one</mat-icon>
+                </button>
+            </div>
+            <div class="example-button-container">
+                <button mat-mini-fab color="warn" aria-label="Example icon button with a filter list icon">
+                    <mat-icon>filter_list</mat-icon>
+                </button>
+            </div>
+            <div class="example-button-container">
+                <button mat-mini-fab disabled aria-label="Example icon button with a home icon">
+                    <mat-icon>home</mat-icon>
+                </button>
+            </div>
+        </div>
+    </div>
+</section>
+
+<div>
+    <ol>
+        <li>
+            <mat-form-field>
+                <mat-label>What's your name?</mat-label>
+                <input matInput [(ngModel)]="name">
+            </mat-form-field>
+        </li>
+        <li>
+            <button mat-raised-button (click)="openDialog()">Pick one</button>
+        </li>
+        <li *ngIf="animal">
+            You chose: <i>{{animal}}</i>
+        </li>
+    </ol>
+</div>
+
+<div>
+    <mat-form-field>
+        <mat-label>Input</mat-label>
+        <input matInput>
+    </mat-form-field>
+    <mat-form-field>
+        <mat-label>Select</mat-label>
+        <mat-select>
+            <mat-option value="one">First option</mat-option>
+            <mat-option value="two">Second option</mat-option>
+        </mat-select>
+    </mat-form-field>
+    <mat-form-field>
+        <mat-label>Textarea</mat-label>
+        <textarea matInput></textarea>
+    </mat-form-field>
+</div>
+
+<div style="height: 1000px;"></div>
+
+<ng-template #dialog>
+    <h1 mat-dialog-title>Hi {{name}}</h1>
+    <div mat-dialog-content>
+        <p>What's your favorite animal?</p>
+        <mat-form-field>
+            <mat-label>Favorite Animal</mat-label>
+            <input matInput [(ngModel)]="animal">
+        </mat-form-field>
+    </div>
+    <div mat-dialog-actions>
+        <button mat-button mat-dialog-close="false">No Thanks</button>
+        <button mat-button [mat-dialog-close]="animal" cdkFocusInitial>Ok</button>
+    </div>
+</ng-template>

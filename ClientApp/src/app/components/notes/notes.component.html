@@ -1,0 +1,39 @@
+<div class="note-box">
+    <app-note-editor [note]="activeNoteUpdate" [state]="noteEditorState" (noteEditorEvent)="doAction($event)"
+        (changeState)="changeNoteEditorState($event)">
+    </app-note-editor>
+    <app-note *ngFor="let note of notes" [note]="note" (noteEvent)="doAction($event)"></app-note>
+</div>
+
+<ng-template #deleteConfirmModall>
+    <div class="modal-header">
+        <h4 class="modal-title" id="modal-basic-title">Confirm delete</h4>
+        <button type="button" class="btn close" aria-label="Close">
+            <span aria-hidden="true">×</span>
+        </button>
+    </div>
+    <div class="modal-body">
+        <label class="control-label">Are you sure want to delete <strong>{{ activeNoteDel.title }}</strong> ?</label>
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-success">Cancel</button>
+        <button type="button" class="btn btn-danger" (click)="deleteNote()" id="confirm-delete-button">Delete</button>
+    </div>
+</ng-template>
+
+<ng-template #shareConfirmModal>
+    <div class="modal-header">
+        <h4 class="modal-title" id="modal-basic-title">Share note</h4>
+        <button type="button" class="btn close" aria-label="Close">
+            <span aria-hidden="true">×</span>
+        </button>
+    </div>
+    <div class="modal-body">
+        <input #url type="text" id="share-url" class="form-control" readonly>
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-success" (>Close</button>
+        <button type="button" class="btn btn-primary" (click)="copyUrl(url)" id="share-copy-button">Copy
+            URL</button>
+    </div>
+</ng-template>

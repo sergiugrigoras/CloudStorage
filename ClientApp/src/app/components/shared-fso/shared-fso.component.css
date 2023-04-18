@@ -1,0 +1,40 @@
+.shared-fso{
+    display: flex;
+    justify-content: space-between;
+    /* margin-top: .1rem; */
+    -webkit-user-select: none;
+    /* Safari */
+    -moz-user-select: none;
+    /* Firefox */
+    -ms-user-select: none;
+    /* IE10+/Edge */
+    user-select: none;
+    /* Standard */
+}
+.shared-fso:hover{
+    background-color: rgba(0, 123, 255, 0.089);
+}
+.shared-fso #fso-name-icon{
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow-x: hidden;
+    max-width: 50vw;
+}
+
+.shared-fso #fso-size{
+    white-space: nowrap;
+}
+
+.shared-fso-content{
+    border-left: 1px dotted gray;
+    padding-left: .5rem;
+    margin-left: .5rem;
+    -webkit-user-select: none;
+    /* Safari */
+    -moz-user-select: none;
+    /* Firefox */
+    -ms-user-select: none;
+    /* IE10+/Edge */
+    user-select: none;
+    /* Standard */
+}

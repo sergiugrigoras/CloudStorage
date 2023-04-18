@@ -1,0 +1,70 @@
+.app-container {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.app-nav {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+
+    .container {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        white-space: nowrap;
+    }
+
+    .selected {
+        background: rgba(0, 0, 0, .2);
+    }
+}
+
+.toolbar-small {
+    height: auto;
+    padding-bottom: 5px;
+
+    .container {
+        justify-content: space-evenly;
+    }
+}
+
+.app-content {
+    flex: 1;
+}
+
+.app-footer {
+    color: rgba(255, 255, 255, .8);
+    z-index: 100;
+}
+
+.logo {
+    text-decoration: none;
+    white-space: nowrap;
+    color: white;
+    font-size: 1.5rem;
+    margin-right: 12px;
+}
+
+.spacer {
+    flex: 1 1 auto;
+}
+
+.app-intersection-observer {
+    width: 100%;
+}
+
+.back-top {
+    position: fixed;
+    bottom: 5rem;
+    right: 1rem;
+    z-index: 100;
+    opacity: 0.9;
+    transition: opacity 600ms 0ms;
+}
+
+.invisible {
+    opacity: 0;
+    transition: opacity 400ms 0ms;
+}

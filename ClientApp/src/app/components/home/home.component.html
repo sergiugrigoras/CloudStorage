@@ -1,0 +1,37 @@
+<h1>Welcome to SCS</h1>
+<p *ngIf="!isLoggedIn">
+    <span>Please</span>
+    <button mat-button color="primary" routerLink="/register">Register</button>
+    <span>or</span>
+    <button mat-button color="primary" routerLink="/login">Login</button>
+</p>
+
+<div *ngIf="isLoggedIn" class="items-box">
+
+    <mat-card class="card" routerLink="/drive">
+        <mat-card-content class="card-content">
+            <span class="material-icons icon-big">
+                backup
+            </span>
+            <span class="card-label">Drive</span>
+        </mat-card-content>
+    </mat-card>
+
+    <mat-card class="card" routerLink="/notes">
+        <mat-card-content class="card-content">
+            <span class="material-icons icon-big">
+                edit_note
+            </span>
+            <span class="card-label">Notes</span>
+        </mat-card-content>
+    </mat-card>
+
+    <mat-card class="card" routerLink="/shares">
+        <mat-card-content class="card-content">
+            <span class="material-icons icon-big">
+                share
+            </span>
+            <span class="card-label">Shares</span>
+        </mat-card-content>
+    </mat-card>
+</div>

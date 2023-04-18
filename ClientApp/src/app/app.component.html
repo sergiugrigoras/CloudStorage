@@ -1,0 +1,83 @@
+<div class="app-container mat-app-background">
+
+    <mat-toolbar class="app-nav mat-elevation-z6" color="primary">
+        <mat-toolbar-row>
+            <div class="container">
+                <a class="logo" routerLink="/">SCS</a>
+                <div *ngIf="isLargeDevice()">
+                    <button mat-button routerLink="/drive" routerLinkActive="selected">Drive</button>
+                    <button mat-button routerLink="/notes" routerLinkActive="selected">Notes</button>
+                    <button mat-button routerLink="/shares" routerLinkActive="selected">Shares</button>
+                </div>
+                <span class="spacer"></span>
+                <button mat-button (click)="toggleTheme()" matTooltip="Theme">
+                    <span class="material-icons">
+                        format_color_fill
+                    </span>
+                </button>
+                <button mat-button [matMenuTriggerFor]="userMenu" matTooltip="User menu">
+                    <span class="material-icons">
+                        person
+                    </span>
+                    <span *ngIf="isLoggedIn">&nbsp;<strong>{{getUser()}}</strong></span>
+                </button>
+            </div>
+        </mat-toolbar-row>
+        <mat-toolbar-row *ngIf="!isLargeDevice()" class="toolbar-small">
+            <div class="container">
+                <button mat-button routerLink="/drive" routerLinkActive="selected">Drive</button>
+                <button mat-button routerLink="/notes" routerLinkActive="selected">Notes</button>
+                <button mat-button routerLink="/shares" routerLinkActive="selected">Shares</button>
+            </div>
+        </mat-toolbar-row>
+    </mat-toolbar>
+    <div class="app-intersection-observer" #emptyDiv></div>
+    <div class="app-content container ">
+        <router-outlet (deactivate)="checkLoggedIn()" (activate)="onOutletLoaded($event)"></router-outlet>
+    </div>
+
+    <mat-toolbar class="app-footer" color="primary">
+        <div class="container">
+            Copyright &copy; {{year}} - Sergiu Grigoras.
+        </div>
+    </mat-toolbar>
+    <div class="back-top">
+        <button mat-mini-fab color="primary" (click)="scrollTop()">
+            <span class="material-icons">
+                arrow_upward
+            </span>
+        </button>
+    </div>
+</div>
+
+
+
+
+<mat-menu #userMenu="matMenu">
+    <div *ngIf="!isLoggedIn">
+        <button mat-menu-item routerLink="/login">Login</button>
+        <button mat-menu-item routerLink="/register">Register</button>
+    </div>
+    <div *ngIf="isLoggedIn">
+        <button mat-menu-item routerLink="/profile">Profile</button>
+        <button mat-menu-item (click)="logout()">Logout</button>
+    </div>
+</mat-menu>
+
+<ng-template #smallNav>
+    <button mat-button routerLink="/drive" routerLinkActive="selected" matTooltip="Drive">
+        <span class="material-icons">
+            backup
+        </span>
+    </button>
+    <button mat-button routerLink="/notes" routerLinkActive="selected" matTooltip="Notes">
+        <span class="material-icons">
+            edit_note
+        </span>
+    </button>
+    <button mat-button routerLink="/shares" routerLinkActive="selected" matTooltip="Shares">
+        <span class="material-icons">
+            share
+        </span>
+    </button>
+</ng-template>

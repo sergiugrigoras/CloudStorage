@@ -1,0 +1,9 @@
+<div *ngIf="progressBar.inProgress">
+    <div class="bar-box">
+        <!--         <ngb-progressbar [animated]="true" [type]="progressBar.background" [value]="progressBar.progress">{{
+            progressBar.text }}
+        </ngb-progressbar> -->
+    </div>
+    <div class="used-bytes">{{ progressBar.loaded | readableBytes : 2 }}</div>
+    <div class="total-bytes">{{ progressBar.total | readableBytes : 2 }}</div>
+</div>

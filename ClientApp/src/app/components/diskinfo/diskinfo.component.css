@@ -1,0 +1,30 @@
+.progress {
+    border-radius: 0.25rem;
+    border: 1px solid #ced4da;
+    margin: 0.2rem 0rem;
+    position: relative;
+}
+
+progress-bar {
+    z-index: 1;
+    position: absolute;
+}
+
+.progress span {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 2;
+    text-align: center;
+    width: 100%;
+    color: black;
+}
+
+.used-bytes {
+    float: left;
+}
+
+.total-bytes {
+    float: right;
+    text-align: right;
+}

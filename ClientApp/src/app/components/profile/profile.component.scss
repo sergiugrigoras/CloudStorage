@@ -1,0 +1,11 @@
+form button {
+    margin-right: .5rem;
+}
+
+div>div {
+    display: flex;
+
+    mat-form-field {
+        flex: 1;
+    }
+}

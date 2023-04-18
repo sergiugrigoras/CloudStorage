@@ -1,0 +1,31 @@
+<div class="fso" [class.fso-selected]="fso?.isSelected">
+    <div class="fso-icon">
+        <div *ngIf="(fso && fso.isFolder) || this.text" class="folder-icon-box">
+            <span class="material-icons"> folder </span>
+        </div>
+        <div *ngIf="fso && !fso.isFolder" class="file-icon-box">
+            <span class="material-icons"> description </span>
+        </div>
+        <div *ngIf="!fso?.isFolder" class="file-ext-box"
+            [ngStyle]="{ 'font-size': fileExtension.length < 4 ? '.8rem' : '.6rem' }">
+            {{ fileExtension }}
+        </div>
+    </div>
+    <div class="fso-text" *ngIf="!this.text">
+        <div class="fso-info-1">
+            <span *ngIf="fso.isFolder" class="folder-name" [title]="fso.name">{{
+                fso.name
+                }}</span>
+            <span *ngIf="!fso.isFolder" class="file-name" [title]="fso.name">{{
+                fso.name
+                }}</span>
+            <span *ngIf="!fso.isFolder" class="file-size"><strong>{{ fso.fileSize | readableBytes : 0 }}</strong></span>
+        </div>
+        <div class="fso-info-2">
+            <span>{{ fso.date | date : "medium" }}</span>
+        </div>
+    </div>
+    <div *ngIf="this.text" class="single-text">
+        {{ this.text }}
+    </div>
+</div>

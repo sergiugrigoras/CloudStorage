@@ -1,0 +1,80 @@
+.fso-selected {
+    background-color: rgba(0, 123, 255, 0.25);
+}
+
+.fso {
+    border-bottom: 1px solid #ced4da87;
+    display: flex;
+    -webkit-user-select: none;
+    /* Safari */
+    -moz-user-select: none;
+    /* Firefox */
+    -ms-user-select: none;
+    /* IE10+/Edge */
+    user-select: none;
+    /* Standard */
+    cursor: pointer;
+}
+
+.fso-icon {
+    font-size: 2rem;
+    margin: 0 .5rem;
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.fso-text {
+    flex-grow: 1;
+}
+
+.fso-info-1 {
+    display: flex;
+    justify-content: space-between;
+}
+
+.folder-name,
+.file-name {
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow-x: hidden;
+    max-width: 60vw;
+}
+
+.folder-name a {
+    text-decoration: none;
+    color: currentcolor;
+}
+
+.fso-info-2 {
+    font-size: .7rem;
+}
+
+.folder-icon-box {
+    color: #ffd242;
+}
+
+.file-icon-box {
+    color: #7291ff;
+    z-index: 1;
+}
+
+.file-ext-box {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 2;
+    /* font-size: .8rem; */
+    color: white;
+    text-shadow: 2px 2px 2px #00000078;
+}
+
+.file-size {
+    white-space: nowrap;
+}
+
+.single-text {
+    display: flex;
+    align-items: center;
+}

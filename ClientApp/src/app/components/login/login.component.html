@@ -1,0 +1,21 @@
+<div>
+    <h2>Login</h2>
+    <form [formGroup]="form" #loginForm (ngSubmit)="login()">
+        <div>
+            <mat-form-field>
+                <mat-label>Username or Email</mat-label>
+                <input matInput formControlName="userIdentifier" type="text">
+            </mat-form-field>
+        </div>
+        <div>
+            <mat-form-field>
+                <mat-label>Password</mat-label>
+                <input matInput formControlName="password" type="password">
+            </mat-form-field>
+        </div>
+        <div>
+            <button type="submit" mat-raised-button color="primary" [disabled]="form.invalid">Login</button>
+            <button type="button" mat-raised-button color="accent" routerLink="/password/reset">Forgot password</button>
+        </div>
+    </form>
+</div>

@@ -1,0 +1,105 @@
+<form [formGroup]="profileForm" (ngSubmit)="changePassword()">
+    <div formGroupName="profileInfo">
+        <h2>Profile</h2>
+        <div>
+            <mat-form-field>
+                <mat-label>Username</mat-label>
+                <input matInput formControlName="username" type="text" readonly>
+            </mat-form-field>
+        </div>
+        <div>
+            <mat-form-field>
+                <mat-label>Email</mat-label>
+                <input matInput formControlName="email" type="text" readonly>
+            </mat-form-field>
+        </div>
+    </div>
+    <div formGroupName="passwordChange">
+        <h2>Change Password</h2>
+        <div>
+            <mat-form-field>
+                <mat-label>Old password</mat-label>
+                <input matInput formControlName="oldPassword" type="password">
+            </mat-form-field>
+        </div>
+        <div>
+            <mat-form-field>
+                <mat-label>New password</mat-label>
+                <input matInput formControlName="newPassword" type="password">
+            </mat-form-field>
+        </div>
+        <div>
+            <mat-form-field>
+                <mat-label>Confirm new password</mat-label>
+                <input matInput formControlName="confirmNewPassword" type="password">
+            </mat-form-field>
+        </div>
+        <div>
+            <button type="submit" mat-raised-button color="accent" [disabled]="profileForm.invalid">Change
+                password</button>
+            <button type="button" mat-raised-button color="primary" (click)="resetPasswordFields()">Clear</button>
+        </div>
+    </div>
+</form>
+
+
+
+<!-- <div class="row">
+    <div class="col-md-4">
+        <h2>Profile</h2>
+        <form [formGroup]="profileForm">
+            <div class="form-group"><label for="username" class="control-label">Username</label>
+                <input formControlName="username" type="text" id="username" class="form-control" readonly>
+            </div>
+            <div class="form-group"><label for="email" class="control-label">Email</label>
+                <input formControlName="email" type="text" id="email" class="form-control" readonly>
+            </div>
+        </form>
+        <br>
+    </div>
+    <div class="col-md-4">
+        <h2>Change Password</h2>
+        <form [formGroup]="passwordForm" (ngSubmit)="changePassword()">
+            <div class="form-group"><label for="oldPassword" class="control-label">Old password</label>
+                <input formControlName="oldPassword" type="password" id="oldPassword" class="form-control">
+            </div>
+            <div *ngIf="oldPassword!.touched && oldPassword!.invalid" class="alert alert-danger">
+                <div *ngIf="oldPassword!.errors!.required"><strong>Old password</strong> is required</div>
+            </div>
+
+            <div class="form-group"><label for="newPassword" class="control-label">New password</label>
+                <input formControlName="newPassword" type="password" id="newPassword" class="form-control">
+            </div>
+            <div *ngIf="newPassword!.touched && newPassword!.invalid" class="alert alert-danger">
+                <div *ngIf="newPassword!.errors!.required"><strong>New password</strong> is required</div>
+            </div>
+
+            <div class="form-group"><label for="confirmNewPassword" class="control-label">Confirm new password</label>
+                <input formControlName="confirmNewPassword" type="password" id="confirmNewPassword"
+                    class="form-control">
+            </div>
+            <div *ngIf="confirmNewPassword!.touched && confirmNewPassword!.invalid" class="alert alert-danger">
+                <div *ngIf="confirmNewPassword!.errors!.required"><strong>Confirm new password</strong> is required
+                </div>
+            </div>
+            <div *ngIf="passwordForm!.errors && newPassword!.dirty && confirmNewPassword!.dirty">
+                <div *ngIf="passwordForm.errors!.passwordsShouldMatch" class="alert alert-danger">
+                    <strong>Passwords</strong> don't
+                    match
+                </div>
+            </div>
+
+            <div class="form-group"><button type="button" class="btn btn-success"
+                    (click)="passwordForm.reset()">Reset</button>&nbsp;
+                <button type="submit" class="btn btn-primary" [disabled]="passwordForm.invalid">Change
+                    password</button>
+            </div>
+            <div *ngIf="response">
+                <div *ngIf="response === 'Success'" class="alert alert-success">Password has been changed successfully!
+                </div>
+                <div *ngIf="response === 'Invalid Password'" class="alert alert-danger">Invalid old password
+                </div>
+            </div>
+        </form>
+    </div>
+</div> -->
