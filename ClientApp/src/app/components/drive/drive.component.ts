@@ -131,7 +131,7 @@ export class DriveComponent implements OnInit, OnDestroy {
   }
 
 
-  openFolder(id: number, isFolder: boolean) {
+  openFolder(id: number, isFolder: boolean = true) {
     if (!isFolder) return;
     const spinnerRef = this._dialog.open(this.spinnerTemplate, { disableClose: true, hasBackdrop: true });
     this.driveService.getFolder(id)

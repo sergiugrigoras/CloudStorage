@@ -1,0 +1,12 @@
+.media__container {
+    display: flex;
+    align-items: flex-start;
+
+    div:not(:first-child) {
+        margin-left: .5rem;
+    }
+}
+
+.media__column {
+    flex: 1 1;
+}

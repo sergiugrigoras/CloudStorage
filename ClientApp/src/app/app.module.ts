@@ -47,6 +47,8 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { SpinnerComponent } from './components/spinner/spinner.component';
+import { MediaComponent } from './components/media/media.component';
+import { MediaItemComponent } from './components/media-item/media-item.component';
 function tokenGetter() {
   return localStorage.getItem("jwt");
 }
@@ -75,6 +77,8 @@ function tokenGetter() {
     SharedFsoComponent,
     SharesComponent,
     SpinnerComponent,
+    MediaComponent,
+    MediaItemComponent,
   ],
   imports: [
     BrowserModule,

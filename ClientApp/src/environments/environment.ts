@@ -4,7 +4,8 @@
 
 export const environment = {
   production: false,
-  apiUrl: 'https://localhost:44361',
+  // baseUrl: 'https://localhost:44361',
+  baseUrl: '',
   maxUploadSize: 1073741824,
 };
 

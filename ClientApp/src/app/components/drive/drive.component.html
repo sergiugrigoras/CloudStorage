@@ -24,7 +24,7 @@
 
 <div *ngIf="pageIsReady; else loading">
   <div *ngIf="view === 'listView'">
-    <fso *ngIf="currentFolder.parentId" [text]="'..'" (dblclick)="openFolder(currentFolder.parentId, true)">
+    <fso *ngIf="currentFolder.parentId" [text]="'..'" (dblclick)="openFolder(currentFolder.parentId)">
     </fso>
     <fso *ngFor="let fso of currentFolder.children" [fso]="fso" (click)="fsoTouched($event, fso.id)"
       (dblclick)="openFolder(fso.id, fso.isFolder)">

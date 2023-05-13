@@ -10,7 +10,7 @@ const httpOptions = {
     'Content-Type': 'application/json'
   })
 }
-const apiUrl: string = environment.apiUrl;
+const apiUrl: string = environment.baseUrl;
 
 @Injectable({
   providedIn: 'root'

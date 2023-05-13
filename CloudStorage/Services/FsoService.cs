@@ -1,12 +1,18 @@
 ﻿using CloudStorage.Models;
+using FFMpegCore;
+using FFMpegCore.Enums;
+using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Resources;
+using System.Security.Cryptography;
 using System.Threading.Tasks;
 
 namespace CloudStorage.Services
@@ -16,7 +22,7 @@ namespace CloudStorage.Services
         Task<FileSystemObject> GetFsoByIdAsync(int id);
         Task<List<FileSystemObject>> GetFsoListByIdAsync(int[] idArray);
         Task<long> GetFsoSizeByIdAsync(int id);
-        Task<bool> CheckOwnerAsync(FileSystemObject fso, User user);
+        bool CheckOwner(FileSystemObject fso, User user);
         Task<List<FileSystemObject>> GetFsoFullPathAsync(FileSystemObject fso);
         Task<List<FileSystemObject>> GetFsoContentAsync(FileSystemObject fso);
         Task AddFsoAsync(FileSystemObject fso);
@@ -31,13 +37,14 @@ namespace CloudStorage.Services
         Task MoveFsoAsync(FileSystemObject fso, FileSystemObject destination);
 
         Task SetContentOfDTO(FileSystemObjectViewModel fsoDTO);
-        string GetMimeType(string extension);
+        Task<FileSystemObject> GetUserRoot(Guid userId);
+        Task<FileSystemObject> GetFolderContent(int id, Guid userId);
     }
     public class FsoService : IFsoService
     {
         private readonly AppDbContext _context;
         private readonly string _storageUrl;
-        private IDictionary<string, string> _mappings = new Dictionary<string, string>(StringComparer.InvariantCultureIgnoreCase) {
+        private static IDictionary<string, string> _mappings = new Dictionary<string, string>(StringComparer.InvariantCultureIgnoreCase) {
         #region mime types
         {".323", "text/h323"},
         {".3g2", "video/3gpp2"},
@@ -613,7 +620,7 @@ namespace CloudStorage.Services
             await _context.SaveChangesAsync();
         }
 
-        public async Task<bool> CheckOwnerAsync(FileSystemObject fso, User user)
+        public bool CheckOwner(FileSystemObject fso, User user)
         {
             return fso.OwnerId == user.Id;
         }
@@ -645,7 +652,7 @@ namespace CloudStorage.Services
                 }
                 catch (Exception ex)
                 {
-                    throw ex;
+                    Console.WriteLine(ex.Message);
                 }
             }
             else
@@ -751,8 +758,6 @@ namespace CloudStorage.Services
             return fileName;
         }
 
-
-
         public async Task<Stream> GetFileAsync(FileSystemObject root, List<FileSystemObject> fsoList, User user)
         {
             var ms = new MemoryStream();
@@ -817,12 +822,12 @@ namespace CloudStorage.Services
                 }
                 catch (Exception ex)
                 {
-                    throw ex;
+                    Console.WriteLine(ex.Message);
                 }
             }
         }
 
-        public string GetMimeType(string extension)
+        public static string GetMimeType(string extension)
         {
             if (extension == null)
             {
@@ -924,5 +929,32 @@ namespace CloudStorage.Services
                 }
             }
         }
+
+        public async Task<FileSystemObject> GetFolderContent(int id, Guid userId)
+        {
+            var folder = await _context.FileSystemObjects.FirstOrDefaultAsync(x => x.Id == id);
+            if (folder == null) ThrowException(404, "Folder Not Found");
+            if (folder.OwnerId != userId) ThrowException(403, "Forbidden");
+
+            _context.Entry(folder).Collection(x => x.Children).Load();
+            return folder;
+        }
+
+        public async Task<FileSystemObject> GetUserRoot(Guid userId)
+        {
+            var rootFolder = await _context.FileSystemObjects.FirstOrDefaultAsync(x => x.OwnerId == userId && x.ParentId == null && x.IsFolder);
+            _context.Entry(rootFolder).Collection(x => x.Children).Load();
+            return rootFolder;
+        }
+
+        private void ThrowException(int statusCode, string statusMessage)
+        {
+            var ex = new Exception(string.Format("{0} - {1}", statusMessage, statusCode.ToString()));
+            ex.Data.Add(statusCode.ToString(), statusMessage);
+            throw ex;
+        }
+
     }
+
+
 }

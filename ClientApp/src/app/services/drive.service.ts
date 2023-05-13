@@ -10,7 +10,7 @@ import { ShareModel } from '../interfaces/share.interface';
 
 
 const SHARE_URL = `${window.location.protocol}//${window.location.hostname}/files/`;
-const apiUrl: string = environment.apiUrl;
+const apiUrl: string = environment.baseUrl;
 const httpOptions = {
   headers: new HttpHeaders({
     'Content-Type': 'application/json'

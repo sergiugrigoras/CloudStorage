@@ -12,6 +12,7 @@ import { ResetPasswordComponent } from './components/reset-password/reset-passwo
 import { ViewNoteComponent } from './components/view-note/view-note.component';
 import { SharedFilesComponent } from './components/shared-files/shared-files.component';
 import { SharesComponent } from './components/shares/shares.component';
+import { MediaComponent } from './components/media/media.component';
 
 const routes: Routes = [
   { path: '', component: HomeComponent },
@@ -20,6 +21,7 @@ const routes: Routes = [
   { path: 'password/reset', component: ResetPasswordComponent, canActivate: [RegGuard] },
   { path: 'profile', component: ProfileComponent, canActivate: [AuthGuard] },
   { path: 'drive', component: DriveComponent, canActivate: [AuthGuard] },
+  { path: 'media', component: MediaComponent, canActivate: [AuthGuard] },
   { path: 'notes', component: NotesComponent, canActivate: [AuthGuard] },
   { path: 'note', component: ViewNoteComponent },
   { path: 'note/:id', component: ViewNoteComponent },

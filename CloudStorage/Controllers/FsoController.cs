@@ -1,5 +1,4 @@
 ﻿using CloudStorage.Models;
-using CloudStorage.Repositories;
 using CloudStorage.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -14,16 +13,14 @@ namespace CloudStorage.Controllers
     {
         private readonly IFsoService _fsoService;
         private readonly IUserService _userService;
-        private readonly IFsoRepository _repository;
         //private readonly IShareService _shareService;
         private readonly string _storageSize;
 
-        public FsoController(IConfiguration configuration, IFsoService fsoService, IUserService userService, IFsoRepository repository/*, IShareService shareService*/)
+        public FsoController(IConfiguration configuration, IFsoService fsoService, IUserService userService/*, IShareService shareService*/)
         {
             _storageSize = configuration.GetValue<string>("Storage:size");
             _fsoService = fsoService ?? throw new ArgumentNullException(nameof(fsoService));
             _userService = userService ?? throw new ArgumentNullException(nameof(userService));
-            _repository = repository ?? throw new ArgumentNullException(nameof(repository));
             /*_shareService = shareService ?? throw new ArgumentNullException(nameof(shareService));*/
         }
 
@@ -34,7 +31,7 @@ namespace CloudStorage.Controllers
 
             if (user == null) return Unauthorized();
 
-            var root = await _repository.GetUserRoot(user.Id);
+            var root = await _fsoService.GetUserRoot(user.Id);
             return new JsonResult(new FileSystemObjectViewModel(root));
         }
 
@@ -46,7 +43,7 @@ namespace CloudStorage.Controllers
 
             try
             {
-                var result = await _repository.GetFolderContent(id, user.Id);
+                var result = await _fsoService.GetFolderContent(id, user.Id);
                 return new JsonResult(new FileSystemObjectViewModel(result));
             }
             catch (Exception ex)
@@ -82,7 +79,7 @@ namespace CloudStorage.Controllers
             {
                 return NotFound();
             }
-            if (!await _fsoService.CheckOwnerAsync(fso, user))
+            if (!_fsoService.CheckOwner(fso, user))
             {
                 return Forbid();
             }
@@ -129,7 +126,7 @@ namespace CloudStorage.Controllers
             {
                 return NotFound();
             }
-            if (!await _fsoService.CheckOwnerAsync(fso, user))
+            if (!_fsoService.CheckOwner(fso, user))
             {
                 return Forbid();
             }
@@ -174,7 +171,7 @@ namespace CloudStorage.Controllers
             {
                 return NotFound();
             }
-            if (!await _fsoService.CheckOwnerAsync(fso, user))
+            if (! _fsoService.CheckOwner(fso, user))
             {
                 return Forbid();
             }
@@ -196,7 +193,7 @@ namespace CloudStorage.Controllers
             foreach (var fsoId in fsoIdArr)
             {
                 var fso = await _fsoService.GetFsoByIdAsync(int.Parse(fsoId));
-                if (await _fsoService.CheckOwnerAsync(fso, user))
+                if (_fsoService.CheckOwner(fso, user))
                 {
                     await _fsoService.DeleteFsoAsync(fso, user);
                 }
@@ -213,7 +210,7 @@ namespace CloudStorage.Controllers
             var user = await _userService.GetUserFromPrincipalAsync(User);
 
             var destination = await _fsoService.GetFsoByIdAsync(int.Parse(destinationDirId));
-            if (!await _fsoService.CheckOwnerAsync(destination, user))
+            if (!_fsoService.CheckOwner(destination, user))
             {
                 return Forbid();
             }
@@ -224,7 +221,7 @@ namespace CloudStorage.Controllers
             foreach (var fsoId in fsoIdArr)
             {
                 var fso = await _fsoService.GetFsoByIdAsync(int.Parse(fsoId));
-                if (await _fsoService.CheckOwnerAsync(fso, user))
+                if (_fsoService.CheckOwner(fso, user))
                 {
                     try
                     {
@@ -247,7 +244,7 @@ namespace CloudStorage.Controllers
             var parentId = Request.Form["rootId"];
             var root = await _fsoService.GetFsoByIdAsync(int.Parse(parentId));
             var user = await _userService.GetUserFromPrincipalAsync(User);
-            if (!await _fsoService.CheckOwnerAsync(root, user))
+            if (!_fsoService.CheckOwner(root, user))
             {
                 return Forbid();
             }
@@ -283,7 +280,7 @@ namespace CloudStorage.Controllers
             int[] fsoIdArray = Array.ConvertAll(fsoIdcsv.Split(','), int.Parse);
             var fsoList = await _fsoService.GetFsoListByIdAsync(fsoIdArray);
             var root = await _fsoService.CheckParentFso(fsoList);
-            if (root == null || !await _fsoService.CheckOwnerAsync(root, user))
+            if (root == null || !_fsoService.CheckOwner(root, user))
             {
                 return Forbid();
             }
@@ -291,11 +288,11 @@ namespace CloudStorage.Controllers
             string contentType;
             if (fsoList.Count == 1 && !fsoList[0].IsFolder)
             {
-                contentType = _fsoService.GetMimeType(Path.GetExtension(fsoList[0].Name));
+                contentType = FsoService.GetMimeType(Path.GetExtension(fsoList[0].Name));
             }
             else
             {
-                contentType = _fsoService.GetMimeType(".zip");
+                contentType = FsoService.GetMimeType(".zip");
             }
             var extension = Path.GetExtension(fsoList[0].Name);
 

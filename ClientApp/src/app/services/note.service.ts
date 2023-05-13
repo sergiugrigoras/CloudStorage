@@ -3,7 +3,7 @@ import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { environment } from './../../environments/environment';
 
-const apiUrl: string = environment.apiUrl;
+const apiUrl: string = environment.baseUrl;
 const httpOptions = {
   headers: new HttpHeaders({
     'Content-Type': 'application/json'

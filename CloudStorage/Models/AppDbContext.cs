@@ -23,8 +23,37 @@ namespace CloudStorage.Models
 
         public virtual DbSet<User> Users { get; set; }
 
+        public virtual DbSet<MediaObject> MediaObjects { get; set; }
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
+            modelBuilder.Entity<MediaObject>(entity =>
+            {
+                entity.HasKey(e => e.Id).HasName("PK__MediaObj__3214EC077A42B899");
+
+                entity.ToTable("MediaObject");
+
+                entity.Property(e => e.Id).ValueGeneratedNever();
+                entity.Property(e => e.ContentType)
+                    .HasMaxLength(100)
+                    .IsUnicode(false);
+                entity.Property(e => e.Hash)
+                    .IsRequired()
+                    .HasMaxLength(100)
+                    .IsUnicode(false);
+                entity.Property(e => e.Snapshot)
+                    .HasMaxLength(100)
+                    .IsUnicode(false);
+                entity.Property(e => e.UploadFileName)
+                    .IsRequired()
+                    .HasMaxLength(255)
+                    .IsUnicode(false);
+
+                entity.HasOne(d => d.Owner).WithMany(p => p.MediaObjects)
+                    .HasForeignKey(d => d.OwnerId)
+                    .HasConstraintName("FK_Media_User");
+            });
+
             modelBuilder.Entity<FileSystemObject>(entity =>
             {
                 entity.HasKey(e => e.Id).HasName("PK__FileSyst__3214EC077F02147E");
@@ -119,7 +148,7 @@ namespace CloudStorage.Models
 
             modelBuilder.Entity<User>(entity =>
             {
-                entity.HasKey(e => e.Id).HasName("PK__User__3214EC0706949E91");
+                entity.HasKey(e => e.Id).HasName("PK__User__3214EC070FAA7A84");
 
                 entity.ToTable("User");
 

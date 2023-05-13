@@ -1,6 +1,6 @@
 using CloudStorage.Models;
-using CloudStorage.Repositories;
 using CloudStorage.Services;
+using FFMpegCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.HttpOverrides;
@@ -55,7 +55,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJw
 
 builder.Services.AddTransient<ITokenService, TokenService>();
 builder.Services.AddTransient<IFsoService, FsoService>();
-builder.Services.AddTransient<IFsoRepository, FsoRepository>();
+builder.Services.AddTransient<IMediaService, MediaService>();
 builder.Services.AddTransient<IUserService, UserService>();
 builder.Services.AddTransient<INoteService, NoteService>();
 // services.AddTransient<IShareService, ShareService>();
@@ -98,5 +98,8 @@ app.UseAuthorization();
 app.MapDefaultControllerRoute();
 app.UseSpaYarp();
 app.MapFallbackToFile("index.html");
+
+if (OperatingSystem.IsWindows()) GlobalFFOptions.Configure(new FFOptions { BinaryFolder = @"C:\ffmpeg\bin", TemporaryFilesFolder = @"C:\ffmpeg\tmp" });
+else if (OperatingSystem.IsLinux()) GlobalFFOptions.Configure(new FFOptions { BinaryFolder = "/usr/bin", TemporaryFilesFolder = "/tmp" });
 
 app.Run();

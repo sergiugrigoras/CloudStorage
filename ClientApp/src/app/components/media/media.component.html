@@ -1,0 +1,33 @@
+<div>
+    <button mat-raised-button color="primary" (click)="parseFolder()">Parse Folder</button>
+</div>
+
+<div class="media__container" *ngIf="mediaReady && view === 'one-column'">
+    <div class="media__column">
+        <app-media-item *ngFor="let item of allMediaObjects" [mediaObject]="item"></app-media-item>
+    </div>
+</div>
+
+<div class="media__container" *ngIf="mediaReady && view === 'two-columns'">
+    <div class="media__column">
+        <app-media-item *ngFor="let item of getMediaForColumn(2, 0)" [mediaObject]="item"></app-media-item>
+    </div>
+    <div class="media__column">
+        <app-media-item *ngFor="let item of getMediaForColumn(2, 1)" [mediaObject]="item"></app-media-item>
+    </div>
+</div>
+
+<div class="media__container" *ngIf="mediaReady && view === 'three-columns'">
+    <div class="media__column">
+        <app-media-item *ngFor="let item of getMediaForColumn(3, 0)" [mediaObject]="item"></app-media-item>
+    </div>
+    <div class="media__column">
+        <app-media-item *ngFor="let item of getMediaForColumn(3, 1)" [mediaObject]="item"></app-media-item>
+    </div>
+    <div class="media__column">
+        <app-media-item *ngFor="let item of getMediaForColumn(3, 2)" [mediaObject]="item"></app-media-item>
+    </div>
+</div>
+<!-- <img id="myimage" [src]='thumbnail' />
+<video [src]="videoSource" width="500px" loop muted (click)="video(myVideo)" #myVideo>
+</video> -->

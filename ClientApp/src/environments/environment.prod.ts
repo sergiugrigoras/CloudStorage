@@ -1,5 +1,6 @@
 export const environment = {
   production: true,
-  apiUrl: 'https://server.local',
+  // baseUrl: 'https://server.local',
+  baseUrl: '',
   maxUploadSize: 524288000,
 };
