@@ -40,7 +40,6 @@ namespace CloudStorage.Controllers
         public async Task<IActionResult> GetMediaContentAsync(Guid id)
         {
             var user = await _userService.GetUserFromPrincipalAsync(User);
-            var mediaFile = (await _mediaService.GetAllMediFilesAsync(user)).ToList().First();
             (Stream stream, string contentType) = await _mediaService.GetMediaFileAsync(user, id);
             return File(stream, contentType);
         }

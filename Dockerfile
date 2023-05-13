@@ -13,6 +13,7 @@ RUN dotnet publish -c Release -o /app/publish
 
 # serve stage
 FROM mcr.microsoft.com/dotnet/aspnet:7.0
+RUN apt-get update -qq && apt-get install ffmpeg -y
 ENV ASPNETCORE_URLS=http://+:5000
 WORKDIR /app
 COPY --from=base /app/publish .
