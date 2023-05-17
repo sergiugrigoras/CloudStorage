@@ -18,11 +18,11 @@ export class MediaService {
   constructor(private http: HttpClient, private router: Router) { }
 
   getMediaFile(id: string) {
-    return this.http.get(API_URL + `/api/media/${id}`, { responseType: 'blob' as 'json', observe: 'response' });
+    return this.http.get(API_URL + `/api/media/${id}`, { responseType: 'blob', observe: 'response' });
   }
 
   getSnapshotFile(id: string) {
-    return this.http.get(API_URL + `/api/media/snapshot/${id}`, { responseType: 'blob' as 'json', observe: 'response' });
+    return this.http.get(API_URL + `/api/media/snapshot/${id}`, { responseType: 'blob', observe: 'response' });
   }
 
   parseFolder() {

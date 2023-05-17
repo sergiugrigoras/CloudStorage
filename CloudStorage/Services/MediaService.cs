@@ -3,6 +3,7 @@ using CloudStorage.ViewModels;
 using FFMpegCore;
 using FFMpegCore.Enums;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.FileProviders;
 using System.Drawing;
 using System.Security.Cryptography;
 
@@ -11,16 +12,19 @@ namespace CloudStorage.Services
     public interface IMediaService 
     {
         Task<IEnumerable<MediaObjectViewModel>> GetAllMediFilesAsync(User user);
-        Task<(Stream, string)> GetMediaFileSnapshotAsync(User user, Guid mediaFileId);
-        Task<(Stream, string)> GetMediaFileAsync(User user, Guid mediaFileI);
+        Task<Stream> GetSnapshotAsync(User user, Guid mediaFileId);
+        Task<Stream> GetMediaAsync(Guid id);
+        Task<MediaObject> GetMediaObjectByIdAsync(Guid id);
         Task ParseMediaFolderAsync(User user);
     }
     public class MediaService: IMediaService
     {
         private readonly AppDbContext _context;
         private readonly string _storageUrl;
+        private const string mediaDirName = "media";
+        private const string snapshotsDirName = "snapshots";
         private static IEnumerable<string> _mediaExtentions = new string[] { "jpg", "gif", "png", "mp4" };
-        private static string _tmpFolder = GlobalFFOptions.Current.TemporaryFilesFolder;
+        private static string _ffmpegTmpFolder = GlobalFFOptions.Current.TemporaryFilesFolder;
         public MediaService(AppDbContext context, IConfiguration configuration)
         {
             _context = context;
@@ -32,60 +36,36 @@ namespace CloudStorage.Services
                 .Where(x => x.OwnerId == user.Id)
                 .Select(x => new MediaObjectViewModel(x))
                 .ToListAsync();
-
-            /*return await Task.Run(async () =>
-            {
-                var userDirectory = Path.Combine(_storageUrl, user.Id.ToString(), "media");
-                var videoFile = Path.Combine(userDirectory, "1682985345678.mp4");
-                var imageFile = Path.Combine(_tmpFolder, Guid.NewGuid().ToString() + ".png");
-                var mediaInfo = await FFProbe.AnalyseAsync(videoFile);
-                FFMpeg.Snapshot(videoFile, imageFile, new Size(300, -1), TimeSpan.FromSeconds(mediaInfo.Duration.TotalSeconds / 2));
-                var checksum = await CalculateMD5Async(imageFile);
-                var base64Img = new Base64Image
-                {
-                    FileContents = File.ReadAllBytes(imageFile),
-                    ContentType = "image/png"
-                };
-                string base64EncodedImg = base64Img.ToString();
-
-                File.Delete(imageFile);
-
-                return Directory
-                    .EnumerateFiles(userDirectory, "*.*", SearchOption.TopDirectoryOnly)
-                    .Where(s => _mediaExtentions.Contains(Path.GetExtension(s).TrimStart('.').ToLowerInvariant())).Select(x => Path.GetFileName(x));
-            });*/
         }
-        public async Task<(Stream, string)> GetMediaFileSnapshotAsync(User user, Guid mediaFileId)
+
+        public async Task<Stream> GetSnapshotAsync(User user, Guid mediaFileId)
         {
             if (user == null) ThrowException(401, "Unauthorized.");
             var mediaObject = await _context.MediaObjects.FindAsync(mediaFileId);
             if (mediaObject == null) ThrowException(404, "Object not found.");
             if (mediaObject.OwnerId != user.Id) ThrowException(403, "Forbidden content.");
 
-            var snapshotFolder = GetUserSnapshotsFolder(user.Id);
-            var fullPath = Path.Combine(snapshotFolder, mediaObject.Snapshot);
-            var contentType = FsoService.GetMimeType(Path.GetExtension(mediaObject.Snapshot));
-            var ms = new MemoryStream();
-            using var stream = new FileStream(fullPath, FileMode.Open);
-            await stream.CopyToAsync(ms);
-            ms.Seek(0, SeekOrigin.Begin);
-            return (ms, contentType);
+            var provider = new PhysicalFileProvider(GetUserSnapshotsFolder(user.Id));
+            var fileInfo = provider.GetFileInfo(mediaObject.Snapshot);
+            if (!fileInfo.Exists) return null;
+            return fileInfo.CreateReadStream();
         }
 
-        public async Task<(Stream, string)> GetMediaFileAsync(User user, Guid mediaFileId)
+        public async Task<Stream> GetMediaAsync(Guid id)
         {
-            if (user == null) ThrowException(401, "Unauthorized.");
-            var mediaObject = await _context.MediaObjects.FindAsync(mediaFileId);
-            if (mediaObject == null) ThrowException(404, "Object not found.");
-            if (mediaObject.OwnerId != user.Id) ThrowException(403, "Forbidden content.");
+            var mediaObject = await GetMediaObjectByIdAsync(id);
+            if (mediaObject == null) return null;
+            var mediaFolderRoot = GetUserMediaFolder(mediaObject.OwnerId);
+            var provider = new PhysicalFileProvider(mediaFolderRoot);
+            var fileInfo = provider.GetFileInfo(mediaObject.UploadFileName);
+            if (!fileInfo.Exists) return null;
+            return fileInfo.CreateReadStream();
+        }
 
-            var mediaFolder = GetUserMediaFolder(user.Id);
-            var fullPath = Path.Combine(mediaFolder, mediaObject.UploadFileName);
-            var ms = new MemoryStream();
-            using var stream = new FileStream(fullPath, FileMode.Open);
-            await stream.CopyToAsync(ms);
-            ms.Seek(0, SeekOrigin.Begin);
-            return (ms, mediaObject.ContentType);
+        public async Task<MediaObject> GetMediaObjectByIdAsync(Guid id)
+        {
+            var mediaObject = await _context.MediaObjects.FindAsync(id);
+            return mediaObject;
         }
 
         private static async Task<string> CalculateMD5Async(string filename)
@@ -157,13 +137,12 @@ namespace CloudStorage.Services
         private string GetUserMediaFolder(Guid userId)
         {
             if (userId == Guid.Empty) return null;
-            return Path.Combine(_storageUrl, userId.ToString(), "media");
+            return Path.Combine(_storageUrl, userId.ToString(), mediaDirName);
         }
-
         private string GetUserSnapshotsFolder(Guid userId)
         {
             if (userId == Guid.Empty) return null;
-            return Path.Combine(GetUserMediaFolder(userId), "snapshots");
+            return Path.Combine(GetUserMediaFolder(userId), snapshotsDirName);
         }
     }
 

@@ -1,7 +1,7 @@
 import { Component, Input, OnInit, TemplateRef, ViewChild } from '@angular/core';
-import { MatDialog, MatDialogRef } from '@angular/material/dialog';
+import { MatDialog, MatDialogConfig, MatDialogRef } from '@angular/material/dialog';
 import { DomSanitizer, SafeUrl } from '@angular/platform-browser';
-import { map, switchMap, tap } from 'rxjs';
+import { Observable, map, switchMap, tap } from 'rxjs';
 import { MediaObject } from 'src/app/model/media-object.model';
 import { MediaService } from 'src/app/services/media.service';
 
@@ -13,11 +13,18 @@ import { MediaService } from 'src/app/services/media.service';
 export class MediaItemComponent implements OnInit {
   @Input() mediaObject: MediaObject;
   @ViewChild('mediaViewDialog', { static: true }) mediaViewDialog: TemplateRef<any>;
-  blobUrl: SafeUrl;
+  imageUrl: SafeUrl;
   mediaFileUnsafeUrl: string;
-  animated = false;
+  isVideo = false;
+  videoSource$: Observable<Blob>;
+  dialogConfig: MatDialogConfig = {
+    hasBackdrop: true,
+    maxWidth: '98vw',
+    maxHeight: '98vh',
+    disableClose: false
+  };
   constructor(
-    private mediaService: MediaService,
+    public mediaService: MediaService,
     private sanitizer: DomSanitizer,
     public dialog: MatDialog
   ) {
@@ -25,7 +32,7 @@ export class MediaItemComponent implements OnInit {
 
   ngOnInit(): void {
     if (this.mediaObject.contentType.startsWith('video')) {
-      this.animated = true;
+      this.isVideo = true;
     }
     this.getSnapshot(this.mediaObject.id).subscribe(url => {
       this.mediaObject.snapshotUrl = url;
@@ -34,22 +41,21 @@ export class MediaItemComponent implements OnInit {
 
   openMedia(id: string) {
     let dialogRef: MatDialogRef<any>;
-    this.getMediaFile(id)
-      .pipe(
-        tap(safeUrl => this.blobUrl = safeUrl),
-        switchMap(() => {
-          const dialogRef = this.dialog.open(this.mediaViewDialog, {
-            hasBackdrop: true,
-            maxWidth: '98vw',
-            maxHeight: '98vh',
-            disableClose: false
-          });
-          return dialogRef.afterClosed()
-        })
-      )
-      .subscribe(() => {
-        URL.revokeObjectURL(this.mediaFileUnsafeUrl)
-      });
+    if (this.isVideo) {
+      dialogRef = this.dialog.open(this.mediaViewDialog, this.dialogConfig);
+    } else {
+      this.getMediaFile(id)
+        .pipe(
+          tap(safeUrl => this.imageUrl = safeUrl),
+          switchMap(() => {
+            const dialogRef = this.dialog.open(this.mediaViewDialog, this.dialogConfig);
+            return dialogRef.afterClosed();
+          })
+        )
+        .subscribe(() => {
+          URL.revokeObjectURL(this.mediaFileUnsafeUrl)
+        });
+    }
   }
 
   getSnapshot(id: string) {
@@ -69,6 +75,7 @@ export class MediaItemComponent implements OnInit {
   }
 
   videoControl(video: HTMLMediaElement) {
+    return;
     if (video.paused) {
       video.play();
     } else {

@@ -1,6 +1,7 @@
 ﻿using CloudStorage.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.FileProviders;
 
 namespace CloudStorage.Controllers
 {
@@ -12,6 +13,7 @@ namespace CloudStorage.Controllers
         private readonly IMediaService _mediaService;
         private readonly IFsoService _fsoService;
         private readonly IUserService _userService;
+        private const string snapshotContentType = "image/png";
 
         public MediaController(IConfiguration configuration, IMediaService mediaService, IUserService userService, IFsoService fsoService)
         {
@@ -32,7 +34,8 @@ namespace CloudStorage.Controllers
         public async Task<IActionResult> GetSnapshotAsync(Guid id)
         {
             var user = await _userService.GetUserFromPrincipalAsync(User);
-            (Stream stream, string contentType) = await _mediaService.GetMediaFileSnapshotAsync(user, id);
+            var stream = await _mediaService.GetSnapshotAsync(user, id);
+            string contentType = snapshotContentType;
             return File(stream, contentType);
         }
 
@@ -40,9 +43,15 @@ namespace CloudStorage.Controllers
         public async Task<IActionResult> GetMediaContentAsync(Guid id)
         {
             var user = await _userService.GetUserFromPrincipalAsync(User);
-            (Stream stream, string contentType) = await _mediaService.GetMediaFileAsync(user, id);
-            return File(stream, contentType);
+            if (user == null) return Unauthorized();
+            var mediaObject = await _mediaService.GetMediaObjectByIdAsync(id);
+            if (mediaObject == null) return NotFound();
+            var stream = await _mediaService.GetMediaAsync(id);
+            if (stream == null) return StatusCode(500, "Unable to retrieve the stream.");
+
+            return File(stream, mediaObject.ContentType);
         }
+
 
         [HttpPost("parse")]
         public async Task<IActionResult> ParseMediaFolderAsync()
