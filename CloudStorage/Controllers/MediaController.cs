@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.FileProviders;
+using System.Globalization;
 
 namespace CloudStorage.Controllers
 {
@@ -13,13 +14,16 @@ namespace CloudStorage.Controllers
         private readonly IMediaService _mediaService;
         private readonly IFsoService _fsoService;
         private readonly IUserService _userService;
-        private const string snapshotContentType = "image/png";
+        private const string _snapshotContentType = "image/png";
+        private const string _contentKey = "ContentKey";
+        private readonly ContentAuthorization _contentAuthorization;
 
-        public MediaController(IConfiguration configuration, IMediaService mediaService, IUserService userService, IFsoService fsoService)
+        public MediaController(IConfiguration configuration, IMediaService mediaService, IUserService userService, IFsoService fsoService, ContentAuthorization contentAuthorization)
         {
             _mediaService = mediaService;
             _userService = userService;
             _fsoService = fsoService;
+            _contentAuthorization = contentAuthorization;
 
         }
         [HttpGet("all")]
@@ -35,7 +39,7 @@ namespace CloudStorage.Controllers
         {
             var user = await _userService.GetUserFromPrincipalAsync(User);
             var stream = await _mediaService.GetSnapshotAsync(user, id);
-            string contentType = snapshotContentType;
+            string contentType = _snapshotContentType;
             return File(stream, contentType);
         }
 
@@ -46,12 +50,26 @@ namespace CloudStorage.Controllers
             if (user == null) return Unauthorized();
             var mediaObject = await _mediaService.GetMediaObjectByIdAsync(id);
             if (mediaObject == null) return NotFound();
+            if (mediaObject.OwnerId != user.Id) return Forbid();
             var stream = await _mediaService.GetMediaAsync(id);
             if (stream == null) return StatusCode(500, "Unable to retrieve the stream.");
 
             return File(stream, mediaObject.ContentType);
         }
 
+        [HttpGet("access-key")]
+        public async Task<IActionResult> SetAccessKeyCookie()
+        {
+            var user = await _userService.GetUserFromPrincipalAsync(User);
+            var cookieOptions = new CookieOptions();
+            cookieOptions.HttpOnly = true;
+            cookieOptions.Expires = DateTime.Now.AddMinutes(1);
+            cookieOptions.Path = "/api/content";
+            var key = _contentAuthorization.GenerateKeyForUser(user.Id);
+            Response.Cookies.Append(_contentKey, key, cookieOptions);
+
+            return Ok();
+        }
 
         [HttpPost("parse")]
         public async Task<IActionResult> ParseMediaFolderAsync()

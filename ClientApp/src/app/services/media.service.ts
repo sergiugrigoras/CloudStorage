@@ -33,7 +33,8 @@ export class MediaService {
     return this.http.get<MediaObject[]>(API_URL + `/api/media/all`);
   }
 
-
-
+  addContentAccesKeyCookie() {
+    return this.http.get(API_URL + `/api/media/access-key`);
+  }
 
 }

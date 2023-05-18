@@ -13,8 +13,8 @@ import { MediaService } from 'src/app/services/media.service';
 export class MediaItemComponent implements OnInit {
   @Input() mediaObject: MediaObject;
   @ViewChild('mediaViewDialog', { static: true }) mediaViewDialog: TemplateRef<any>;
-  imageUrl: SafeUrl;
-  mediaFileUnsafeUrl: string;
+
+  contentUrl: string;
   isVideo = false;
   videoSource$: Observable<Blob>;
   dialogConfig: MatDialogConfig = {
@@ -23,6 +23,7 @@ export class MediaItemComponent implements OnInit {
     maxHeight: '98vh',
     disableClose: false
   };
+  timer: NodeJS.Timer;
   constructor(
     public mediaService: MediaService,
     private sanitizer: DomSanitizer,
@@ -31,6 +32,7 @@ export class MediaItemComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    this.contentUrl = `/api/content/${this.mediaObject?.id}`;
     if (this.mediaObject.contentType.startsWith('video')) {
       this.isVideo = true;
     }
@@ -40,22 +42,16 @@ export class MediaItemComponent implements OnInit {
   }
 
   openMedia(id: string) {
-    let dialogRef: MatDialogRef<any>;
-    if (this.isVideo) {
-      dialogRef = this.dialog.open(this.mediaViewDialog, this.dialogConfig);
-    } else {
-      this.getMediaFile(id)
-        .pipe(
-          tap(safeUrl => this.imageUrl = safeUrl),
-          switchMap(() => {
-            const dialogRef = this.dialog.open(this.mediaViewDialog, this.dialogConfig);
-            return dialogRef.afterClosed();
-          })
-        )
-        .subscribe(() => {
-          URL.revokeObjectURL(this.mediaFileUnsafeUrl)
-        });
-    }
+    this.mediaService.addContentAccesKeyCookie()
+      .pipe(
+        switchMap(() => {
+          this.updateAccessKey();
+          return this.dialog.open(this.mediaViewDialog, this.dialogConfig).afterClosed();
+        }),
+        tap(() => {
+          window.clearTimeout(this.timer);
+        })
+      ).subscribe();
   }
 
   getSnapshot(id: string) {
@@ -65,13 +61,10 @@ export class MediaItemComponent implements OnInit {
     }));
   }
 
-  getMediaFile(id: string) {
-    return this.mediaService.getMediaFile(id)
-      .pipe(map(x => {
-        const blob = x.body as Blob;
-        this.mediaFileUnsafeUrl = URL.createObjectURL(blob);
-        return this.sanitizer.bypassSecurityTrustUrl(this.mediaFileUnsafeUrl);
-      }))
+  updateAccessKey() {
+    this.timer = setInterval(() => {
+      this.mediaService.addContentAccesKeyCookie().subscribe();
+    }, 30000);
   }
 
   videoControl(video: HTMLMediaElement) {

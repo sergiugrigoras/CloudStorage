@@ -1,3 +1,4 @@
+using CloudStorage.Middleware;
 using CloudStorage.Models;
 using CloudStorage.Services;
 using FFMpegCore;
@@ -53,12 +54,13 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJw
     };
 });
 
+builder.Services.AddSingleton<ContentAuthorization>();
 builder.Services.AddTransient<ITokenService, TokenService>();
 builder.Services.AddTransient<IFsoService, FsoService>();
 builder.Services.AddTransient<IMediaService, MediaService>();
 builder.Services.AddTransient<IUserService, UserService>();
 builder.Services.AddTransient<INoteService, NoteService>();
-// services.AddTransient<IShareService, ShareService>();
+// builder.Services.AddTransient<IShareService, ShareService>();
 if (builder.Environment.IsProduction())
 {
     builder.Services.AddSingleton<IMailService, MailService>();
@@ -91,6 +93,7 @@ app.UseForwardedHeaders(new ForwardedHeadersOptions
     ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
 });
 app.UseHttpsRedirection();
+app.UseMediaContent();
 app.UseStaticFiles();
 app.UseRouting();
 app.UseAuthentication();

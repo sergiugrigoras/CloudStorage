@@ -4,11 +4,11 @@
 
 <ng-template #mediaViewDialog>
     <div *ngIf="!isVideo" class="media-item__view">
-        <img id="myimage" [src]='imageUrl' />
+        <img id="myimage" [src]="contentUrl" />
     </div>
     <div *ngIf="isVideo" class="media-item__view">
         <video autoplay [muted]="'muted'" loop controls (click)="videoControl(myVideo)" #myVideo>
-            <source [src]="'/api/content/video/' + mediaObject?.id" [type]="mediaObject?.contentType">
+            <source [src]="contentUrl" [type]="mediaObject?.contentType">
         </video>
     </div>
 </ng-template>
