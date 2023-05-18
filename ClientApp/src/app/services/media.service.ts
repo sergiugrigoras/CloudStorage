@@ -37,4 +37,7 @@ export class MediaService {
     return this.http.get(API_URL + `/api/media/access-key`);
   }
 
+  removeContentAccesKey() {
+    return this.http.delete(API_URL + `/api/media/access-key`);
+  }
 }

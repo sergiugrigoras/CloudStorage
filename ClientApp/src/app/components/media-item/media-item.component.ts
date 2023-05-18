@@ -48,8 +48,9 @@ export class MediaItemComponent implements OnInit {
           this.updateAccessKey();
           return this.dialog.open(this.mediaViewDialog, this.dialogConfig).afterClosed();
         }),
-        tap(() => {
+        switchMap(() => {
           window.clearTimeout(this.timer);
+          return this.mediaService.removeContentAccesKey();
         })
       ).subscribe();
   }
@@ -64,7 +65,7 @@ export class MediaItemComponent implements OnInit {
   updateAccessKey() {
     this.timer = setInterval(() => {
       this.mediaService.addContentAccesKeyCookie().subscribe();
-    }, 30000);
+    }, 60000);
   }
 
   videoControl(video: HTMLMediaElement) {

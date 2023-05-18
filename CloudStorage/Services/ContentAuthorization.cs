@@ -26,6 +26,11 @@ namespace CloudStorage.Services
             return key;
         }
 
+        public void RemoveKeyForUser(Guid userId)
+        {
+            UserKeys.Remove(userId);
+        }
+
         public bool ValidKey(Guid userId, string key)
         {
             if (string.IsNullOrWhiteSpace(key)) return false;
@@ -38,8 +43,7 @@ namespace CloudStorage.Services
             const string chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
             const int length = 64;
             var random = new Random();
-            var key = new string(Enumerable.Repeat(chars, length)
-                                                    .Select(s => s[random.Next(s.Length)]).ToArray());
+            var key = new string(Enumerable.Repeat(chars, length).Select(s => s[random.Next(s.Length)]).ToArray());
             return key;
         }
 
@@ -47,20 +51,36 @@ namespace CloudStorage.Services
 
     public class AuthorizationKeys
     {
-        public string CurrentKey { get; set; }
-        public string PreviousKey { get; set; }
+        private Key _currentKey { get; set; }
+        private Key _previousKey { get; set; }
 
-        public AuthorizationKeys AddKey(string key)
+        public AuthorizationKeys AddKey(string keyValue)
         {
-            PreviousKey = CurrentKey;
-            CurrentKey = key;
+            _previousKey = _currentKey;
+            _currentKey = new Key(keyValue);
             return this;
         }
 
         public bool Validate(string key)
         {
-            return CurrentKey == key || PreviousKey == key;
+            return _currentKey.IsValid(key) || _previousKey.IsValid(key);
         }
 
+    }
+
+    public class Key
+    {
+        private string _value;
+        private DateTime _expirationDate;
+        public Key(string keyValue) 
+        {
+            _value = keyValue;
+            _expirationDate = DateTime.Now.AddMinutes(2);
+        }
+
+        public bool IsValid(string key)
+        { 
+            return _value.Equals(key) && _expirationDate > DateTime.Now;
+        }
     }
 }

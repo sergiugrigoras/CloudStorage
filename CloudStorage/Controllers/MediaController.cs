@@ -63,11 +63,20 @@ namespace CloudStorage.Controllers
             var user = await _userService.GetUserFromPrincipalAsync(User);
             var cookieOptions = new CookieOptions();
             cookieOptions.HttpOnly = true;
-            cookieOptions.Expires = DateTime.Now.AddMinutes(1);
+            cookieOptions.Expires = DateTime.Now.AddMinutes(2);
             cookieOptions.Path = "/api/content";
             var key = _contentAuthorization.GenerateKeyForUser(user.Id);
             Response.Cookies.Append(_contentKey, key, cookieOptions);
 
+            return Ok();
+        }
+
+        [HttpDelete("access-key")]
+        public async Task<IActionResult> RemoveAccessKey()
+        {
+            var user = await _userService.GetUserFromPrincipalAsync(User);
+            _contentAuthorization.RemoveKeyForUser(user.Id);
+           
             return Ok();
         }
 
