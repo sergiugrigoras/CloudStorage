@@ -17,3 +17,23 @@ div.media-item__view {
         vertical-align: middle;
     }
 }
+
+div.visible-controls {
+    width: 250px;
+}
+
+.dialog-controls {
+    position: absolute;
+    top: 0;
+    left: 0;
+    padding: 0.2rem;
+    cursor: pointer;
+    color: white;
+    opacity: 0.4;
+    transition: opacity 200ms 0ms;
+
+    &--invisible {
+        opacity: 0;
+        transition: opacity 200ms 0ms;
+    }
+}

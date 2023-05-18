@@ -23,7 +23,9 @@ export class MediaItemComponent implements OnInit {
     maxHeight: '98vh',
     disableClose: false
   };
+  dialogRef: MatDialogRef<any>;
   timer: NodeJS.Timer;
+  invisibleControls = true;
   constructor(
     public mediaService: MediaService,
     private sanitizer: DomSanitizer,
@@ -46,7 +48,8 @@ export class MediaItemComponent implements OnInit {
       .pipe(
         switchMap(() => {
           this.updateAccessKey();
-          return this.dialog.open(this.mediaViewDialog, this.dialogConfig).afterClosed();
+          this.dialogRef = this.dialog.open(this.mediaViewDialog, this.dialogConfig)
+          return this.dialogRef.afterClosed();
         }),
         switchMap(() => {
           window.clearTimeout(this.timer);
@@ -75,5 +78,17 @@ export class MediaItemComponent implements OnInit {
     } else {
       video.pause();
     }
+  }
+
+  showControls(event$: MouseEvent) {
+    this.invisibleControls = false;
+  }
+
+  hideControls(event$: MouseEvent) {
+    this.invisibleControls = true;
+  }
+
+  closeDialog() {
+    this.dialogRef?.close();
   }
 }
