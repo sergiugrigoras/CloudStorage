@@ -1,4 +1,5 @@
 import { BreakpointObserver, BreakpointState } from '@angular/cdk/layout';
+import { OverlayContainer } from '@angular/cdk/overlay';
 import { Component, HostListener, OnDestroy, OnInit } from '@angular/core';
 import { DomSanitizer, SafeUrl } from '@angular/platform-browser';
 import { forkJoin, map, switchMap } from 'rxjs';
@@ -21,14 +22,16 @@ export class MediaComponent implements OnInit, OnDestroy {
   threeColumnsViewMap: Map<number, MediaObject[]>;
   constructor(
     private mediaService: MediaService,
-    public breakpointObserver: BreakpointObserver
+    public breakpointObserver: BreakpointObserver,
+    private overlay: OverlayContainer
   ) { }
 
   ngOnDestroy(): void {
-    throw new Error('Method not implemented.');
+    this.overlay.getContainerElement().classList.remove('media');
   }
 
   ngOnInit(): void {
+    this.overlay.getContainerElement().classList.add('media');
     this.breakpointObserver
       .observe(['(min-width: 1200px)', '(max-width: 768px)'])
       .subscribe((state: BreakpointState) => {

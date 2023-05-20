@@ -25,7 +25,6 @@ export class MediaItemComponent implements OnInit {
   };
   dialogRef: MatDialogRef<any>;
   timer: NodeJS.Timer;
-  invisibleControls = true;
   constructor(
     public mediaService: MediaService,
     private sanitizer: DomSanitizer,
@@ -71,22 +70,15 @@ export class MediaItemComponent implements OnInit {
     }, 60000);
   }
 
-  videoControl(video: HTMLMediaElement) {
-    return;
-    if (video.paused) {
-      video.play();
-    } else {
-      video.pause();
-    }
+  videoControl(video: HTMLMediaElement, event$: MouseEvent) {
+    /*     return;
+        if (video.paused) {
+          video.play();
+        } else {
+          video.pause();
+        } */
   }
 
-  showControls(event$: MouseEvent) {
-    this.invisibleControls = false;
-  }
-
-  hideControls(event$: MouseEvent) {
-    this.invisibleControls = true;
-  }
 
   closeDialog() {
     this.dialogRef?.close();

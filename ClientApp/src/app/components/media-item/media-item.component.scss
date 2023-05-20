@@ -23,7 +23,7 @@ div.visible-controls {
 }
 
 .dialog-controls {
-    position: absolute;
+    position: fixed;
     top: 0;
     left: 0;
     padding: 0.2rem;
@@ -31,6 +31,7 @@ div.visible-controls {
     color: white;
     opacity: 0.4;
     transition: opacity 200ms 0ms;
+    font-size: 36px;
 
     &--invisible {
         opacity: 0;

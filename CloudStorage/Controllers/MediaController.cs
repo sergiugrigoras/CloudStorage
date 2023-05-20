@@ -14,8 +14,8 @@ namespace CloudStorage.Controllers
         private readonly IMediaService _mediaService;
         private readonly IFsoService _fsoService;
         private readonly IUserService _userService;
-        private const string _snapshotContentType = "image/png";
-        private const string _contentKey = "ContentKey";
+        private const string SnapshotContentType = "image/png";
+        private const string ContentKey = "ContentKey";
         private readonly ContentAuthorization _contentAuthorization;
 
         public MediaController(IConfiguration configuration, IMediaService mediaService, IUserService userService, IFsoService fsoService, ContentAuthorization contentAuthorization)
@@ -39,7 +39,7 @@ namespace CloudStorage.Controllers
         {
             var user = await _userService.GetUserFromPrincipalAsync(User);
             var stream = await _mediaService.GetSnapshotAsync(user, id);
-            string contentType = _snapshotContentType;
+            string contentType = SnapshotContentType;
             return File(stream, contentType);
         }
 
@@ -61,12 +61,14 @@ namespace CloudStorage.Controllers
         public async Task<IActionResult> SetAccessKeyCookie()
         {
             var user = await _userService.GetUserFromPrincipalAsync(User);
-            var cookieOptions = new CookieOptions();
-            cookieOptions.HttpOnly = true;
-            cookieOptions.Expires = DateTime.Now.AddMinutes(2);
-            cookieOptions.Path = "/api/content";
+            var cookieOptions = new CookieOptions
+            {
+                HttpOnly = true,
+                Expires = DateTime.Now.AddMinutes(2),
+                Path = "/api/content"
+            };
             var key = _contentAuthorization.GenerateKeyForUser(user.Id);
-            Response.Cookies.Append(_contentKey, key, cookieOptions);
+            Response.Cookies.Append(ContentKey, key, cookieOptions);
 
             return Ok();
         }
