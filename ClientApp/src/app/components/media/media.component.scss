@@ -1,6 +1,10 @@
-.media_section-select {
-    text-align: center;
+.media__controls {
     padding: 1rem 0;
+    display: flex;
+
+    button {
+        margin-left: 1rem;
+    }
 }
 
 .media__container {
@@ -14,4 +18,16 @@
 
 .media__column {
     flex: 1 1;
+}
+
+mat-spinner {
+    margin: 1rem auto;
+}
+
+h3 {
+    text-align: center;
+}
+
+.spacer {
+    flex: 1 1 auto;
 }

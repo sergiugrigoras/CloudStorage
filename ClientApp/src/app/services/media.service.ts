@@ -3,6 +3,7 @@ import { Injectable } from '@angular/core';
 import { Router } from '@angular/router';
 import { environment } from 'src/environments/environment';
 import { MediaObject } from '../model/media-object.model';
+import { Subject } from 'rxjs';
 
 const API_URL: string = environment.baseUrl;
 const httpOptions = {
@@ -15,6 +16,7 @@ const httpOptions = {
 })
 export class MediaService {
 
+  updateList$ = new Subject<boolean>();
   constructor(private http: HttpClient, private router: Router) { }
 
   getMediaFile(id: string) {

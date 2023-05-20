@@ -1,6 +1,5 @@
-import { Component, Input, OnInit, TemplateRef, ViewChild } from '@angular/core';
+import { Component, EventEmitter, Input, OnInit, Output, TemplateRef, ViewChild } from '@angular/core';
 import { MatDialog, MatDialogConfig, MatDialogRef } from '@angular/material/dialog';
-import { DomSanitizer, SafeUrl } from '@angular/platform-browser';
 import { Observable, map, switchMap, tap } from 'rxjs';
 import { MediaObject } from 'src/app/model/media-object.model';
 import { MediaService } from 'src/app/services/media.service';
@@ -16,7 +15,6 @@ export class MediaItemComponent implements OnInit {
 
   contentUrl: string;
   isVideo = false;
-  videoSource$: Observable<Blob>;
   dialogConfig: MatDialogConfig = {
     hasBackdrop: true,
     maxWidth: '98vw',
@@ -27,7 +25,6 @@ export class MediaItemComponent implements OnInit {
   timer: NodeJS.Timer;
   constructor(
     public mediaService: MediaService,
-    private sanitizer: DomSanitizer,
     public dialog: MatDialog
   ) {
   }
@@ -37,9 +34,6 @@ export class MediaItemComponent implements OnInit {
     if (this.mediaObject.contentType.startsWith('video')) {
       this.isVideo = true;
     }
-    this.getSnapshot(this.mediaObject.id).subscribe(url => {
-      this.mediaObject.snapshotUrl = url;
-    });
   }
 
   openMedia(id: string) {
@@ -57,26 +51,11 @@ export class MediaItemComponent implements OnInit {
       ).subscribe();
   }
 
-  getSnapshot(id: string) {
-    return this.mediaService.getSnapshotFile(id).pipe(map(x => {
-      const blob = x.body as Blob;
-      return this.sanitizer.bypassSecurityTrustUrl(URL.createObjectURL(blob));
-    }));
-  }
-
   updateAccessKey() {
+    if (!this.isVideo) return;
     this.timer = setInterval(() => {
       this.mediaService.addContentAccesKeyCookie().subscribe();
     }, 60000);
-  }
-
-  videoControl(video: HTMLMediaElement, event$: MouseEvent) {
-    /*     return;
-        if (video.paused) {
-          video.play();
-        } else {
-          video.pause();
-        } */
   }
 
 
@@ -87,6 +66,7 @@ export class MediaItemComponent implements OnInit {
   favoriteToggle() {
     this.mediaService.toggleFavorite(this.mediaObject.id).subscribe((result) => {
       this.mediaObject.favorite = result;
+      this.mediaService.updateList$.next(true);
     })
   }
 }

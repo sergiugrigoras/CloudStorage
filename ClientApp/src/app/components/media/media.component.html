@@ -1,38 +1,57 @@
-<!-- <div>
-    <button mat-raised-button color="primary" (click)="parseFolder()">Parse Folder</button>
-</div> -->
+<div *ngIf="mediaReady; else loading">
+    <div class="media__controls">
+        <mat-button-toggle-group name="viewSelect" value="all" aria-label="Select View"
+            (change)="sectionViewChanged($event)">
+            <mat-button-toggle value="all">All</mat-button-toggle>
+            <mat-button-toggle value="favorite">Favorite</mat-button-toggle>
+        </mat-button-toggle-group>
+        <span class="spacer"></span>
+        <div>
+            <button mat-mini-fab color="primary" aria-label="Upload" matTooltip="Upload">
+                <span class="material-icons-outlined">
+                    backup
+                </span>
+            </button>
+            <button mat-mini-fab color="primary" aria-label="Sync Folder" matTooltip="Sync Folder"
+                (click)="parseFolder()">
+                <span class="material-icons-outlined">
+                    cloud_sync
+                </span>
+            </button>
+        </div>
+    </div>
 
-<div class="media_section-select">
-    <mat-button-toggle-group name="viewSelect" value="all" aria-label="Select View"
-        (change)="sectionViewChanged($event)">
-        <mat-button-toggle value="all">All</mat-button-toggle>
-        <mat-button-toggle value="favorite">Favorite</mat-button-toggle>
-    </mat-button-toggle-group>
+    <h3 *ngIf="filteredMediaObjects.length < 1">
+        No content.
+    </h3>
+    <div class="media__container" *ngIf="mediaReady && columnView === 'one-column'">
+        <div class="media__column">
+            <app-media-item *ngFor="let item of filteredMediaObjects" [mediaObject]="item"></app-media-item>
+        </div>
+    </div>
+
+    <div class="media__container" *ngIf="mediaReady && columnView === 'two-columns'">
+        <div class="media__column">
+            <app-media-item *ngFor="let item of getMediaForColumn(2, 0)" [mediaObject]="item"></app-media-item>
+        </div>
+        <div class="media__column">
+            <app-media-item *ngFor="let item of getMediaForColumn(2, 1)" [mediaObject]="item"></app-media-item>
+        </div>
+    </div>
+
+    <div class="media__container" *ngIf="mediaReady && columnView === 'three-columns'">
+        <div class="media__column">
+            <app-media-item *ngFor="let item of getMediaForColumn(3, 0)" [mediaObject]="item"></app-media-item>
+        </div>
+        <div class="media__column">
+            <app-media-item *ngFor="let item of getMediaForColumn(3, 1)" [mediaObject]="item"></app-media-item>
+        </div>
+        <div class="media__column">
+            <app-media-item *ngFor="let item of getMediaForColumn(3, 2)" [mediaObject]="item"></app-media-item>
+        </div>
+    </div>
 </div>
 
-<div class="media__container" *ngIf="mediaReady && columnView === 'one-column'">
-    <div class="media__column">
-        <app-media-item *ngFor="let item of allMediaObjects" [mediaObject]="item"></app-media-item>
-    </div>
-</div>
-
-<div class="media__container" *ngIf="mediaReady && columnView === 'two-columns'">
-    <div class="media__column">
-        <app-media-item *ngFor="let item of getMediaForColumn(2, 0)" [mediaObject]="item"></app-media-item>
-    </div>
-    <div class="media__column">
-        <app-media-item *ngFor="let item of getMediaForColumn(2, 1)" [mediaObject]="item"></app-media-item>
-    </div>
-</div>
-
-<div class="media__container" *ngIf="mediaReady && columnView === 'three-columns'">
-    <div class="media__column">
-        <app-media-item *ngFor="let item of getMediaForColumn(3, 0)" [mediaObject]="item"></app-media-item>
-    </div>
-    <div class="media__column">
-        <app-media-item *ngFor="let item of getMediaForColumn(3, 1)" [mediaObject]="item"></app-media-item>
-    </div>
-    <div class="media__column">
-        <app-media-item *ngFor="let item of getMediaForColumn(3, 2)" [mediaObject]="item"></app-media-item>
-    </div>
-</div>
+<ng-template #loading>
+    <mat-spinner></mat-spinner>
+</ng-template>
