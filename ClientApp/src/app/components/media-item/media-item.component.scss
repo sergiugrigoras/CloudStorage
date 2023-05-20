@@ -1,10 +1,19 @@
 div.media-item__snapshot {
+    position: relative;
     margin-bottom: .5rem;
     cursor: pointer;
 
     img {
         width: 100%;
         vertical-align: middle;
+    }
+
+    span {
+        position: absolute;
+        top: 5px;
+        right: 5px;
+        color: deeppink;
+        opacity: 0.8;
     }
 }
 
@@ -22,19 +31,26 @@ div.visible-controls {
     width: 250px;
 }
 
-.dialog-controls {
+.control {
     position: fixed;
-    top: 0;
-    left: 0;
     padding: 0.2rem;
     cursor: pointer;
+    font-size: 36px;
     color: white;
     opacity: 0.4;
-    transition: opacity 200ms 0ms;
-    font-size: 36px;
 
-    &--invisible {
-        opacity: 0;
-        transition: opacity 200ms 0ms;
+    &__close {
+        top: 0;
+        left: 0;
+    }
+
+    &__favorite {
+        top: 0;
+        right: 0;
+
+        &--pink {
+            color: deeppink;
+            opacity: 0.8;
+        }
     }
 }

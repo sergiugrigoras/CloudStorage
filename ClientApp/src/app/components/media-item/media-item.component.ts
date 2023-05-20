@@ -83,4 +83,10 @@ export class MediaItemComponent implements OnInit {
   closeDialog() {
     this.dialogRef?.close();
   }
+
+  favoriteToggle() {
+    this.mediaService.toggleFavorite(this.mediaObject.id).subscribe((result) => {
+      this.mediaObject.favorite = result;
+    })
+  }
 }

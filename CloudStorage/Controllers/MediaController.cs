@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.FileProviders;
 using System.Globalization;
+using CloudStorage.ViewModels;
 
 namespace CloudStorage.Controllers
 {
@@ -88,6 +89,20 @@ namespace CloudStorage.Controllers
             var user = await _userService.GetUserFromPrincipalAsync(User);
             await _mediaService.ParseMediaFolderAsync(user);
             return Ok();
+        }
+
+        [HttpPost("favorite")]
+        public async Task<IActionResult> ToggleFavoriteAsync([FromBody] Identifiable mediaObject)
+        {
+            try
+            {
+                var result = await _mediaService.ToggleFavorite(mediaObject.Id);
+                return Ok(result);
+            }
+            catch (Exception e)
+            {
+                return BadRequest(e.Message);
+            }
         }
     }
 }

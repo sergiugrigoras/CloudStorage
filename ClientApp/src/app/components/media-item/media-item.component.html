@@ -1,5 +1,6 @@
 <div class="media-item__snapshot">
     <img *ngIf="mediaObject?.snapshotUrl" [src]="mediaObject.snapshotUrl" (click)="openMedia(mediaObject.id)" />
+    <span *ngIf="mediaObject?.favorite" class="material-icons">favorite</span>
 </div>
 
 <ng-template #mediaViewDialog>
@@ -9,8 +10,12 @@
             <source [src]="contentUrl" [type]="mediaObject?.contentType">
         </video>
         <img *ngIf="!isVideo" id="image" [src]="contentUrl" />
-        <span class="material-icons dialog-controls" (click)=" closeDialog()">
+        <span class="material-icons control control__close" (click)=" closeDialog()">
             close
+        </span>
+        <span class="material-icons control control__favorite"
+            [ngClass]="mediaObject?.favorite ? 'control__favorite--pink': ''" (click)="favoriteToggle()">
+            {{ mediaObject?.favorite ? 'favorite' : 'favorite_border' }}
         </span>
     </div>
 </ng-template>

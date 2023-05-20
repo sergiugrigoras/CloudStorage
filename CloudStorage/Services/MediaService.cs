@@ -16,6 +16,7 @@ namespace CloudStorage.Services
         Task<Stream> GetMediaAsync(Guid id);
         Task<MediaObject> GetMediaObjectByIdAsync(Guid id);
         Task ParseMediaFolderAsync(User user);
+        Task<bool> ToggleFavorite(Guid id);
     }
     public class MediaService: IMediaService
     {
@@ -99,6 +100,19 @@ namespace CloudStorage.Services
                     Console.WriteLine($"Fail - {file}");
                 }
             }
+        }
+
+        public async Task<bool> ToggleFavorite(Guid id)
+        {
+            var mediaObject = await _context.MediaObjects.FindAsync(id);
+            if (mediaObject == null)
+            {
+                ThrowException(404, "Object not found.");
+                return false;
+            }
+            mediaObject.Favorite = !mediaObject.Favorite;
+            await _context.SaveChangesAsync();
+            return mediaObject.Favorite;
         }
 
         private async Task ProcessMediaFileAsync(string mediaFile, string mediaFolder, Guid userId)

@@ -40,4 +40,8 @@ export class MediaService {
   removeContentAccesKey() {
     return this.http.delete(API_URL + `/api/media/access-key`);
   }
+
+  toggleFavorite(id: string) {
+    return this.http.post<boolean>(API_URL + `/api/media/favorite`, { id });
+  }
 }

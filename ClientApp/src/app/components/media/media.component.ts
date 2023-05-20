@@ -1,6 +1,7 @@
 import { BreakpointObserver, BreakpointState } from '@angular/cdk/layout';
 import { OverlayContainer } from '@angular/cdk/overlay';
 import { Component, HostListener, OnDestroy, OnInit } from '@angular/core';
+import { MatButtonToggleChange } from '@angular/material/button-toggle';
 import { DomSanitizer, SafeUrl } from '@angular/platform-browser';
 import { forkJoin, map, switchMap } from 'rxjs';
 import { MediaObject } from 'src/app/model/media-object.model';
@@ -16,8 +17,10 @@ export class MediaComponent implements OnInit, OnDestroy {
   videoType: string;
 
   allMediaObjects: MediaObject[] = [];
+  filteredMediaObjects: MediaObject[];
   mediaReady = false;
-  view: string;
+  columnView: string;
+  sectionView: string;
   twoColumnsViewMap: Map<number, MediaObject[]>;
   threeColumnsViewMap: Map<number, MediaObject[]>;
   constructor(
@@ -36,29 +39,21 @@ export class MediaComponent implements OnInit, OnDestroy {
       .observe(['(min-width: 1200px)', '(max-width: 768px)'])
       .subscribe((state: BreakpointState) => {
         if (!state.matches) {
-          this.view = 'two-columns';
+          this.columnView = 'two-columns';
         } else if (state.matches && state.breakpoints['(max-width: 768px)']) {
-          this.view = 'one-column';
+          this.columnView = 'one-column';
         } else if (state.matches && state.breakpoints['(min-width: 1200px)']) {
-          this.view = 'three-columns';
+          this.columnView = 'three-columns';
         }
       });
 
     this.mediaService.getAllMediaFiles()
       .subscribe(result => {
         this.allMediaObjects = result;
+        this.filteredMediaObjects = this.allMediaObjects.slice();
         this.buildColumnsMap();
         this.mediaReady = true;
       });
-
-    /*     this.mediaService.getMediaFile("ca3ac314-9ee3-4f16-86e8-de78f054c04c").subscribe(result => {
-          console.log(result);
-          const blob = result.body as Blob;
-          this.videoType = blob.type;
-          this.videoSource = this.sanitizer.bypassSecurityTrustUrl(URL.createObjectURL(blob));
-          //var url = URL.createObjectURL(blob);
-          // this.thumbnail = this.sanitizer.bypassSecurityTrustUrl(url);
-        }); */
   }
 
   buildColumnsMap() {
@@ -73,8 +68,8 @@ export class MediaComponent implements OnInit, OnDestroy {
     ]);
 
     for (let index = 0; index < this.allMediaObjects.length; index = index + 1) {
-      this.twoColumnsViewMap.get(index % 2).push(this.allMediaObjects[index]);
-      this.threeColumnsViewMap.get(index % 3).push(this.allMediaObjects[index]);
+      this.twoColumnsViewMap.get(index % 2).push(this.filteredMediaObjects[index]);
+      this.threeColumnsViewMap.get(index % 3).push(this.filteredMediaObjects[index]);
     }
   }
 
@@ -84,8 +79,18 @@ export class MediaComponent implements OnInit, OnDestroy {
     } else if (numberOfColumns === 3) {
       return this.threeColumnsViewMap.get(columnIndex);
     } else {
-      return this.allMediaObjects;
+      return this.filteredMediaObjects;
     }
+  }
+
+  sectionViewChanged($event: MatButtonToggleChange) {
+    /*     if ($event.value === 'favorite') {
+          this.filteredMediaObjects = this.allMediaObjects.filter(x => x.favorite);
+        } else {
+          this.filteredMediaObjects = this.allMediaObjects.slice();
+        }
+    
+        this.buildColumnsMap(); */
   }
 
   parseFolder() {
@@ -94,4 +99,5 @@ export class MediaComponent implements OnInit, OnDestroy {
       console.log('Parse done!');
     });
   }
+
 }
