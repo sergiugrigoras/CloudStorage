@@ -94,11 +94,7 @@
             [ngClass]="activeMediaObject?.favorite ? 'control__favorite--pink': ''" (click)="favoriteToggle()">
             {{ activeMediaObject?.favorite ? 'favorite' : 'favorite_border' }}
         </span>
-        <span class="material-icons control control__left" (click)="scrollBack()">
-            arrow_back_ios
-        </span>
-        <span class="material-icons control control__right" (click)="scrollForward()">
-            arrow_forward_ios
-        </span>
+        <span class="material-icons control control__left" (click)="scrollBack()">navigate_before</span>
+        <span class="material-icons control control__right" (click)="scrollForward()">navigate_next</span>
     </div>
 </ng-template>

@@ -8,6 +8,7 @@ import { Observable, Subscription, forkJoin, map, switchMap, tap } from 'rxjs';
 import { MediaObject } from 'src/app/model/media-object.model';
 import { MediaService } from 'src/app/services/media.service';
 
+const KEY_UPDATE_INTERVAL_SECONDS = 60;
 @Component({
   selector: 'app-media',
   templateUrl: './media.component.html',
@@ -23,6 +24,7 @@ export class MediaComponent implements OnInit, OnDestroy {
   threeColumnsViewMap: Map<number, MediaObject[]>;
   updateListSubscription: Subscription;
   activeMediaObject: MediaObject;
+  activeIndex: number;
   @ViewChild('mediaViewDialog', { static: true }) mediaViewDialog: TemplateRef<any>;
   dialogConfig: MatDialogConfig = {
     hasBackdrop: true,
@@ -49,12 +51,6 @@ export class MediaComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    this.mediaService.updateList$.subscribe(() => {
-      if (this.sectionView === 'favorite') {
-        this.filteredMediaObjects = this.allMediaObjects.filter(x => x.favorite);
-        this.buildColumnsMap();
-      }
-    });
     this.overlay.getContainerElement().classList.add('media');
     this.breakpointObserver
       .observe(['(min-width: 1200px)', '(max-width: 768px)'])
@@ -99,6 +95,7 @@ export class MediaComponent implements OnInit, OnDestroy {
       .pipe(
         switchMap(() => {
           this.activeMediaObject = this.getMediaObjectById(id);
+          this.activeIndex = this.filteredMediaObjects.indexOf(this.activeMediaObject);
           this.updateAccessKey();
           this.dialogRef = this.dialog.open(this.mediaViewDialog, this.dialogConfig)
           return this.dialogRef.afterClosed();
@@ -112,10 +109,9 @@ export class MediaComponent implements OnInit, OnDestroy {
   }
 
   updateAccessKey() {
-    if (!this.isActiveVideo()) return;
     this.timer = setInterval(() => {
       this.mediaService.addContentAccesKeyCookie().subscribe();
-    }, 10000);
+    }, KEY_UPDATE_INTERVAL_SECONDS * 1000);
   }
 
 
@@ -126,7 +122,10 @@ export class MediaComponent implements OnInit, OnDestroy {
   favoriteToggle() {
     this.mediaService.toggleFavorite(this.activeMediaObject.id).subscribe((result) => {
       this.activeMediaObject.favorite = result;
-      this.mediaService.updateList$.next(true);
+      if (this.sectionView === 'favorite') {
+        this.filteredMediaObjects = this.allMediaObjects.filter(x => x.favorite);
+        this.buildColumnsMap();
+      }
     })
   }
 
@@ -184,23 +183,21 @@ export class MediaComponent implements OnInit, OnDestroy {
   }
 
   scrollBack() {
-    let index = this.filteredMediaObjects.indexOf(this.activeMediaObject);
-    if (index === 0) {
-      index = this.filteredMediaObjects.length - 1;
+    if (this.activeIndex === 0) {
+      this.activeIndex = this.filteredMediaObjects.length - 1;
     } else {
-      index--;
+      this.activeIndex--;
     }
-    this.activeMediaObject = this.filteredMediaObjects[index];
+    this.activeMediaObject = this.filteredMediaObjects[this.activeIndex];
   }
 
   scrollForward() {
-    let index = this.filteredMediaObjects.indexOf(this.activeMediaObject);
-    if (index === this.filteredMediaObjects.length - 1) {
-      index = 0;
+    if (this.activeIndex === this.filteredMediaObjects.length - 1) {
+      this.activeIndex = 0;
     } else {
-      index++;
+      this.activeIndex++;
     }
-    this.activeMediaObject = this.filteredMediaObjects[index];
+    this.activeMediaObject = this.filteredMediaObjects[this.activeIndex];
   }
 
   private getMediaObjectById(id: string) {

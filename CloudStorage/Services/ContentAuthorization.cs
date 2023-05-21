@@ -58,6 +58,7 @@ namespace CloudStorage.Services
         {
             _previousKey = _currentKey;
             _currentKey = new Key(keyValue);
+            _previousKey ??= _currentKey;
             return this;
         }
 

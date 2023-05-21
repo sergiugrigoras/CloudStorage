@@ -15,8 +15,6 @@ const httpOptions = {
   providedIn: 'root'
 })
 export class MediaService {
-
-  updateList$ = new Subject<boolean>();
   constructor(private http: HttpClient, private router: Router) { }
 
   getMediaFile(id: string) {
