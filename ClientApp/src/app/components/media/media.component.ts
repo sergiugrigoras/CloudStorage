@@ -1,7 +1,8 @@
 import { BreakpointObserver, BreakpointState } from '@angular/cdk/layout';
 import { OverlayContainer } from '@angular/cdk/overlay';
-import { Component, HostListener, OnDestroy, OnInit } from '@angular/core';
+import { Component, HostListener, OnDestroy, OnInit, TemplateRef, ViewChild } from '@angular/core';
 import { MatButtonToggleChange } from '@angular/material/button-toggle';
+import { MatDialog, MatDialogConfig, MatDialogRef } from '@angular/material/dialog';
 import { DomSanitizer, SafeUrl } from '@angular/platform-browser';
 import { Observable, Subscription, forkJoin, map, switchMap, tap } from 'rxjs';
 import { MediaObject } from 'src/app/model/media-object.model';
@@ -13,9 +14,6 @@ import { MediaService } from 'src/app/services/media.service';
   styleUrls: ['./media.component.scss']
 })
 export class MediaComponent implements OnInit, OnDestroy {
-  videoSource: any;
-  videoType: string;
-
   private allMediaObjects: MediaObject[] = [];
   filteredMediaObjects: MediaObject[];
   mediaReady = false;
@@ -24,11 +22,23 @@ export class MediaComponent implements OnInit, OnDestroy {
   twoColumnsViewMap: Map<number, MediaObject[]>;
   threeColumnsViewMap: Map<number, MediaObject[]>;
   updateListSubscription: Subscription;
+  activeMediaObject: MediaObject;
+  @ViewChild('mediaViewDialog', { static: true }) mediaViewDialog: TemplateRef<any>;
+  dialogConfig: MatDialogConfig = {
+    hasBackdrop: true,
+    maxWidth: '98vw',
+    maxHeight: '98vh',
+    disableClose: false
+  };
+  dialogRef: MatDialogRef<any>;
+  timer: NodeJS.Timer;
+
   constructor(
     private mediaService: MediaService,
     public breakpointObserver: BreakpointObserver,
     private overlay: OverlayContainer,
     private sanitizer: DomSanitizer,
+    public dialog: MatDialog
   ) { }
 
   ngOnDestroy(): void {
@@ -79,6 +89,45 @@ export class MediaComponent implements OnInit, OnDestroy {
         this.buildColumnsMap();
         this.mediaReady = true;
       });
+  }
+  isActiveVideo() {
+    return this.activeMediaObject?.contentType.startsWith('video');
+  }
+
+  openMedia(id: string) {
+    this.mediaService.addContentAccesKeyCookie()
+      .pipe(
+        switchMap(() => {
+          this.activeMediaObject = this.getMediaObjectById(id);
+          this.updateAccessKey();
+          this.dialogRef = this.dialog.open(this.mediaViewDialog, this.dialogConfig)
+          return this.dialogRef.afterClosed();
+        }),
+        switchMap(() => {
+          window.clearTimeout(this.timer);
+          this.activeMediaObject = null;
+          return this.mediaService.removeContentAccesKey();
+        })
+      ).subscribe();
+  }
+
+  updateAccessKey() {
+    if (!this.isActiveVideo()) return;
+    this.timer = setInterval(() => {
+      this.mediaService.addContentAccesKeyCookie().subscribe();
+    }, 10000);
+  }
+
+
+  closeDialog() {
+    this.dialogRef?.close();
+  }
+
+  favoriteToggle() {
+    this.mediaService.toggleFavorite(this.activeMediaObject.id).subscribe((result) => {
+      this.activeMediaObject.favorite = result;
+      this.mediaService.updateList$.next(true);
+    })
   }
 
   getSnapshotUrl(id: string) {
@@ -132,6 +181,26 @@ export class MediaComponent implements OnInit, OnDestroy {
     this.mediaService.parseFolder().subscribe(() => {
       console.log('Parse done!');
     });
+  }
+
+  scrollBack() {
+    let index = this.filteredMediaObjects.indexOf(this.activeMediaObject);
+    if (index === 0) {
+      index = this.filteredMediaObjects.length - 1;
+    } else {
+      index--;
+    }
+    this.activeMediaObject = this.filteredMediaObjects[index];
+  }
+
+  scrollForward() {
+    let index = this.filteredMediaObjects.indexOf(this.activeMediaObject);
+    if (index === this.filteredMediaObjects.length - 1) {
+      index = 0;
+    } else {
+      index++;
+    }
+    this.activeMediaObject = this.filteredMediaObjects[index];
   }
 
   private getMediaObjectById(id: string) {
