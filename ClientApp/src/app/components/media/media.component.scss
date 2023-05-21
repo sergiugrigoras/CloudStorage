@@ -77,6 +77,15 @@ div.media-item__view {
     /* Standard */
     cursor: pointer;
 
+    &--invisible {
+        display: none;
+    }
+
+    &--pink {
+        color: deeppink;
+        opacity: 0.8;
+    }
+
     &__close {
         top: 0;
         left: 0;
@@ -98,9 +107,5 @@ div.media-item__view {
         top: 0;
         right: 0;
 
-        &--pink {
-            color: deeppink;
-            opacity: 0.8;
-        }
     }
 }

@@ -4,7 +4,7 @@ import { Component, HostListener, OnDestroy, OnInit, TemplateRef, ViewChild } fr
 import { MatButtonToggleChange } from '@angular/material/button-toggle';
 import { MatDialog, MatDialogConfig, MatDialogRef } from '@angular/material/dialog';
 import { DomSanitizer, SafeUrl } from '@angular/platform-browser';
-import { Observable, Subscription, forkJoin, map, switchMap, tap } from 'rxjs';
+import { Observable, Subscription, debounceTime, forkJoin, fromEvent, map, switchMap, tap } from 'rxjs';
 import { MediaObject } from 'src/app/model/media-object.model';
 import { MediaService } from 'src/app/services/media.service';
 
@@ -22,15 +22,16 @@ export class MediaComponent implements OnInit, OnDestroy {
   sectionView: string;
   twoColumnsViewMap: Map<number, MediaObject[]>;
   threeColumnsViewMap: Map<number, MediaObject[]>;
-  updateListSubscription: Subscription;
+  overlayEventSubscription: Subscription;
   activeMediaObject: MediaObject;
   activeIndex: number;
+  hideControls = false;
   @ViewChild('mediaViewDialog', { static: true }) mediaViewDialog: TemplateRef<any>;
   dialogConfig: MatDialogConfig = {
-    hasBackdrop: true,
     maxWidth: '98vw',
     maxHeight: '98vh',
-    disableClose: false
+    hasBackdrop: true,
+    disableClose: true,
   };
   dialogRef: MatDialogRef<any>;
   timer: NodeJS.Timer;
@@ -45,12 +46,15 @@ export class MediaComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.overlay.getContainerElement().classList.remove('media');
-    if (this.updateListSubscription) {
-      this.updateListSubscription.unsubscribe();
+    if (this.overlayEventSubscription) {
+      this.overlayEventSubscription.unsubscribe();
     }
   }
 
   ngOnInit(): void {
+    this.overlayEventSubscription = fromEvent(this.overlay.getContainerElement(), 'click').subscribe(event => {
+      this.hideControls = !this.hideControls;
+    });
     this.overlay.getContainerElement().classList.add('media');
     this.breakpointObserver
       .observe(['(min-width: 1200px)', '(max-width: 768px)'])
@@ -91,13 +95,14 @@ export class MediaComponent implements OnInit, OnDestroy {
   }
 
   openMedia(id: string) {
+    this.hideControls = false;
     this.mediaService.addContentAccesKeyCookie()
       .pipe(
         switchMap(() => {
           this.activeMediaObject = this.getMediaObjectById(id);
           this.activeIndex = this.filteredMediaObjects.indexOf(this.activeMediaObject);
           this.updateAccessKey();
-          this.dialogRef = this.dialog.open(this.mediaViewDialog, this.dialogConfig)
+          this.dialogRef = this.dialog.open(this.mediaViewDialog, this.dialogConfig);
           return this.dialogRef.afterClosed();
         }),
         switchMap(() => {
@@ -115,11 +120,13 @@ export class MediaComponent implements OnInit, OnDestroy {
   }
 
 
-  closeDialog() {
+  closeDialog($event: MouseEvent) {
+    $event.stopPropagation();
     this.dialogRef?.close();
   }
 
-  favoriteToggle() {
+  favoriteToggle($event: MouseEvent) {
+    $event.stopPropagation();
     this.mediaService.toggleFavorite(this.activeMediaObject.id).subscribe((result) => {
       this.activeMediaObject.favorite = result;
       if (this.sectionView === 'favorite') {
@@ -182,7 +189,8 @@ export class MediaComponent implements OnInit, OnDestroy {
     });
   }
 
-  scrollBack() {
+  scrollBack($event: MouseEvent) {
+    $event.stopPropagation();
     if (this.activeIndex === 0) {
       this.activeIndex = this.filteredMediaObjects.length - 1;
     } else {
@@ -191,13 +199,24 @@ export class MediaComponent implements OnInit, OnDestroy {
     this.activeMediaObject = this.filteredMediaObjects[this.activeIndex];
   }
 
-  scrollForward() {
+  scrollForward($event: MouseEvent) {
+    $event.stopPropagation();
     if (this.activeIndex === this.filteredMediaObjects.length - 1) {
       this.activeIndex = 0;
     } else {
       this.activeIndex++;
     }
     this.activeMediaObject = this.filteredMediaObjects[this.activeIndex];
+  }
+
+  getFavoriteControlClassList() {
+    if (this.hideControls) {
+      return 'control--invisible';
+    } else if (this.activeMediaObject?.favorite) {
+      return 'control--pink'
+    } else {
+      return '';
+    }
   }
 
   private getMediaObjectById(id: string) {

@@ -87,14 +87,16 @@
             <source [src]="'/api/content/'+activeMediaObject?.id" [type]="activeMediaObject?.contentType">
         </video>
         <img *ngIf="!isActiveVideo()" id="image" [src]="'/api/content/'+activeMediaObject?.id" />
-        <span class="material-icons control control__close" (click)=" closeDialog()">
+        <span class="material-icons control control__close" (click)="closeDialog($event)">
             close
         </span>
-        <span class="material-icons control control__favorite"
-            [ngClass]="activeMediaObject?.favorite ? 'control__favorite--pink': ''" (click)="favoriteToggle()">
+        <span class="material-icons control control__favorite" [ngClass]="getFavoriteControlClassList()"
+            (click)="favoriteToggle($event)">
             {{ activeMediaObject?.favorite ? 'favorite' : 'favorite_border' }}
         </span>
-        <span class="material-icons control control__left" (click)="scrollBack()">navigate_before</span>
-        <span class="material-icons control control__right" (click)="scrollForward()">navigate_next</span>
+        <span class="material-icons control control__left" [ngClass]="hideControls ? 'control--invisible' : ''"
+            (click)="scrollBack($event)">navigate_before</span>
+        <span class="material-icons control control__right" [ngClass]="hideControls ? 'control--invisible' : ''"
+            (click)="scrollForward($event)">navigate_next</span>
     </div>
 </ng-template>
