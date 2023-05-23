@@ -22,40 +22,33 @@ export class MediaComponent implements OnInit, OnDestroy {
   sectionView: string;
   twoColumnsViewMap: Map<number, MediaObject[]>;
   threeColumnsViewMap: Map<number, MediaObject[]>;
-  overlayEventSubscription: Subscription;
   activeMediaObject: MediaObject;
   activeIndex: number;
   hideControls = false;
-  @ViewChild('mediaViewDialog', { static: true }) mediaViewDialog: TemplateRef<any>;
-  dialogConfig: MatDialogConfig = {
-    maxWidth: '98vw',
-    maxHeight: '98vh',
-    hasBackdrop: true,
-    disableClose: true,
-  };
-  dialogRef: MatDialogRef<any>;
+  viewMedia = false;
   timer: NodeJS.Timer;
 
   constructor(
     private mediaService: MediaService,
     public breakpointObserver: BreakpointObserver,
-    private overlay: OverlayContainer,
     private sanitizer: DomSanitizer,
-    public dialog: MatDialog
   ) { }
 
   ngOnDestroy(): void {
-    this.overlay.getContainerElement().classList.remove('media');
-    if (this.overlayEventSubscription) {
-      this.overlayEventSubscription.unsubscribe();
-    }
+
   }
 
   ngOnInit(): void {
-    this.overlayEventSubscription = fromEvent(this.overlay.getContainerElement(), 'click').subscribe(event => {
-      this.hideControls = !this.hideControls;
+    fromEvent(document, 'mousewheel').pipe(debounceTime(250)).subscribe((event: Event) => {
+      if (!this.viewMedia) return;
+      const wheelEvent = event as WheelEvent;
+      if (wheelEvent.deltaY > 0) {
+        this.scrollMediaBack();
+      } else {
+        this.scrollMediaForward();
+      }
+
     });
-    this.overlay.getContainerElement().classList.add('media');
     this.breakpointObserver
       .observe(['(min-width: 1200px)', '(max-width: 768px)'])
       .subscribe((state: BreakpointState) => {
@@ -96,21 +89,16 @@ export class MediaComponent implements OnInit, OnDestroy {
 
   openMedia(id: string) {
     this.hideControls = false;
+
     this.mediaService.addContentAccesKeyCookie()
       .pipe(
-        switchMap(() => {
+        tap(() => {
           this.activeMediaObject = this.getMediaObjectById(id);
           this.activeIndex = this.filteredMediaObjects.indexOf(this.activeMediaObject);
           this.updateAccessKey();
-          this.dialogRef = this.dialog.open(this.mediaViewDialog, this.dialogConfig);
-          return this.dialogRef.afterClosed();
-        }),
-        switchMap(() => {
-          window.clearTimeout(this.timer);
-          this.activeMediaObject = null;
-          return this.mediaService.removeContentAccesKey();
-        })
-      ).subscribe();
+          this.viewMedia = true;
+        }))
+      .subscribe();
   }
 
   updateAccessKey() {
@@ -122,7 +110,10 @@ export class MediaComponent implements OnInit, OnDestroy {
 
   closeDialog($event: MouseEvent) {
     $event.stopPropagation();
-    this.dialogRef?.close();
+    this.viewMedia = false;
+    window.clearTimeout(this.timer);
+    this.activeMediaObject = null;
+    this.mediaService.removeContentAccesKey().subscribe();
   }
 
   favoriteToggle($event: MouseEvent) {
@@ -191,22 +182,33 @@ export class MediaComponent implements OnInit, OnDestroy {
 
   scrollBack($event: MouseEvent) {
     $event.stopPropagation();
-    if (this.activeIndex === 0) {
-      this.activeIndex = this.filteredMediaObjects.length - 1;
-    } else {
-      this.activeIndex--;
-    }
-    this.activeMediaObject = this.filteredMediaObjects[this.activeIndex];
+    this.scrollMediaBack();
   }
 
   scrollForward($event: MouseEvent) {
     $event.stopPropagation();
+    this.scrollMediaForward();
+  }
+
+  private scrollMediaForward() {
     if (this.activeIndex === this.filteredMediaObjects.length - 1) {
       this.activeIndex = 0;
     } else {
       this.activeIndex++;
     }
     this.activeMediaObject = this.filteredMediaObjects[this.activeIndex];
+    console.log(this.activeIndex);
+
+  }
+
+  private scrollMediaBack() {
+    if (this.activeIndex === 0) {
+      this.activeIndex = this.filteredMediaObjects.length - 1;
+    } else {
+      this.activeIndex--;
+    }
+    this.activeMediaObject = this.filteredMediaObjects[this.activeIndex];
+    console.log(this.activeIndex);
   }
 
   getFavoriteControlClassList() {

@@ -1,4 +1,22 @@
-<div *ngIf="mediaReady; else loading">
+<div class="media-item__view" *ngIf="viewMedia" (click)="hideControls = !hideControls">
+    <video *ngIf="isActiveVideo()" autoplay [muted]="'muted'" loop controls>
+        <source [src]="'/api/content/'+activeMediaObject?.id" [type]="activeMediaObject?.contentType">
+    </video>
+    <img *ngIf="!isActiveVideo()" id="image" [src]="'/api/content/'+activeMediaObject?.id" />
+    <span class="material-icons control control__close" (click)="closeDialog($event)">
+        close
+    </span>
+    <span class="material-icons control control__favorite" [ngClass]="getFavoriteControlClassList()"
+        (click)="favoriteToggle($event)">
+        {{ activeMediaObject?.favorite ? 'favorite' : 'favorite_border' }}
+    </span>
+    <span class="material-icons control control__left" [ngClass]="hideControls ? 'control--invisible' : ''"
+        (click)="scrollBack($event)">navigate_before</span>
+    <span class="material-icons control control__right" [ngClass]="hideControls ? 'control--invisible' : ''"
+        (click)="scrollForward($event)">navigate_next</span>
+</div>
+
+<div *ngIf="mediaReady && !viewMedia; else loading">
     <div class="media__controls">
         <mat-button-toggle-group name="viewSelect" value="all" aria-label="Select View"
             (change)="sectionViewChanged($event)">
@@ -78,25 +96,5 @@
 </div>
 
 <ng-template #loading>
-    <mat-spinner></mat-spinner>
-</ng-template>
-
-<ng-template #mediaViewDialog>
-    <div class="media-item__view">
-        <video *ngIf="isActiveVideo()" autoplay [muted]="'muted'" loop controls>
-            <source [src]="'/api/content/'+activeMediaObject?.id" [type]="activeMediaObject?.contentType">
-        </video>
-        <img *ngIf="!isActiveVideo()" id="image" [src]="'/api/content/'+activeMediaObject?.id" />
-        <span class="material-icons control control__close" (click)="closeDialog($event)">
-            close
-        </span>
-        <span class="material-icons control control__favorite" [ngClass]="getFavoriteControlClassList()"
-            (click)="favoriteToggle($event)">
-            {{ activeMediaObject?.favorite ? 'favorite' : 'favorite_border' }}
-        </span>
-        <span class="material-icons control control__left" [ngClass]="hideControls ? 'control--invisible' : ''"
-            (click)="scrollBack($event)">navigate_before</span>
-        <span class="material-icons control control__right" [ngClass]="hideControls ? 'control--invisible' : ''"
-            (click)="scrollForward($event)">navigate_next</span>
-    </div>
+    <mat-spinner *ngIf="!viewMedia"></mat-spinner>
 </ng-template>

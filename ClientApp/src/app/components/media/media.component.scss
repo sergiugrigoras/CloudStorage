@@ -52,12 +52,22 @@ div.media-item__snapshot {
 }
 
 div.media-item__view {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 200;
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: black;
 
     img,
     video {
-        width: 100%;
+        max-width: 96vw;
         max-height: 96vh;
-        vertical-align: middle;
+        // vertical-align: middle;
     }
 }
 
