@@ -49,6 +49,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { SpinnerComponent } from './components/spinner/spinner.component';
 import { MediaComponent } from './components/media/media.component';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
 function tokenGetter() {
   return localStorage.getItem("jwt");
 }
@@ -108,7 +109,8 @@ function tokenGetter() {
     MatSelectModule,
     MatTooltipModule,
     MatProgressSpinnerModule,
-    MatButtonToggleModule
+    MatButtonToggleModule,
+    MatProgressBarModule
   ],
   providers: [
     AuthGuard,

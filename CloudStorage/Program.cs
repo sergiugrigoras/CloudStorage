@@ -29,14 +29,10 @@ builder.Services.AddCors(options =>
 });
 builder.Services.Configure<FormOptions>(o =>
 {
-    o.ValueLengthLimit = int.MaxValue;
-    o.MultipartBodyLengthLimit = int.MaxValue;
-    o.MultipartHeadersLengthLimit = int.MaxValue;
-    o.MemoryBufferThreshold = int.MaxValue;
-});
-builder.Services.Configure<IISServerOptions>(options =>
-{
-    options.MaxRequestBodySize = 1073741824; // Limit on request body size
+    o.ValueLengthLimit = 268435456;
+    o.MultipartBodyLengthLimit = 4294967295;
+    o.MultipartHeadersLengthLimit = 65365;
+    o.MemoryBufferThreshold = 1048576;
 });
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(x =>
 {

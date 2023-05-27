@@ -25,7 +25,9 @@
         </mat-button-toggle-group>
         <span class="spacer"></span>
         <div>
-            <button mat-mini-fab color="primary" aria-label="Upload" matTooltip="Upload">
+            <input type="file" #inputFiles placeholder="Choose file" (change)="uploadFiles(inputFiles)"
+                style="display:none;" multiple>
+            <button mat-mini-fab color="primary" aria-label="Upload" matTooltip="Upload" (click)="inputFiles.click()">
                 <span class="material-icons-outlined">
                     backup
                 </span>
@@ -37,6 +39,10 @@
                 </span>
             </button>
         </div>
+    </div>
+
+    <div *ngIf="uploading" class="media_upload-progress">
+        <mat-progress-bar mode="determinate" [value]="uploadProgress"></mat-progress-bar>
     </div>
 
     <h3 *ngIf="filteredMediaObjects.length < 1">

@@ -9,6 +9,7 @@ using System.Security.Cryptography;
 using static System.Net.Mime.MediaTypeNames;
 using FFMpegCore.Enums;
 using Microsoft.AspNetCore.Components.Forms;
+using System.Net.Http.Headers;
 
 namespace CloudStorage.Services
 {
@@ -20,6 +21,7 @@ namespace CloudStorage.Services
         Task<MediaObject> GetMediaObjectByIdAsync(Guid id);
         Task ParseMediaFolderAsync(User user);
         Task<bool> ToggleFavorite(Guid id);
+        Task UploadMediaFileAsync(IFormFile file, User user);
     }
     public class MediaService: IMediaService
     {
@@ -227,6 +229,25 @@ namespace CloudStorage.Services
         {
             if (userId == Guid.Empty) return null;
             return Path.Combine(GetUserMediaFolder(userId), snapshotsDirName);
+        }
+
+        public async Task UploadMediaFileAsync(IFormFile file, User user)
+        {
+            var mediaFolder = GetUserMediaFolder(user.Id);
+            if (!Directory.Exists(mediaFolder))
+                Directory.CreateDirectory(mediaFolder);
+            var fileName = ContentDispositionHeaderValue.Parse(file.ContentDisposition).FileName.Trim('"');
+            var mediaFile = Path.Combine(mediaFolder, fileName);
+            if (File.Exists(mediaFile))
+            {
+                fileName = $"{Path.GetFileNameWithoutExtension(fileName)}_{Guid.NewGuid()}{Path.GetExtension(fileName)}";
+                mediaFile = Path.Combine(mediaFolder, fileName);
+            }
+                
+            using var stream = File.Create(mediaFile);
+            await file.CopyToAsync(stream);
+            stream.Close();
+            await ProcessMediaFileAsync(mediaFile, user.Id);
         }
     }
 

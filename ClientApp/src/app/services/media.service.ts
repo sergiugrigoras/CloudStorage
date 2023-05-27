@@ -1,9 +1,9 @@
-import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { HttpClient, HttpEvent, HttpHeaders } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Router } from '@angular/router';
 import { environment } from 'src/environments/environment';
 import { MediaObject } from '../model/media-object.model';
-import { Subject } from 'rxjs';
+import { Observable, Subject } from 'rxjs';
 
 const API_URL: string = environment.baseUrl;
 const httpOptions = {
@@ -43,5 +43,13 @@ export class MediaService {
 
   toggleFavorite(id: string) {
     return this.http.post<boolean>(API_URL + `/api/media/favorite`, { id });
+  }
+
+  upload(formData: FormData): Observable<HttpEvent<Object>> {
+    return this.http.post(API_URL + '/api/media/upload', formData,
+      {
+        observe: 'events',
+        reportProgress: true
+      });
   }
 }

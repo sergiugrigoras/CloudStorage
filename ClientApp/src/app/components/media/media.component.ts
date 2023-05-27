@@ -1,10 +1,9 @@
 import { BreakpointObserver, BreakpointState } from '@angular/cdk/layout';
-import { OverlayContainer } from '@angular/cdk/overlay';
-import { Component, HostListener, OnDestroy, OnInit, TemplateRef, ViewChild } from '@angular/core';
+import { HttpEvent, HttpEventType } from '@angular/common/http';
+import { Component, HostListener, OnDestroy, OnInit } from '@angular/core';
 import { MatButtonToggleChange } from '@angular/material/button-toggle';
-import { MatDialog, MatDialogConfig, MatDialogRef } from '@angular/material/dialog';
-import { DomSanitizer, SafeUrl } from '@angular/platform-browser';
-import { EMPTY, Observable, Subscription, debounceTime, forkJoin, fromEvent, map, switchMap, tap } from 'rxjs';
+import { DomSanitizer } from '@angular/platform-browser';
+import { EMPTY, debounceTime, forkJoin, fromEvent, map, switchMap, tap } from 'rxjs';
 import { MediaObject } from 'src/app/model/media-object.model';
 import { MediaService } from 'src/app/services/media.service';
 
@@ -27,6 +26,8 @@ export class MediaComponent implements OnInit, OnDestroy {
   hideControls = false;
   viewMedia = false;
   timer: NodeJS.Timer;
+  uploading = false;
+  uploadProgress = 0;
 
   constructor(
     private mediaService: MediaService,
@@ -68,15 +69,14 @@ export class MediaComponent implements OnInit, OnDestroy {
     this.mediaReady = false;
     const allMediaObserver = {
       next: () => {
-        this.buildColumnsMap();
-        this.mediaReady = true;
+
       },
       error: (error: any) => {
         console.error(error);
-        alert('An error occurred.');
         this.mediaReady = true;
       },
       complete: () => {
+        this.buildColumnsMap();
         this.mediaReady = true;
       }
     }
@@ -129,8 +129,15 @@ export class MediaComponent implements OnInit, OnDestroy {
   }
 
 
-  closeDialog($event: MouseEvent) {
-    $event.stopPropagation();
+  @HostListener('document:keydown', ['$event'])
+  private escKeyListner(event: KeyboardEvent) {
+    if (event.key === "Escape" && this.viewMedia) {
+      this.closeDialog();
+    }
+  }
+
+  closeDialog($event?: MouseEvent) {
+    $event?.stopPropagation();
     this.viewMedia = false;
     window.clearTimeout(this.timer);
     this.activeMediaObject = null;
@@ -200,6 +207,36 @@ export class MediaComponent implements OnInit, OnDestroy {
       console.log('Parse done!');
       this.fetchMediaObjects();
     });
+  }
+
+  uploadFiles(input: HTMLInputElement) {
+    if (input instanceof HTMLInputElement && input.files.length > 0) {
+      this.uploading = true;
+      const formData = new FormData();
+      for (var i = 0; i != input.files.length; i++) {
+        formData.append("files", input.files[i]);
+      }
+      const uploadObserver = {
+        next: (event: HttpEvent<Object>) => {
+          if (event.type === HttpEventType.Response) {
+            this.fetchMediaObjects();
+          }
+          if (event.type === HttpEventType.UploadProgress && event.total) {
+            this.uploadProgress = Math.floor((event.loaded / event.total) * 100);
+          }
+        },
+        error: (error: any) => {
+          console.error(error);
+          this.uploading = false;
+          this.uploadProgress = 0;
+        },
+        complete: () => {
+          this.uploading = false;
+          this.uploadProgress = 0;
+        }
+      }
+      this.mediaService.upload(formData).subscribe(uploadObserver);
+    }
   }
 
   scrollBack($event: MouseEvent) {

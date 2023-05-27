@@ -79,7 +79,7 @@ namespace CloudStorage.Controllers
         {
             var user = await _userService.GetUserFromPrincipalAsync(User);
             _contentAuthorization.RemoveKeyForUser(user.Id);
-           
+
             return Ok();
         }
 
@@ -103,6 +103,16 @@ namespace CloudStorage.Controllers
             {
                 return BadRequest(e.Message);
             }
+        }
+
+        [HttpPost("upload"), DisableRequestSizeLimit]
+        public async Task<IActionResult> UploadAsync([FromForm] IList<IFormFile> files)
+        {
+            var user = await _userService.GetUserFromPrincipalAsync(User);
+            foreach (var file in files)
+                await _mediaService.UploadMediaFileAsync(file, user);
+
+            return Ok();
         }
     }
 }
