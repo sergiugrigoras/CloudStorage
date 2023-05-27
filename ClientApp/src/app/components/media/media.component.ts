@@ -4,7 +4,7 @@ import { Component, HostListener, OnDestroy, OnInit, TemplateRef, ViewChild } fr
 import { MatButtonToggleChange } from '@angular/material/button-toggle';
 import { MatDialog, MatDialogConfig, MatDialogRef } from '@angular/material/dialog';
 import { DomSanitizer, SafeUrl } from '@angular/platform-browser';
-import { Observable, Subscription, debounceTime, forkJoin, fromEvent, map, switchMap, tap } from 'rxjs';
+import { EMPTY, Observable, Subscription, debounceTime, forkJoin, fromEvent, map, switchMap, tap } from 'rxjs';
 import { MediaObject } from 'src/app/model/media-object.model';
 import { MediaService } from 'src/app/services/media.service';
 
@@ -61,6 +61,26 @@ export class MediaComponent implements OnInit, OnDestroy {
         }
       });
 
+    this.fetchMediaObjects();
+  }
+
+  private fetchMediaObjects() {
+    this.mediaReady = false;
+    const allMediaObserver = {
+      next: () => {
+        this.buildColumnsMap();
+        this.mediaReady = true;
+      },
+      error: (error: any) => {
+        console.error(error);
+        alert('An error occurred.');
+        this.mediaReady = true;
+      },
+      complete: () => {
+        this.mediaReady = true;
+      }
+    }
+
     this.mediaService.getAllMediaFiles()
       .pipe(
         tap((mediaObjects: MediaObject[]) => {
@@ -68,7 +88,10 @@ export class MediaComponent implements OnInit, OnDestroy {
           this.filteredMediaObjects = this.allMediaObjects.slice();
         }),
         switchMap(mediaObjects => {
-          return forkJoin(mediaObjects.map(x => this.getSnapshotUrl(x.id)));
+          if (Array.isArray(mediaObjects) && mediaObjects.length > 0) {
+            return forkJoin(mediaObjects.map(x => this.getSnapshotUrl(x.id)));
+          }
+          return EMPTY;
         }),
         tap(urls => {
           urls.forEach(url => {
@@ -78,11 +101,9 @@ export class MediaComponent implements OnInit, OnDestroy {
             }
           })
         })
-      ).subscribe(() => {
-        this.buildColumnsMap();
-        this.mediaReady = true;
-      });
+      ).subscribe(allMediaObserver);
   }
+
   isActiveVideo() {
     return this.activeMediaObject?.contentType.startsWith('video');
   }
@@ -177,6 +198,7 @@ export class MediaComponent implements OnInit, OnDestroy {
     console.log('Starting folder Parse!');
     this.mediaService.parseFolder().subscribe(() => {
       console.log('Parse done!');
+      this.fetchMediaObjects();
     });
   }
 

@@ -1,11 +1,14 @@
-﻿using CloudStorage.Models;
+﻿using System.Diagnostics;
+using CloudStorage.Models;
 using CloudStorage.ViewModels;
 using FFMpegCore;
-using FFMpegCore.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
 using System.Drawing;
 using System.Security.Cryptography;
+using static System.Net.Mime.MediaTypeNames;
+using FFMpegCore.Enums;
+using Microsoft.AspNetCore.Components.Forms;
 
 namespace CloudStorage.Services
 {
@@ -24,9 +27,10 @@ namespace CloudStorage.Services
         private readonly string _storageUrl;
         private const string mediaDirName = "media";
         private const string snapshotsDirName = "snapshots";
+        private const string snapshotExtension = ".jpg";
         private static IEnumerable<string> _mediaExtentions = new string[] { "jpg", "gif", "png", "mp4" };
         private static string _ffmpegTmpFolder = GlobalFFOptions.Current.TemporaryFilesFolder;
-        public MediaService(AppDbContext context, IConfiguration configuration)
+            public MediaService(AppDbContext context, IConfiguration configuration)
         {
             _context = context;
             _storageUrl = configuration.GetValue<string>("Storage:url");
@@ -48,8 +52,17 @@ namespace CloudStorage.Services
 
             var provider = new PhysicalFileProvider(GetUserSnapshotsFolder(user.Id));
             var fileInfo = provider.GetFileInfo(mediaObject.Snapshot);
-            if (!fileInfo.Exists) return null;
-            return fileInfo.CreateReadStream();
+            if (fileInfo.Exists)
+                return fileInfo.CreateReadStream();
+            else
+            {
+                var mediaFile = Path.Combine(GetUserMediaFolder(user.Id), mediaObject.UploadFileName);
+                var snapshotFile = Path.Combine(GetUserSnapshotsFolder(user.Id), mediaObject.Snapshot);
+                if (!File.Exists(mediaFile)) return Stream.Null;
+                await CreateSnapshotAsync(mediaFile, snapshotFile);
+                fileInfo = provider.GetFileInfo(mediaObject.Snapshot);
+                return fileInfo.Exists ? fileInfo.CreateReadStream() : Stream.Null;
+            }
         }
 
         public async Task<Stream> GetMediaAsync(Guid id)
@@ -71,6 +84,7 @@ namespace CloudStorage.Services
 
         private static async Task<string> CalculateMD5Async(string filename)
         {
+            if (!File.Exists(filename)) return null;
             return await Task.Run(() =>
             {
                 using var md5 = MD5.Create();
@@ -83,22 +97,27 @@ namespace CloudStorage.Services
 
         public async Task ParseMediaFolderAsync(User user)
         {
-            var mediaFolder = Path.Combine(_storageUrl, user.Id.ToString(), "media");
+            var mediaFolder = Path.Combine(_storageUrl, user.Id.ToString(), mediaDirName);
             var mediaFiles = Directory.EnumerateFiles(mediaFolder, "*.*", SearchOption.TopDirectoryOnly)
                     .Where(s => _mediaExtentions.Contains(Path.GetExtension(s).TrimStart('.').ToLowerInvariant()));
-            if (!Directory.Exists(Path.Combine(mediaFolder, "snapshots")))
-                Directory.CreateDirectory(Path.Combine(mediaFolder, "snapshots"));
+            if (!Directory.Exists(Path.Combine(mediaFolder, snapshotsDirName)))
+                Directory.CreateDirectory(Path.Combine(mediaFolder, snapshotsDirName));
+            ICollection<Guid> existingFilesMediaObjectIds = new List<Guid>();
             foreach (var file in mediaFiles)
             {
-                try
-                {
-                    await ProcessMediaFileAsync(file, mediaFolder, user.Id);
-                    Console.WriteLine($"Done - {file}");
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Fail - {file}");
-                }
+                var id = await ProcessMediaFileAsync(file, user.Id);
+                existingFilesMediaObjectIds.Add(id);
+            }
+
+            var mediaObjectsNoFile = await _context.MediaObjects.Where(x => x.OwnerId == user.Id && !existingFilesMediaObjectIds.Contains(x.Id)).ToArrayAsync();
+            if (mediaObjectsNoFile.Any())
+            {
+                var snapshotFolder = GetUserSnapshotsFolder(user.Id);
+                foreach (var mediaObject in mediaObjectsNoFile)
+                    DeleteFile(Path.Combine(snapshotFolder, mediaObject.Snapshot));
+
+                _context.MediaObjects.RemoveRange(mediaObjectsNoFile);
+                await _context.SaveChangesAsync();
             }
         }
 
@@ -115,18 +134,39 @@ namespace CloudStorage.Services
             return mediaObject.Favorite;
         }
 
-        private async Task ProcessMediaFileAsync(string mediaFile, string mediaFolder, Guid userId)
+        private async Task<Guid> ProcessMediaFileAsync(string mediaFile, Guid userId)
         {
+            var mediaFolder = GetUserMediaFolder(userId);
+            var snapshotFolder = GetUserSnapshotsFolder(userId);
             var checksum = await CalculateMD5Async(mediaFile);
-            var exists = await _context.MediaObjects.Where(x => x.OwnerId == userId && x.Hash == checksum).Select(x => x.Id).FirstOrDefaultAsync();
-            if (exists != Guid.Empty) return;
-            var snapshotDir = Path.Combine(mediaFolder, "snapshots");
-            var snapshotFile = Path.Combine(snapshotDir, checksum + ".png");
-            var mediaInfo = await FFProbe.AnalyseAsync(mediaFile);
-            FFMpeg.Snapshot(mediaFile, snapshotFile, new Size(300, -1), TimeSpan.FromSeconds(mediaInfo.Duration.TotalSeconds / 4));
-            var contentType = FsoService.GetMimeType(Path.GetExtension(mediaFile));
+            var snapshotFile = Path.Combine(snapshotFolder, checksum + snapshotExtension);
+            var mediaFileName = Path.GetFileName(mediaFile);
 
-            var mediaObject = new MediaObject
+            MediaObject mediaObject;
+            mediaObject = await _context.MediaObjects.FirstOrDefaultAsync(x => x.OwnerId == userId && x.Hash == checksum);
+            if (mediaObject != null && mediaObject.UploadFileName == Path.GetFileName(mediaFile))
+            {
+                return mediaObject.Id;
+            }
+            else if (mediaObject != null && mediaObject.UploadFileName != mediaFileName)
+            {
+                var existingFile = Path.Combine(mediaFolder, mediaObject.UploadFileName);
+                var existingFileChecksum = await CalculateMD5Async(existingFile);
+                if (existingFileChecksum == checksum)
+                {
+                    DeleteFile(mediaFile);
+                    return mediaObject.Id;
+                }
+                DeleteFile(existingFile);
+                mediaObject.UploadFileName = mediaFileName;
+                await _context.SaveChangesAsync();
+                await CreateSnapshotAsync(mediaFile, snapshotFile);
+
+                return mediaObject.Id;
+            }
+
+            var contentType = FsoService.GetMimeType(Path.GetExtension(mediaFile));
+            mediaObject = new MediaObject
             {
                 Id = Guid.NewGuid(),
                 ContentType = contentType,
@@ -139,6 +179,36 @@ namespace CloudStorage.Services
 
             _context.Add(mediaObject);
             await _context.SaveChangesAsync();
+            await CreateSnapshotAsync(mediaFile, snapshotFile);
+            return mediaObject.Id;
+        }
+
+        private static async Task CreateSnapshotAsync(string mediaFile, string snapshotFile)
+        {
+            if (!File.Exists(mediaFile)) return;
+            var mediaInfo = await FFProbe.AnalyseAsync(mediaFile);
+
+            await FFMpegArguments
+            .FromFileInput(mediaFile)
+            .OutputToFile(snapshotFile, true, options => options
+                .Seek(TimeSpan.FromSeconds(mediaInfo.Duration.TotalSeconds / 4))
+                .WithVideoFilters(filterOptions => filterOptions
+                        .Scale(300, -1))
+                .WithFrameOutputCount(1)
+                .WithCustomArgument("-q:v 2")
+             ).ProcessAsynchronously(false);
+        }
+
+        private static void DeleteFile(string fileName)
+        {
+            try
+            {
+                File.Delete(fileName);
+            }
+            catch (Exception e)
+            {
+                Debug.WriteLine(e.Message);
+            }
         }
 
         private void ThrowException(int statusCode, string statusMessage)
