@@ -26,6 +26,10 @@ export class MediaObject {
         this.ownerId = mediaObject.ownerId;
         this.snapshot$ = new AsyncSubject();
     }
+
+    isVideo() {
+        return this.contentType.startsWith('video');
+    }
 }
 
 export interface SnapshotUrl {

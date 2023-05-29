@@ -48,10 +48,14 @@ div.media-item__snapshot {
 
     span {
         position: absolute;
-        top: 5px;
+        bottom: 5px;
         right: 5px;
-        color: deeppink;
+        color: white;
+        background-color: black;
         opacity: 0.8;
+        font-weight: 700;
+        padding: 0 4px;
+        border-radius: 2px;
     }
 }
 
