@@ -29,7 +29,7 @@ namespace CloudStorage.Models
         {
             modelBuilder.Entity<MediaObject>(entity =>
             {
-                entity.HasKey(e => e.Id).HasName("PK__MediaObj__3214EC077A42B899");
+                entity.HasKey(e => e.Id).HasName("PK__MediaObj__3214EC07FAE7681B");
 
                 entity.ToTable("MediaObject");
 
@@ -39,9 +39,6 @@ namespace CloudStorage.Models
                     .IsUnicode(false);
                 entity.Property(e => e.Hash)
                     .IsRequired()
-                    .HasMaxLength(100)
-                    .IsUnicode(false);
-                entity.Property(e => e.Snapshot)
                     .HasMaxLength(100)
                     .IsUnicode(false);
                 entity.Property(e => e.UploadFileName)

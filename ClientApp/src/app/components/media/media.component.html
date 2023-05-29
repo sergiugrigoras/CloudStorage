@@ -53,7 +53,7 @@
         <div class="media__column">
             <ng-container *ngFor="let item of filteredMediaObjects">
                 <div class="media-item__snapshot">
-                    <img *ngIf="item?.snapshotUrl" [src]="item.snapshotUrl" (click)="openMedia(item.id)" />
+                    <img [src]="item.snapshot$ | async" (click)="openMedia(item.id)" />
                 </div>
             </ng-container>
         </div>
@@ -63,14 +63,14 @@
         <div class="media__column">
             <ng-container *ngFor="let item of getMediaForColumn(2, 0)">
                 <div class="media-item__snapshot">
-                    <img *ngIf="item?.snapshotUrl" [src]="item.snapshotUrl" (click)="openMedia(item.id)" />
+                    <img [src]="item.snapshot$ | async" (click)="openMedia(item.id)" />
                 </div>
             </ng-container>
         </div>
         <div class="media__column">
             <ng-container *ngFor="let item of getMediaForColumn(2, 1)">
                 <div class="media-item__snapshot">
-                    <img *ngIf="item?.snapshotUrl" [src]="item.snapshotUrl" (click)="openMedia(item.id)" />
+                    <img [src]="item.snapshot$ | async" (click)="openMedia(item.id)" />
                 </div>
             </ng-container>
         </div>
@@ -80,21 +80,21 @@
         <div class="media__column">
             <ng-container *ngFor="let item of getMediaForColumn(3, 0)">
                 <div class="media-item__snapshot">
-                    <img *ngIf="item?.snapshotUrl" [src]="item.snapshotUrl" (click)="openMedia(item.id)" />
+                    <img [src]="item.snapshot$ | async" (click)="openMedia(item.id)" />
                 </div>
             </ng-container>
         </div>
         <div class="media__column">
             <ng-container *ngFor="let item of getMediaForColumn(3, 1)">
                 <div class="media-item__snapshot">
-                    <img *ngIf="item?.snapshotUrl" [src]="item.snapshotUrl" (click)="openMedia(item.id)" />
+                    <img [src]="item.snapshot$ | async" (click)="openMedia(item.id)" />
                 </div>
             </ng-container>
         </div>
         <div class="media__column">
             <ng-container *ngFor="let item of getMediaForColumn(3, 2)">
                 <div class="media-item__snapshot">
-                    <img *ngIf="item?.snapshotUrl" [src]="item.snapshotUrl" (click)="openMedia(item.id)" />
+                    <img [src]="item.snapshot$ | async" (click)="openMedia(item.id)" />
                 </div>
             </ng-container>
         </div>

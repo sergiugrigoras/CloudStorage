@@ -29,7 +29,6 @@ namespace CloudStorage.Services
         private readonly string _storageUrl;
         private const string mediaDirName = "media";
         private const string snapshotsDirName = "snapshots";
-        private const string snapshotExtension = ".jpg";
         private static IEnumerable<string> _mediaExtentions = new string[] { "jpg", "gif", "png", "mp4" };
         private static string _ffmpegTmpFolder = GlobalFFOptions.Current.TemporaryFilesFolder;
             public MediaService(AppDbContext context, IConfiguration configuration)
@@ -141,7 +140,6 @@ namespace CloudStorage.Services
             var mediaFolder = GetUserMediaFolder(userId);
             var snapshotFolder = GetUserSnapshotsFolder(userId);
             var checksum = await CalculateMD5Async(mediaFile);
-            var snapshotFile = Path.Combine(snapshotFolder, checksum + snapshotExtension);
             var mediaFileName = Path.GetFileName(mediaFile);
 
             MediaObject mediaObject;
@@ -162,38 +160,41 @@ namespace CloudStorage.Services
                 DeleteFile(existingFile);
                 mediaObject.UploadFileName = mediaFileName;
                 await _context.SaveChangesAsync();
-                await CreateSnapshotAsync(mediaFile, snapshotFile);
+                await CreateSnapshotAsync(mediaFile, Path.Combine(snapshotFolder, mediaObject.Snapshot));
 
                 return mediaObject.Id;
             }
 
             var contentType = FsoService.GetMimeType(Path.GetExtension(mediaFile));
+            var mediaAnalysis = await FFProbe.AnalyseAsync(mediaFile);
             mediaObject = new MediaObject
             {
                 Id = Guid.NewGuid(),
                 ContentType = contentType,
                 Favorite = false,
                 Hash = checksum,
+                Width = mediaAnalysis.PrimaryVideoStream.Width,
+                Height = mediaAnalysis.PrimaryVideoStream.Height,
+                Duration = Convert.ToInt32(mediaAnalysis.PrimaryVideoStream?.Duration.TotalMilliseconds),
                 OwnerId = userId,
-                Snapshot = Path.GetFileName(snapshotFile),
                 UploadFileName = Path.GetFileName(mediaFile)
             };
 
             _context.Add(mediaObject);
             await _context.SaveChangesAsync();
-            await CreateSnapshotAsync(mediaFile, snapshotFile);
+            await CreateSnapshotAsync(mediaFile, Path.Combine(snapshotFolder, mediaObject.Snapshot), mediaAnalysis);
             return mediaObject.Id;
         }
 
-        private static async Task CreateSnapshotAsync(string mediaFile, string snapshotFile)
+        private static async Task CreateSnapshotAsync(string mediaFile, string snapshotFile, IMediaAnalysis mediaAnalysis = null)
         {
             if (!File.Exists(mediaFile)) return;
-            var mediaInfo = await FFProbe.AnalyseAsync(mediaFile);
 
+            mediaAnalysis ??= await FFProbe.AnalyseAsync(mediaFile);
             await FFMpegArguments
             .FromFileInput(mediaFile)
             .OutputToFile(snapshotFile, true, options => options
-                .Seek(TimeSpan.FromSeconds(mediaInfo.Duration.TotalSeconds / 4))
+                .Seek(TimeSpan.FromSeconds(mediaAnalysis.Duration.TotalSeconds / 4))
                 .WithVideoFilters(filterOptions => filterOptions
                         .Scale(300, -1))
                 .WithFrameOutputCount(1)

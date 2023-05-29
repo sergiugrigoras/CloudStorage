@@ -3,8 +3,8 @@ import { HttpEvent, HttpEventType } from '@angular/common/http';
 import { Component, HostListener, OnDestroy, OnInit } from '@angular/core';
 import { MatButtonToggleChange } from '@angular/material/button-toggle';
 import { DomSanitizer } from '@angular/platform-browser';
-import { EMPTY, debounceTime, forkJoin, fromEvent, map, switchMap, tap } from 'rxjs';
-import { MediaObject } from 'src/app/model/media-object.model';
+import { EMPTY, catchError, debounceTime, forkJoin, fromEvent, retry, tap } from 'rxjs';
+import { MediaObject, SnapshotUrl } from 'src/app/model/media-object.model';
 import { MediaService } from 'src/app/services/media.service';
 
 const KEY_UPDATE_INTERVAL_SECONDS = 60;
@@ -28,7 +28,8 @@ export class MediaComponent implements OnInit, OnDestroy {
   timer: NodeJS.Timer;
   uploading = false;
   uploadProgress = 0;
-
+  currentScroll = 0;
+  snapshotUrls: Map<string, SnapshotUrl> = new Map<string, SnapshotUrl>();
   constructor(
     private mediaService: MediaService,
     public breakpointObserver: BreakpointObserver,
@@ -68,9 +69,7 @@ export class MediaComponent implements OnInit, OnDestroy {
   private fetchMediaObjects() {
     this.mediaReady = false;
     const allMediaObserver = {
-      next: () => {
-
-      },
+      next: () => { },
       error: (error: any) => {
         console.error(error);
         this.mediaReady = true;
@@ -78,29 +77,16 @@ export class MediaComponent implements OnInit, OnDestroy {
       complete: () => {
         this.buildColumnsMap();
         this.mediaReady = true;
+        this.fetchSnapshots();
       }
     }
 
     this.mediaService.getAllMediaFiles()
       .pipe(
         tap((mediaObjects: MediaObject[]) => {
-          this.allMediaObjects = mediaObjects;
+          this.allMediaObjects = mediaObjects.map(x => new MediaObject(x));
           this.filteredMediaObjects = this.allMediaObjects.slice();
         }),
-        switchMap(mediaObjects => {
-          if (Array.isArray(mediaObjects) && mediaObjects.length > 0) {
-            return forkJoin(mediaObjects.map(x => this.getSnapshotUrl(x.id)));
-          }
-          return EMPTY;
-        }),
-        tap(urls => {
-          urls.forEach(url => {
-            const mediaObject = this.getMediaObjectById(url.id);
-            if (mediaObject) {
-              mediaObject.snapshotUrl = url.safeUrl;
-            }
-          })
-        })
       ).subscribe(allMediaObserver);
   }
 
@@ -109,6 +95,7 @@ export class MediaComponent implements OnInit, OnDestroy {
   }
 
   openMedia(id: string) {
+    this.currentScroll = window.scrollY;
     this.hideControls = false;
 
     this.mediaService.addContentAccesKeyCookie()
@@ -139,6 +126,9 @@ export class MediaComponent implements OnInit, OnDestroy {
   closeDialog($event?: MouseEvent) {
     $event?.stopPropagation();
     this.viewMedia = false;
+    setTimeout(() => {
+      window.scrollTo(0, this.currentScroll);
+    }, 25);
     window.clearTimeout(this.timer);
     this.activeMediaObject = null;
     this.mediaService.removeContentAccesKey().subscribe();
@@ -155,12 +145,23 @@ export class MediaComponent implements OnInit, OnDestroy {
     })
   }
 
-  getSnapshotUrl(id: string) {
-    return this.mediaService.getSnapshotFile(id).pipe(map(x => {
-      const blob = x.body as Blob;
-      const safeUrl = this.sanitizer.bypassSecurityTrustUrl(URL.createObjectURL(blob));
-      return { id, safeUrl }
-    }));
+  fetchSnapshots() {
+    const snapshot = (mediaObject: MediaObject) => this.mediaService.getSnapshotFile(mediaObject.id)
+      .pipe(
+        retry(3),
+        catchError((error: any) => {
+          return EMPTY;
+        }),
+        tap(response => {
+          const blob = response.body as Blob;
+          const url = URL.createObjectURL(blob);
+          const safeUrl = this.sanitizer.bypassSecurityTrustUrl(url);
+          this.snapshotUrls.set(mediaObject.id, { url, safeUrl });
+          mediaObject.snapshot$.next(safeUrl);
+          mediaObject.snapshot$.complete();
+        }));
+
+    forkJoin(this.filteredMediaObjects.map(mediaObject => snapshot(mediaObject))).subscribe();
   }
 
   buildColumnsMap() {

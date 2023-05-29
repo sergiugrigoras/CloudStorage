@@ -10,7 +10,9 @@ namespace CloudStorage.ViewModels
             UploadFileName = mediaObject.UploadFileName;
             ContentType = mediaObject.ContentType;
             Hash = mediaObject.Hash;
-            Snapshot = mediaObject.Snapshot;
+            Width = mediaObject.Width;
+            Height = mediaObject.Height;
+            Duration = mediaObject.Duration;
             Favorite = mediaObject.Favorite;
             OwnerId = mediaObject.OwnerId;
         }
@@ -24,7 +26,11 @@ namespace CloudStorage.ViewModels
 
         public string Hash { get; set; }
 
-        public string Snapshot { get; set; }
+        public int? Width { get; set; }
+
+        public int? Height { get; set; }
+
+        public int? Duration { get; set; }
 
         public bool Favorite { get; set; }
 
