@@ -101,8 +101,6 @@ namespace CloudStorage.Services
             var mediaFolder = Path.Combine(_storageUrl, user.Id.ToString(), mediaDirName);
             var mediaFiles = Directory.EnumerateFiles(mediaFolder, "*.*", SearchOption.TopDirectoryOnly)
                     .Where(s => _mediaExtentions.Contains(Path.GetExtension(s).TrimStart('.').ToLowerInvariant()));
-            if (!Directory.Exists(Path.Combine(mediaFolder, snapshotsDirName)))
-                Directory.CreateDirectory(Path.Combine(mediaFolder, snapshotsDirName));
             ICollection<Guid> existingFilesMediaObjectIds = new List<Guid>();
             foreach (var file in mediaFiles)
             {
@@ -224,12 +222,19 @@ namespace CloudStorage.Services
         private string GetUserMediaFolder(Guid userId)
         {
             if (userId == Guid.Empty) return null;
-            return Path.Combine(_storageUrl, userId.ToString(), mediaDirName);
+            var mediaFolder = Path.Combine(_storageUrl, userId.ToString(), mediaDirName);
+            if (!Directory.Exists(mediaFolder))
+                Directory.CreateDirectory(mediaFolder);
+            return mediaFolder;
         }
+
         private string GetUserSnapshotsFolder(Guid userId)
         {
             if (userId == Guid.Empty) return null;
-            return Path.Combine(GetUserMediaFolder(userId), snapshotsDirName);
+            var snapshotFolder = Path.Combine(GetUserMediaFolder(userId), snapshotsDirName);
+            if (!Directory.Exists(snapshotFolder))
+                Directory.CreateDirectory(snapshotFolder);
+            return snapshotFolder;
         }
 
         public async Task UploadMediaFileAsync(IFormFile file, User user)

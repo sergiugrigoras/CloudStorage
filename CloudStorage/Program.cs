@@ -17,7 +17,10 @@ var _issuer = builder.Configuration.GetValue<string>("Jwt:Issuer");
 
 
 // Add services to the container.
-builder.Services.AddDbContext<AppDbContext>(options => options.UseSqlServer(connectionString));
+builder.Services.AddDbContext<AppDbContext>(options =>
+{
+    options.UseSqlServer(connectionString, builder => builder.EnableRetryOnFailure(5, TimeSpan.FromSeconds(10), null));
+});
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("EnableCORS", builder =>

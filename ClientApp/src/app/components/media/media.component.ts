@@ -246,16 +246,6 @@ export class MediaComponent implements OnInit, OnDestroy {
     this.scrollMediaForward();
   }
 
-  toVideoTime(duration: number) {
-    var minutes = Math.floor(duration / 60000);
-    var seconds = Math.floor((duration % 60000) / 1000);
-    return (
-      seconds == 60 ?
-        (minutes + 1) + ":00" :
-        minutes + ":" + (seconds < 10 ? "0" : "") + seconds
-    );
-  }
-
   private scrollMediaForward() {
     if (this.activeIndex === this.filteredMediaObjects.length - 1) {
       this.activeIndex = 0;

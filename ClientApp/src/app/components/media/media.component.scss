@@ -36,29 +36,6 @@ h3 {
     flex: 1 1 auto;
 }
 
-div.media-item__snapshot {
-    position: relative;
-    margin-bottom: .5rem;
-    cursor: pointer;
-
-    img {
-        width: 100%;
-        vertical-align: middle;
-    }
-
-    span {
-        position: absolute;
-        bottom: 5px;
-        right: 5px;
-        color: white;
-        background-color: black;
-        opacity: 0.8;
-        font-weight: 700;
-        padding: 0 4px;
-        border-radius: 2px;
-    }
-}
-
 div.media-item__view {
     position: fixed;
     top: 0;

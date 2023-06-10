@@ -1,6 +1,6 @@
 <div class="media-item__view" *ngIf="viewMedia" (click)="hideControls = !hideControls">
-    <video *ngIf="activeMediaObject?.isVideo()" autoplay [muted]="'muted'" loop controls>
-        <source [src]="'/api/content/'+activeMediaObject?.id" [type]="activeMediaObject?.contentType">
+    <video *ngIf="activeMediaObject?.isVideo()" autoplay [muted]="'muted'" loop controls
+        [src]="'/api/content/'+activeMediaObject?.id">
     </video>
     <img *ngIf="!activeMediaObject?.isVideo()" id="image" [src]="'/api/content/'+activeMediaObject?.id" />
     <span class="material-icons control control__close" (click)="closeDialog($event)">
@@ -52,10 +52,7 @@
     <div class="media__container" *ngIf="mediaReady && columnView === 'one-column'">
         <div class="media__column">
             <ng-container *ngFor="let item of filteredMediaObjects">
-                <div class="media-item__snapshot">
-                    <img [src]="item.snapshot$ | async" (click)="openMedia(item.id)" />
-                    <span *ngIf="item.isVideo()">{{toVideoTime(item.duration)}}</span>
-                </div>
+                <app-media-item [item]="item" (open)="openMedia($event)"></app-media-item>
             </ng-container>
         </div>
     </div>
@@ -63,18 +60,12 @@
     <div class="media__container" *ngIf="mediaReady && columnView === 'two-columns'">
         <div class="media__column">
             <ng-container *ngFor="let item of getMediaForColumn(2, 0)">
-                <div class="media-item__snapshot">
-                    <img [src]="item.snapshot$ | async" (click)="openMedia(item.id)" />
-                    <span *ngIf="item.isVideo()">{{toVideoTime(item.duration)}}</span>
-                </div>
+                <app-media-item [item]="item" (open)="openMedia($event)"></app-media-item>
             </ng-container>
         </div>
         <div class="media__column">
             <ng-container *ngFor="let item of getMediaForColumn(2, 1)">
-                <div class="media-item__snapshot">
-                    <img [src]="item.snapshot$ | async" (click)="openMedia(item.id)" />
-                    <span *ngIf="item.isVideo()">{{toVideoTime(item.duration)}}</span>
-                </div>
+                <app-media-item [item]="item" (open)="openMedia($event)"></app-media-item>
             </ng-container>
         </div>
     </div>
@@ -82,26 +73,17 @@
     <div class="media__container" *ngIf="mediaReady && columnView === 'three-columns'">
         <div class="media__column">
             <ng-container *ngFor="let item of getMediaForColumn(3, 0)">
-                <div class="media-item__snapshot">
-                    <img [src]="item.snapshot$ | async" (click)="openMedia(item.id)" />
-                    <span *ngIf="item.isVideo()">{{toVideoTime(item.duration)}}</span>
-                </div>
+                <app-media-item [item]="item" (open)="openMedia($event)"></app-media-item>
             </ng-container>
         </div>
         <div class="media__column">
             <ng-container *ngFor="let item of getMediaForColumn(3, 1)">
-                <div class="media-item__snapshot">
-                    <img [src]="item.snapshot$ | async" (click)="openMedia(item.id)" />
-                    <span *ngIf="item.isVideo()">{{toVideoTime(item.duration)}}</span>
-                </div>
+                <app-media-item [item]="item" (open)="openMedia($event)"></app-media-item>
             </ng-container>
         </div>
         <div class="media__column">
             <ng-container *ngFor="let item of getMediaForColumn(3, 2)">
-                <div class="media-item__snapshot">
-                    <img [src]="item.snapshot$ | async" (click)="openMedia(item.id)" />
-                    <span *ngIf="item.isVideo()">{{toVideoTime(item.duration)}}</span>
-                </div>
+                <app-media-item [item]="item" (open)="openMedia($event)"></app-media-item>
             </ng-container>
         </div>
     </div>

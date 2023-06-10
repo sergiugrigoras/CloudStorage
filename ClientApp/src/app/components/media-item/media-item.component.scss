@@ -1,0 +1,34 @@
+.media-item__snapshot {
+    position: relative;
+    margin-bottom: .5rem;
+    cursor: pointer;
+
+    img {
+        width: 100%;
+        vertical-align: middle;
+        border-radius: 4px;
+    }
+
+    &-placeholder {
+        box-sizing: border-box;
+        border: 1px solid #cfcfcf;
+        background-image: linear-gradient(to right, #303030, #4a4a4a, #666666, #838383, #a1a1a1);
+        border-radius: 4px;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        justify-content: end;
+    }
+
+    span {
+        position: absolute;
+        bottom: 5px;
+        right: 5px;
+        color: white;
+        background-color: black;
+        opacity: 0.8;
+        font-weight: 700;
+        padding: 0 4px;
+        border-radius: 2px;
+    }
+}

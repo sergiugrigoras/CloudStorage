@@ -1,0 +1,8 @@
+<div class="media-item__snapshot">
+    <img *ngIf="!item.isLoading" [src]="item.snapshot$ | async" (click)="openItem()" />
+    <span *ngIf="item.isVideo()">{{toVideoTime(item.duration)}}</span>
+    <div class="media-item__snapshot-placeholder" *ngIf="item.isLoading"
+        [ngStyle]="{'aspect-ratio': item.width / item.height}">
+        <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+    </div>
+</div>

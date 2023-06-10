@@ -12,7 +12,7 @@ export class MediaObject {
     favorite: boolean;
     ownerId: string;
     snapshot$: AsyncSubject<SafeUrl>;
-
+    isLoading = true;
 
     constructor(mediaObject: any) {
         this.id = mediaObject.id;
@@ -25,6 +25,11 @@ export class MediaObject {
         this.favorite = mediaObject.favorite;
         this.ownerId = mediaObject.ownerId;
         this.snapshot$ = new AsyncSubject();
+        this.snapshot$.subscribe({
+            complete: () => {
+                this.isLoading = false;
+            }
+        });
     }
 
     isVideo() {
