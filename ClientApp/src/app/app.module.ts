@@ -51,6 +51,7 @@ import { MediaComponent } from './components/media/media.component';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MediaItemComponent } from './components/media-item/media-item.component';
+import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 function tokenGetter() {
   return localStorage.getItem("jwt");
 }
@@ -112,7 +113,8 @@ function tokenGetter() {
     MatTooltipModule,
     MatProgressSpinnerModule,
     MatButtonToggleModule,
-    MatProgressBarModule
+    MatProgressBarModule,
+    MatSlideToggleModule
   ],
   providers: [
     AuthGuard,

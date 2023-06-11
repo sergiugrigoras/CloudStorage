@@ -1,9 +1,17 @@
 .media__controls {
-    padding: 1rem 0;
+    padding-top: 1.5rem;
+    padding-bottom: 1rem;
     display: flex;
 
-    button {
-        margin-left: 1rem;
+    &-filters {
+        display: flex;
+        flex-direction: column;
+    }
+
+    &-tasks {
+        button {
+            margin-left: .5rem;
+        }
     }
 }
 

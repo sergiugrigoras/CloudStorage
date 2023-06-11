@@ -18,26 +18,18 @@
 
 <div *ngIf="mediaReady && !viewMedia; else loading">
     <div class="media__controls">
-        <mat-button-toggle-group name="viewSelect" value="all" aria-label="Select View"
-            (change)="sectionViewChanged($event)">
-            <mat-button-toggle value="all">All</mat-button-toggle>
-            <mat-button-toggle value="favorite">Favorite</mat-button-toggle>
-        </mat-button-toggle-group>
+        <div class="media__controls-filters">
+            <mat-slide-toggle [(ngModel)]="favoriteView" (ngModelChange)="favoriteViewChanged($event)"
+                color="primary">Favorite</mat-slide-toggle>
+        </div>
         <span class="spacer"></span>
-        <div>
+        <div class="media__controls-tasks">
             <input type="file" #inputFiles placeholder="Choose file" (change)="uploadFiles(inputFiles)"
                 style="display:none;" multiple>
-            <button mat-mini-fab color="primary" aria-label="Upload" matTooltip="Upload" (click)="inputFiles.click()">
-                <span class="material-icons-outlined">
-                    backup
-                </span>
-            </button>
-            <button mat-mini-fab color="primary" aria-label="Sync Folder" matTooltip="Sync Folder"
-                (click)="parseFolder()">
-                <span class="material-icons-outlined">
-                    cloud_sync
-                </span>
-            </button>
+            <button mat-stroked-button color="primary" aria-label="Upload" matTooltip="Upload media files"
+                (click)="inputFiles.click()">Upload</button>
+            <button mat-stroked-button color="primary" aria-label="Sync Folder" matTooltip="Sync Media Folder"
+                (click)="parseFolder()">Synchronize</button>
         </div>
     </div>
 

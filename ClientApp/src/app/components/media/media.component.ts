@@ -18,7 +18,7 @@ export class MediaComponent implements OnInit, OnDestroy {
   filteredMediaObjects: MediaObject[];
   mediaReady = false;
   columnView: string;
-  sectionView: string;
+  favoriteView = false;
   twoColumnsViewMap: Map<number, MediaObject[]>;
   threeColumnsViewMap: Map<number, MediaObject[]>;
   activeMediaObject: MediaObject;
@@ -134,7 +134,7 @@ export class MediaComponent implements OnInit, OnDestroy {
     $event.stopPropagation();
     this.mediaService.toggleFavorite(this.activeMediaObject.id).subscribe((result) => {
       this.activeMediaObject.favorite = result;
-      if (this.sectionView === 'favorite') {
+      if (this.favoriteView) {
         this.filteredMediaObjects = this.allMediaObjects.filter(x => x.favorite);
         this.buildColumnsMap();
       }
@@ -187,14 +187,12 @@ export class MediaComponent implements OnInit, OnDestroy {
     }
   }
 
-  sectionViewChanged($event: MatButtonToggleChange) {
-    this.sectionView = $event.value;
-    if ($event.value === 'favorite') {
+  favoriteViewChanged($event: boolean) {
+    if ($event) {
       this.filteredMediaObjects = this.allMediaObjects.filter(x => x.favorite);
     } else {
       this.filteredMediaObjects = this.allMediaObjects.slice();
     }
-
     this.buildColumnsMap();
   }
 
@@ -253,8 +251,6 @@ export class MediaComponent implements OnInit, OnDestroy {
       this.activeIndex++;
     }
     this.activeMediaObject = this.filteredMediaObjects[this.activeIndex];
-    console.log(this.activeIndex);
-
   }
 
   private scrollMediaBack() {
@@ -264,7 +260,6 @@ export class MediaComponent implements OnInit, OnDestroy {
       this.activeIndex--;
     }
     this.activeMediaObject = this.filteredMediaObjects[this.activeIndex];
-    console.log(this.activeIndex);
   }
 
   getFavoriteControlClassList() {
