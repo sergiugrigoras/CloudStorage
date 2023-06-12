@@ -19,10 +19,15 @@
 <div *ngIf="mediaReady && !viewMedia; else loading">
     <div class="media__controls">
         <div class="media__controls-filters">
-            <mat-slide-toggle [(ngModel)]="favoriteView" (ngModelChange)="favoriteViewChanged($event)"
+            <mat-slide-toggle [(ngModel)]="favoriteFilter" (ngModelChange)="filterChanged()"
                 color="primary">Favorite</mat-slide-toggle>
+            <mat-checkbox color="primary" [(ngModel)]="videoFilter"
+                (ngModelChange)="filterChanged()">Video</mat-checkbox>
+            <mat-checkbox color="primary" [(ngModel)]="pictureFilter"
+                (ngModelChange)="filterChanged()">Picture</mat-checkbox>
+            <span matTooltip="Total">| {{filteredMediaObjects.length}}/{{totalItems}}</span>
+
         </div>
-        <span class="spacer"></span>
         <div class="media__controls-tasks">
             <input type="file" #inputFiles placeholder="Choose file" (change)="uploadFiles(inputFiles)"
                 style="display:none;" multiple>
@@ -32,7 +37,7 @@
                 (click)="parseFolder()">Synchronize</button>
         </div>
     </div>
-
+    <mat-divider class="media__divider"></mat-divider>
     <div *ngIf="uploading" class="media_upload-progress">
         <mat-progress-bar mode="determinate" [value]="uploadProgress"></mat-progress-bar>
     </div>

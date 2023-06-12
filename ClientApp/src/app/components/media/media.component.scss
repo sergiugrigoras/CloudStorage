@@ -1,18 +1,36 @@
 .media__controls {
     padding-top: 1.5rem;
-    padding-bottom: 1rem;
     display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+
+
+    >div {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        padding-bottom: .8rem;
+    }
 
     &-filters {
-        display: flex;
-        flex-direction: column;
+        justify-content: start;
+
+        >span {
+            margin-left: 12px;
+        }
     }
 
     &-tasks {
+        justify-content: end;
+
         button {
             margin-left: .5rem;
         }
     }
+}
+
+.media__divider {
+    margin-bottom: .5rem;
 }
 
 .media_upload-progress {

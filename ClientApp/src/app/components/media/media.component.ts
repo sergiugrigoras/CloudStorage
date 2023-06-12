@@ -18,7 +18,11 @@ export class MediaComponent implements OnInit, OnDestroy {
   filteredMediaObjects: MediaObject[];
   mediaReady = false;
   columnView: string;
-  favoriteView = false;
+  favoriteFilter = false;
+  videoFilter = true;
+  pictureFilter = true;
+
+
   twoColumnsViewMap: Map<number, MediaObject[]>;
   threeColumnsViewMap: Map<number, MediaObject[]>;
   activeMediaObject: MediaObject;
@@ -64,6 +68,10 @@ export class MediaComponent implements OnInit, OnDestroy {
       });
 
     this.fetchMediaObjects();
+  }
+
+  get totalItems() {
+    return this.allMediaObjects?.length;
   }
 
   private fetchMediaObjects() {
@@ -134,7 +142,7 @@ export class MediaComponent implements OnInit, OnDestroy {
     $event.stopPropagation();
     this.mediaService.toggleFavorite(this.activeMediaObject.id).subscribe((result) => {
       this.activeMediaObject.favorite = result;
-      if (this.favoriteView) {
+      if (this.favoriteFilter) {
         this.filteredMediaObjects = this.allMediaObjects.filter(x => x.favorite);
         this.buildColumnsMap();
       }
@@ -187,12 +195,18 @@ export class MediaComponent implements OnInit, OnDestroy {
     }
   }
 
-  favoriteViewChanged($event: boolean) {
-    if ($event) {
-      this.filteredMediaObjects = this.allMediaObjects.filter(x => x.favorite);
-    } else {
-      this.filteredMediaObjects = this.allMediaObjects.slice();
+  filterChanged() {
+    let filtered = this.allMediaObjects.slice();
+    if (this.favoriteFilter) {
+      filtered = this.allMediaObjects.filter(x => x.favorite);
     }
+    if (!this.videoFilter) {
+      filtered = filtered.filter(x => !x.isVideo());
+    }
+    if (!this.pictureFilter) {
+      filtered = filtered.filter(x => x.isVideo());
+    }
+    this.filteredMediaObjects = filtered;
     this.buildColumnsMap();
   }
 
