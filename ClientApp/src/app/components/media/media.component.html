@@ -25,8 +25,8 @@
                 (ngModelChange)="filterChanged()">Video</mat-checkbox>
             <mat-checkbox color="primary" [(ngModel)]="pictureFilter"
                 (ngModelChange)="filterChanged()">Picture</mat-checkbox>
-            <span matTooltip="Total">| {{filteredMediaObjects.length}}/{{totalItems}}</span>
-
+            <span matTooltip="Filtered/Total/Selected">|
+                {{filteredMediaObjects.length}}/{{totalItems}}/{{totalSelected}}</span>
         </div>
         <div class="media__controls-tasks">
             <input type="file" #inputFiles placeholder="Choose file" (change)="uploadFiles(inputFiles)"

@@ -13,6 +13,7 @@ export class MediaObject {
     ownerId: string;
     snapshot$: AsyncSubject<SafeUrl>;
     isLoading = true;
+    isSelected = false;
 
     constructor(mediaObject: any) {
         this.id = mediaObject.id;

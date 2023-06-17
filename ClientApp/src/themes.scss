@@ -9,23 +9,28 @@ $angular-warn: mat.define-palette(mat.$red-palette);
 $angular-primary-dark: mat.define-palette(mat.$purple-palette, 500, 100, 900);
 $angular-accent-dark: mat.define-palette(mat.$teal-palette, A200, A100, A400);
 
-$angular-default-theme: mat.define-light-theme((color: (primary: $angular-primary,
+$light-theme: mat.define-light-theme((color: (primary: $angular-primary,
                 accent: $angular-accent,
                 warn: $angular-warn,
             ),
         ));
 
-$angular-dark-theme: mat.define-dark-theme((color: (primary: $angular-primary-dark,
+$dark-theme: mat.define-dark-theme((color: (primary: $angular-primary-dark,
                 accent: $angular-accent,
                 warn: $angular-warn,
             ),
         ));
 
-/* $color-primary-light: map.get($angular-primary, 500);
-$color-primary-dark: map.get($angular-primary-dark, 500); */
+@include mat.all-component-themes($light-theme);
 
-@include mat.all-component-themes($angular-default-theme);
+.theme-color-border {
+    border-color: mat.get-color-from-palette(mat.$indigo-palette, 500);
+}
 
 .darkMode {
-    @include mat.all-component-colors($angular-dark-theme);
+    @include mat.all-component-colors($dark-theme);
+
+    .theme-color-border {
+        border-color: mat.get-color-from-palette(mat.$purple-palette, 500);
+    }
 }

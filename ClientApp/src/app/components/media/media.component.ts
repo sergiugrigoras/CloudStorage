@@ -73,6 +73,9 @@ export class MediaComponent implements OnInit, OnDestroy {
   get totalItems() {
     return this.allMediaObjects?.length;
   }
+  get totalSelected() {
+    return this.filteredMediaObjects.reduce((sum: number, current: MediaObject) => current.isSelected ? ++sum : sum, 0)
+  }
 
   private fetchMediaObjects() {
     this.mediaReady = false;
