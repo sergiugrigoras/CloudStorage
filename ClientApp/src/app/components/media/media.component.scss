@@ -17,6 +17,7 @@
 
         >span {
             margin-left: 12px;
+            white-space: nowrap;
         }
     }
 
@@ -128,5 +129,16 @@ div.media-item__view {
         top: 0;
         right: 0;
 
+    }
+}
+
+
+.media__dialog-content {
+    >div {
+        display: flex;
+    }
+
+    >div>* {
+        flex-grow: 1;
     }
 }

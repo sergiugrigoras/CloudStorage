@@ -3,7 +3,8 @@ import { Injectable } from '@angular/core';
 import { Router } from '@angular/router';
 import { environment } from 'src/environments/environment';
 import { MediaObject } from '../model/media-object.model';
-import { Observable, Subject } from 'rxjs';
+import { Observable, map } from 'rxjs';
+import { MediaAlbum } from '../model/media-album.model';
 
 const API_URL: string = environment.baseUrl;
 const httpOptions = {
@@ -52,4 +53,23 @@ export class MediaService {
         reportProgress: true
       });
   }
+
+  createAlbum(name: string) {
+    return this.http.post<string>(API_URL + '/api/media/new-album', { name })
+  }
+
+  getAllAlbums() {
+    return this.http.get<MediaAlbum[]>(API_URL + '/api/media/all-albums').pipe(
+      map((albums: MediaAlbum[]) => albums.map(x => new MediaAlbum(x)))
+    );
+  }
+
+  addToAlbum(payload: unknown) {
+    return this.http.post(API_URL + '/api/media/album-add', payload)
+  }
+
+  albumUniqueName(name: string) {
+    return this.http.get(API_URL + `/api/media/unique-album-name?name=${name}`);
+  }
+
 }

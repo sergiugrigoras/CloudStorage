@@ -14,13 +14,21 @@ var builder = WebApplication.CreateBuilder(args);
 var connectionString = builder.Configuration.GetConnectionString("DB");
 var _key = builder.Configuration.GetValue<string>("Jwt:Key");
 var _issuer = builder.Configuration.GetValue<string>("Jwt:Issuer");
-
+var inMemory = builder.Configuration.GetValue<bool>("InMemoryDb");
 
 // Add services to the container.
 builder.Services.AddDbContext<AppDbContext>(options =>
 {
-    options.UseSqlServer(connectionString, builder => builder.EnableRetryOnFailure(5, TimeSpan.FromSeconds(10), null));
+    if (inMemory)
+    {
+        options.UseInMemoryDatabase("InMemoryDB");
+    }
+    else
+    {
+        options.UseSqlServer(connectionString, builder => builder.EnableRetryOnFailure(5, TimeSpan.FromSeconds(10), null));
+    }
 });
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("EnableCORS", builder =>
@@ -79,6 +87,10 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.UseDeveloperExceptionPage();
+    if (inMemory) 
+    {
+        app.SeedInMemoryDb();
+    }
 }
 app.UseCors("EnableCORS");
 // Configure the HTTP request pipeline.

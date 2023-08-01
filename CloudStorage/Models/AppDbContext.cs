@@ -25,8 +25,30 @@ namespace CloudStorage.Models
 
         public virtual DbSet<MediaObject> MediaObjects { get; set; }
 
+        public virtual DbSet<MediaAlbum> MediaAlbums { get; set; }
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
+            modelBuilder.Entity<MediaAlbum>(entity =>
+            {
+                entity.HasKey(e => e.Id).HasName("PK__MediaAlb__3214EC0794FF9D8D");
+
+                entity.ToTable("MediaAlbum");
+
+                entity.Property(e => e.Id).ValueGeneratedNever();
+                entity.Property(e => e.CreateDate).HasColumnType("datetime");
+                entity.Property(e => e.LastUpdate).HasColumnType("datetime");
+                entity.Property(e => e.Name)
+                    .IsRequired()
+                    .HasMaxLength(255)
+                    .IsUnicode(false);
+
+                entity.HasOne(d => d.Owner).WithMany(p => p.MediaAlbums)
+                    .HasForeignKey(d => d.OwnerId)
+                    .OnDelete(DeleteBehavior.SetNull)
+                    .HasConstraintName("FK_Album_User");
+            });
+
             modelBuilder.Entity<MediaObject>(entity =>
             {
                 entity.HasKey(e => e.Id).HasName("PK__MediaObj__3214EC07FAE7681B");
@@ -49,6 +71,21 @@ namespace CloudStorage.Models
                 entity.HasOne(d => d.Owner).WithMany(p => p.MediaObjects)
                     .HasForeignKey(d => d.OwnerId)
                     .HasConstraintName("FK_Media_User");
+
+                entity.HasMany(d => d.MediaAlbums).WithMany(p => p.MediaObjects)
+                    .UsingEntity<Dictionary<string, object>>(
+                        "MediaObjectAlbum",
+                        r => r.HasOne<MediaAlbum>().WithMany()
+                            .HasForeignKey("MediaAlbumId")
+                            .HasConstraintName("FK_MediaObjectAlbum_MediaAlbum"),
+                        l => l.HasOne<MediaObject>().WithMany()
+                            .HasForeignKey("MediaObjectId")
+                            .HasConstraintName("FK_MediaObjectAlbum_MediaObject"),
+                        j =>
+                        {
+                            j.HasKey("MediaObjectId", "MediaAlbumId").HasName("PK_Media_Album");
+                            j.ToTable("MediaObjectAlbum");
+                        });
             });
 
             modelBuilder.Entity<FileSystemObject>(entity =>

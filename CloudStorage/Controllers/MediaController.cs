@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.FileProviders;
 using System.Globalization;
 using CloudStorage.ViewModels;
+using CloudStorage.Models;
 
 namespace CloudStorage.Controllers
 {
@@ -113,6 +114,40 @@ namespace CloudStorage.Controllers
                 await _mediaService.UploadMediaFileAsync(file, user);
 
             return Ok();
+        }
+
+        [HttpPost("new-album")]
+        public async Task<IActionResult> CreateAlbumAsync([FromBody] MediaAlbumViewModel album)
+        {
+            if (album == null || string.IsNullOrWhiteSpace(album.Name)) return BadRequest();
+            var user = await _userService.GetUserFromPrincipalAsync(User);
+            await _mediaService.CreateAlbumAsync(user, album.Name);
+            return new JsonResult(album?.Name);
+        }
+
+        [HttpGet("all-albums")]
+        public async Task<IActionResult> GetUserAlbumsAsync()
+        {
+            var user = await _userService.GetUserFromPrincipalAsync(User);
+            var albums = await _mediaService.GetAllAlbumsAsync(user);
+            var result = albums.Select(album => new MediaAlbumViewModel(album));
+            return new JsonResult(result);
+        }
+
+        [HttpPost("album-add")]
+        public async Task<IActionResult> AddMediaToAlbumAsync([FromBody] MediaToAlbumViewModel viewModel)
+        {
+            var user = await _userService.GetUserFromPrincipalAsync(User);
+            await _mediaService.AddMediaToAlbumAsync(user, viewModel.MediaObjectsIds, viewModel.AlbumsIds);
+            return Ok();
+        }
+
+        [HttpGet("unique-album-name")]
+        public async Task<IActionResult> CheckAlbumUniqueName(string name)
+        {
+            var user = await _userService.GetUserFromPrincipalAsync(User);
+            var isUnique = await _mediaService.UniqueAlbumNameAsync(user, name);
+            return new JsonResult(isUnique);
         }
     }
 }

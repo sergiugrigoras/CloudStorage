@@ -30,6 +30,7 @@ public partial class MediaObject
     public Guid OwnerId { get; set; }
 
     public virtual User Owner { get; set; }
+    public virtual ICollection<MediaAlbum> MediaAlbums { get; set; } = new List<MediaAlbum>();
 
     public string Snapshot { get { return Hash + snapshotExtension; } }
 }

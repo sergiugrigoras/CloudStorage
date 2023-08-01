@@ -31,6 +31,10 @@
         <div class="media__controls-tasks">
             <input type="file" #inputFiles placeholder="Choose file" (change)="uploadFiles(inputFiles)"
                 style="display:none;" multiple>
+            <button mat-stroked-button color="primary" aria-label="New Album" matTooltip="Create New Album"
+                (click)="createAlbum()">New Album</button>
+            <button mat-stroked-button color="primary" aria-label="Add To Album" matTooltip="Add To Album"
+                    (click)="addSelectedToAlbum()" [disabled]="totalSelected < 1">Add To Album</button>
             <button mat-stroked-button color="primary" aria-label="Upload" matTooltip="Upload media files"
                 (click)="inputFiles.click()">Upload</button>
             <button mat-stroked-button color="primary" aria-label="Sync Folder" matTooltip="Sync Media Folder"
@@ -88,4 +92,46 @@
 
 <ng-template #loading>
     <mat-spinner *ngIf="!viewMedia"></mat-spinner>
+</ng-template>
+
+<ng-template #newAlbum>
+    <div mat-dialog-title class="media__dialog-title">New Album</div>
+    <form [formGroup]="newAlbumForm" mat-dialog-content class="media__dialog-content">
+        <p></p>
+        <div>
+            <mat-form-field appearance="outline">
+                <mat-label>Album Name</mat-label>
+                <input matInput #albumNameInput formControlName="name">
+                <mat-error>{{newAlbumErrorMessage()}}</mat-error>
+            </mat-form-field>
+        </div>
+    </form>
+    <div mat-dialog-actions class="media__dialog-actions">
+        <button mat-raised-button color="primary" [mat-dialog-close]="albumNameInput.value"
+            [disabled]="newAlbumForm.invalid">Create</button>
+        <button mat-raised-button color="accent" [mat-dialog-close]="false">Cancel</button>
+    </div>
+</ng-template>
+
+<ng-template #addToAlbum>
+    <div mat-dialog-title class="media__dialog-title">Add to album</div>
+    <div mat-dialog-content class="media__dialog-content">
+        <p></p>
+        <div>
+            <mat-form-field appearance="outline">
+                <mat-label>Select Album</mat-label>
+                <mat-select #albumSelect [multiple]="true">
+                  <mat-option>
+                    <ngx-mat-select-search [formControl]="albumFilterCtrl" placeholderLabel="Search" noEntriesFoundLabel="No results."></ngx-mat-select-search>
+                  </mat-option>
+                  <mat-option *ngFor="let item of filteredAlbums$ | async" [value]="item">{{item.name}}</mat-option>
+                </mat-select>
+            </mat-form-field>
+        </div>
+    </div>
+    <div mat-dialog-actions class="media__dialog-actions">
+        <button mat-raised-button color="primary" [mat-dialog-close]="albumSelect.value"
+            [disabled]="!albumSelect.value">Add</button>
+        <button mat-raised-button color="accent" [mat-dialog-close]="false">Cancel</button>
+    </div>
 </ng-template>

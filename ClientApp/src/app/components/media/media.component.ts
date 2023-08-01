@@ -1,13 +1,30 @@
 import { BreakpointObserver, BreakpointState } from '@angular/cdk/layout';
 import { HttpEvent, HttpEventType } from '@angular/common/http';
-import { Component, HostListener, OnDestroy, OnInit } from '@angular/core';
+import { Component, HostListener, OnDestroy, OnInit, TemplateRef, ViewChild } from '@angular/core';
+import { AbstractControl, FormControl, FormGroup, ValidationErrors, Validators } from '@angular/forms';
 import { MatButtonToggleChange } from '@angular/material/button-toggle';
+import {MatDialog, MatDialogConfig} from '@angular/material/dialog';
+import { MatSnackBar } from '@angular/material/snack-bar';
 import { DomSanitizer } from '@angular/platform-browser';
-import { EMPTY, catchError, debounceTime, forkJoin, fromEvent, retry, tap } from 'rxjs';
+import {
+  EMPTY,
+  Observable,
+  catchError,
+  debounceTime,
+  forkJoin,
+  fromEvent,
+  map,
+  retry,
+  switchMap,
+  tap,
+  ReplaySubject
+} from 'rxjs';
+import { MediaAlbum } from 'src/app/model/media-album.model';
 import { MediaObject, SnapshotUrl } from 'src/app/model/media-object.model';
 import { MediaService } from 'src/app/services/media.service';
 
 const KEY_UPDATE_INTERVAL_SECONDS = 60;
+const SNACKBAR_OPTIONS = { duration: 3000 };
 @Component({
   selector: 'app-media',
   templateUrl: './media.component.html',
@@ -34,10 +51,25 @@ export class MediaComponent implements OnInit, OnDestroy {
   uploadProgress = 0;
   currentScroll = 0;
   snapshotUrls: Map<string, SnapshotUrl> = new Map<string, SnapshotUrl>();
+  @ViewChild('newAlbum', { static: true }) newAlbumDialog: TemplateRef<never>;
+  @ViewChild('addToAlbum', { static: true }) addToAlbumDialog: TemplateRef<never>;
+  albumFilterCtrl: FormControl<string> = new FormControl<string>('');
+  filteredAlbums$: ReplaySubject<MediaAlbum[]> = new ReplaySubject<MediaAlbum[]>(1);
+  allMediaAlbums: MediaAlbum[];
+  newAlbumForm = new FormGroup({
+    name: new FormControl('', [Validators.required, Validators.minLength(5)], this.uniqueAlbumName.bind(this))
+  });
+  dialogConfig: MatDialogConfig<any> = {
+    width: '500px',
+    disableClose: false,
+    hasBackdrop: true,
+  };
   constructor(
     private mediaService: MediaService,
     public breakpointObserver: BreakpointObserver,
     private sanitizer: DomSanitizer,
+    private dialog: MatDialog,
+    private snackBar: MatSnackBar
   ) { }
 
   ngOnDestroy(): void {
@@ -68,6 +100,20 @@ export class MediaComponent implements OnInit, OnDestroy {
       });
 
     this.fetchMediaObjects();
+
+    this.albumFilterCtrl.valueChanges
+      .pipe(debounceTime(250))
+      .subscribe(() => {
+        this.filterAlbums();
+      });
+  }
+
+  uniqueAlbumName(control: AbstractControl): Observable<ValidationErrors | null> {
+    return this.mediaService.albumUniqueName(control.value)
+      .pipe(map(result => {
+        if (result) return null;
+        else return { shouldBeUnique: true }
+      }));
   }
 
   get totalItems() {
@@ -97,7 +143,7 @@ export class MediaComponent implements OnInit, OnDestroy {
         tap((mediaObjects: MediaObject[]) => {
           this.allMediaObjects = mediaObjects.map(x => new MediaObject(x));
           this.filteredMediaObjects = this.allMediaObjects.slice();
-        }),
+        })
       ).subscribe(allMediaObserver);
   }
 
@@ -251,6 +297,49 @@ export class MediaComponent implements OnInit, OnDestroy {
     }
   }
 
+  createAlbum() {
+    this.dialog.open(this.newAlbumDialog, this.dialogConfig).afterClosed().subscribe((dialogResult: boolean | string) => {
+      if (typeof dialogResult === 'string') {
+        this.mediaService.createAlbum(dialogResult).subscribe({ complete: () => this.newAlbumForm.reset() });
+      }
+      this.newAlbumForm.reset();
+    });
+  }
+
+  addSelectedToAlbum() {
+    const addToAlbumObserver = {
+      next: () => {
+        this.filteredMediaObjects.forEach(x => x.isSelected = false);
+        this.snackBar.open(`Success.`, 'Ok', SNACKBAR_OPTIONS);
+      },
+      error: (error: unknown) => {
+        console.error(error);
+      }
+    };
+
+    this.mediaService.getAllAlbums().pipe(
+      retry(3),
+      catchError(error => {
+        this.snackBar.open(`An error occurred.`, 'Ok', SNACKBAR_OPTIONS);
+        console.error(error);
+        return EMPTY;
+      }),
+      switchMap(albums => {
+        this.allMediaAlbums = albums;
+        this.filteredAlbums$.next(albums);
+        return this.dialog.open(this.addToAlbumDialog, this.dialogConfig).afterClosed();
+      }),
+      switchMap((dialogResult: unknown) => {
+        if (Array.isArray(dialogResult) && dialogResult.length > 0) {
+          const mediaObjectsIds = this.filteredMediaObjects.filter(x => x.isSelected).map(x => x.id);
+          const albumsIds = dialogResult.map((x: MediaAlbum) => x.id);
+          return this.mediaService.addToAlbum({ albumsIds, mediaObjectsIds });
+        }
+        return EMPTY;
+      })
+    ).subscribe(addToAlbumObserver);
+  }
+
   scrollBack($event: MouseEvent) {
     $event.stopPropagation();
     this.scrollMediaBack();
@@ -293,4 +382,25 @@ export class MediaComponent implements OnInit, OnDestroy {
     return this.allMediaObjects.find(m => m.id === id);
   }
 
+  newAlbumErrorMessage() {
+    const controlErrors = this.newAlbumForm.get('name').errors;
+    if (controlErrors == null) return '';
+    if (controlErrors['required']) return 'Name is required.';
+    if (controlErrors['minlength']) return `At least ${controlErrors['minlength'].requiredLength} characters long.`
+    if (controlErrors['shouldBeUnique']) return 'Name is not unique.'
+    return '';
+  }
+
+  private filterAlbums() {
+    let search = this.albumFilterCtrl.value;
+    if (!search) {
+      this.filteredAlbums$.next(this.allMediaAlbums.slice());
+      return;
+    } else {
+      search = search.toLowerCase();
+    }
+    this.filteredAlbums$.next(
+      this.allMediaAlbums.filter(album => album.name.toLowerCase().indexOf(search) > -1)
+    );
+  }
 }

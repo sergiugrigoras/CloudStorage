@@ -13,12 +13,14 @@ $light-theme: mat.define-light-theme((color: (primary: $angular-primary,
                 accent: $angular-accent,
                 warn: $angular-warn,
             ),
+            typography: mat.define-typography-config(),
         ));
 
 $dark-theme: mat.define-dark-theme((color: (primary: $angular-primary-dark,
                 accent: $angular-accent,
                 warn: $angular-warn,
             ),
+            typography: mat.define-typography-config(),
         ));
 
 @include mat.all-component-themes($light-theme);

@@ -15,8 +15,8 @@ export class MediaItemComponent {
   }
 
   toVideoTime(duration: number) {
-    var minutes = Math.floor(duration / 60000);
-    var seconds = Math.floor((duration % 60000) / 1000);
+    const minutes = Math.floor(duration / 60000);
+    const seconds = Math.floor((duration % 60000) / 1000);
     return (
       seconds == 60 ?
         (minutes + 1) + ":00" :

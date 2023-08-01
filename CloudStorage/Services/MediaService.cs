@@ -22,6 +22,10 @@ namespace CloudStorage.Services
         Task ParseMediaFolderAsync(User user);
         Task<bool> ToggleFavorite(Guid id);
         Task UploadMediaFileAsync(IFormFile file, User user);
+        Task CreateAlbumAsync(User user, string name);
+        Task <IEnumerable<MediaAlbum>> GetAllAlbumsAsync(User user);
+        Task AddMediaToAlbumAsync(User user, ICollection<Guid> mediaIds, ICollection<Guid> albumIds);
+        Task<bool> UniqueAlbumNameAsync(User user, string name);
     }
     public class MediaService: IMediaService
     {
@@ -254,6 +258,68 @@ namespace CloudStorage.Services
             await file.CopyToAsync(stream);
             stream.Close();
             await ProcessMediaFileAsync(mediaFile, user.Id);
+        }
+
+        public async Task CreateAlbumAsync(User user, string name)
+        {
+            if (user == null) return;
+            var album = new MediaAlbum 
+            {
+                Id = Guid.NewGuid(),
+                OwnerId = user.Id,
+                Name = name,
+                CreateDate = DateTime.UtcNow,
+            };
+
+            await _context.MediaAlbums.AddAsync(album);
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task<IEnumerable<MediaAlbum>> GetAllAlbumsAsync(User user)
+        {
+            if (user == null) return Enumerable.Empty<MediaAlbum>();
+            var albums = await _context.MediaAlbums
+                .Where(x => x.OwnerId == user.Id)
+                .OrderByDescending(x => x.LastUpdate)
+                .ThenBy(x => x.Name)
+                .ToListAsync();
+            return albums;
+        }
+
+        public async Task AddMediaToAlbumAsync(User user, ICollection<Guid> mediaIds, ICollection<Guid> albumIds)
+        {
+            if (user == null || !mediaIds.Any() || !albumIds.Any()) return;
+            if (albumIds is null)
+            {
+                throw new ArgumentNullException(nameof(albumIds));
+            }
+
+            var mediaObjects = await _context.MediaObjects.Where(x => mediaIds.Contains(x.Id) && x.OwnerId == user.Id).ToListAsync();
+            foreach (var albumId in albumIds)
+            {
+                var album = await _context.MediaAlbums.Include(x => x.MediaObjects).Where(x => x.Id == albumId).FirstOrDefaultAsync();
+                if (album == null || album.OwnerId != user.Id) continue;
+                AddMediaToAlbum(album, mediaObjects);
+            }
+
+            await _context.SaveChangesAsync();
+        }
+
+        private static void AddMediaToAlbum(MediaAlbum album, IEnumerable<MediaObject> mediaObjects)
+        {
+            foreach (var mediaObject in mediaObjects)
+            {
+                if (!album.MediaObjects.Contains(mediaObject))
+                    album.MediaObjects.Add(mediaObject);
+            }
+        }
+
+        public async Task<bool> UniqueAlbumNameAsync(User user, string name)
+
+        {
+            if (name == null || user == null) return false;
+            var exists = await _context.MediaAlbums.AnyAsync(x => x.Name == name.Trim().ToLower() && x.OwnerId == user.Id);
+            return !exists;
         }
     }
 

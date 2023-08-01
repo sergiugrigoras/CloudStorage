@@ -53,6 +53,7 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MediaItemComponent } from './components/media-item/media-item.component';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatCheckboxModule } from '@angular/material/checkbox';
+import { NgxMatSelectSearchModule } from 'ngx-mat-select-search';
 function tokenGetter() {
   return localStorage.getItem("jwt");
 }
@@ -116,7 +117,8 @@ function tokenGetter() {
     MatButtonToggleModule,
     MatProgressBarModule,
     MatSlideToggleModule,
-    MatCheckboxModule
+    MatCheckboxModule,
+    NgxMatSelectSearchModule
   ],
   providers: [
     AuthGuard,

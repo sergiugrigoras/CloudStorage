@@ -26,6 +26,7 @@ namespace CloudStorage.Models
 
         public virtual ICollection<Share> Shares { get; } = new List<Share>();
         public virtual ICollection<MediaObject> MediaObjects { get; set; } = new List<MediaObject>();
+        public virtual ICollection<MediaAlbum> MediaAlbums { get; set; } = new List<MediaAlbum>();
     }
 
     public class TokenApiModel
