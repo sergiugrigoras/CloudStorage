@@ -217,7 +217,7 @@ export class MediaComponent implements OnInit, OnDestroy {
     forkJoin(this.filteredMediaObjects.map(mediaObject => snapshot(mediaObject))).subscribe();
   }
 
-  buildColumnsMap() {
+  private buildColumnsMap() {
     this.twoColumnsViewMap = new Map<number, MediaObject[]>([
       [0, []],
       [1, []],
@@ -228,19 +228,39 @@ export class MediaComponent implements OnInit, OnDestroy {
       [2, []],
     ]);
 
-    for (let index = 0; index < this.filteredMediaObjects.length; index = index + 1) {
-      this.twoColumnsViewMap.get(index % 2).push(this.filteredMediaObjects[index]);
-      this.threeColumnsViewMap.get(index % 3).push(this.filteredMediaObjects[index]);
+    const twoColumnsOffset = [0, 0];
+    const threeColumnsOffset = [0, 0, 0];
+
+    const getMinIndex = (numberOfColumns: 2 | 3) => {
+      switch (numberOfColumns) {
+        case 2: return twoColumnsOffset.indexOf(Math.min(...twoColumnsOffset));
+        case 3: return threeColumnsOffset.indexOf(Math.min(...threeColumnsOffset));
+        default: return 0;
+      }
+    }
+
+    for (const mediaObject of this.filteredMediaObjects) {
+      const minIndexTwoColumns = getMinIndex(2);
+      this.twoColumnsViewMap.get(minIndexTwoColumns).push(mediaObject);
+      twoColumnsOffset[minIndexTwoColumns] = twoColumnsOffset[minIndexTwoColumns] + (mediaObject.height/mediaObject.width);
+
+      const minIndexThreeColumns = getMinIndex(3);
+      this.threeColumnsViewMap.get(minIndexThreeColumns).push(mediaObject);
+      threeColumnsOffset[minIndexThreeColumns] = threeColumnsOffset[minIndexThreeColumns] + (mediaObject.height/mediaObject.width);
     }
   }
 
   getMediaForColumn(numberOfColumns: number, columnIndex: number) {
-    if (numberOfColumns === 2) {
-      return this.twoColumnsViewMap.get(columnIndex);
-    } else if (numberOfColumns === 3) {
-      return this.threeColumnsViewMap.get(columnIndex);
-    } else {
-      return this.filteredMediaObjects;
+    switch (numberOfColumns) {
+      case 2: {
+        return this.twoColumnsViewMap.get(columnIndex);
+      }
+      case 3: {
+        return this.threeColumnsViewMap.get(columnIndex);
+      }
+      default: {
+        return this.filteredMediaObjects;
+      }
     }
   }
 
