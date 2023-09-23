@@ -2,7 +2,6 @@ import { BreakpointObserver, BreakpointState } from '@angular/cdk/layout';
 import { HttpEvent, HttpEventType } from '@angular/common/http';
 import { Component, HostListener, OnDestroy, OnInit, TemplateRef, ViewChild } from '@angular/core';
 import { AbstractControl, FormControl, FormGroup, ValidationErrors, Validators } from '@angular/forms';
-import { MatButtonToggleChange } from '@angular/material/button-toggle';
 import {MatDialog, MatDialogConfig} from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { DomSanitizer } from '@angular/platform-browser';
@@ -354,6 +353,9 @@ export class MediaComponent implements OnInit, OnDestroy {
           const mediaObjectsIds = this.filteredMediaObjects.filter(x => x.isSelected).map(x => x.id);
           const albumsIds = dialogResult.map((x: MediaAlbum) => x.id);
           return this.mediaService.addToAlbum({ albumsIds, mediaObjectsIds });
+        }
+        if (dialogResult === 'new') {
+          this.createAlbum();
         }
         return EMPTY;
       })

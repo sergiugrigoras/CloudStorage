@@ -31,14 +31,18 @@
         <div class="media__controls-tasks">
             <input type="file" #inputFiles placeholder="Choose file" (change)="uploadFiles(inputFiles)"
                 style="display:none;" multiple>
-            <button mat-stroked-button color="primary" aria-label="New Album" matTooltip="Create New Album"
-                (click)="createAlbum()">New Album</button>
-            <button mat-stroked-button color="primary" aria-label="Add To Album" matTooltip="Add To Album"
-                    (click)="addSelectedToAlbum()" [disabled]="totalSelected < 1">Add To Album</button>
-            <button mat-stroked-button color="primary" aria-label="Upload" matTooltip="Upload media files"
-                (click)="inputFiles.click()">Upload</button>
-            <button mat-stroked-button color="primary" aria-label="Sync Folder" matTooltip="Sync Media Folder"
-                (click)="parseFolder()">Synchronize</button>
+            <button mat-icon-button color="primary" aria-label="Add To Album" matTooltip="Add To Album"
+                    (click)="addSelectedToAlbum()">
+              <span class="material-icons-outlined">collections</span>
+            </button>
+            <button mat-icon-button color="primary" aria-label="Upload" matTooltip="Upload media files"
+                (click)="inputFiles.click()">
+              <span class="material-icons-outlined">cloud_upload</span>
+            </button>
+            <button mat-icon-button color="primary" aria-label="Sync Folder" matTooltip="Sync Media Folder"
+                (click)="parseFolder()">
+              <span class="material-icons-outlined">sync</span>
+            </button>
         </div>
     </div>
     <mat-divider class="media__divider"></mat-divider>
@@ -120,7 +124,7 @@
         <div>
             <mat-form-field appearance="outline">
                 <mat-label>Select Album</mat-label>
-                <mat-select #albumSelect [multiple]="true">
+                <mat-select #albumSelect [multiple]="true" ngModel>
                   <mat-option>
                     <ngx-mat-select-search [formControl]="albumFilterCtrl" placeholderLabel="Search" noEntriesFoundLabel="No results."></ngx-mat-select-search>
                   </mat-option>
@@ -132,6 +136,8 @@
     <div mat-dialog-actions class="media__dialog-actions">
         <button mat-raised-button color="primary" [mat-dialog-close]="albumSelect.value"
             [disabled]="!albumSelect.value">Add</button>
+        <button mat-raised-button color="primary" [mat-dialog-close]="'new'">New Album</button>
+        <span class="spacer"></span>
         <button mat-raised-button color="accent" [mat-dialog-close]="false">Cancel</button>
     </div>
 </ng-template>
