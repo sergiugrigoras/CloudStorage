@@ -3,8 +3,9 @@ import { Injectable } from '@angular/core';
 import { Router } from '@angular/router';
 import { environment } from 'src/environments/environment';
 import { MediaObject } from '../model/media-object.model';
-import { Observable, map } from 'rxjs';
+import {Observable, map, Subject} from 'rxjs';
 import { MediaAlbum } from '../model/media-album.model';
+import {debounceTime} from "rxjs/operators";
 
 const API_URL: string = environment.baseUrl;
 const httpOptions = {
@@ -16,8 +17,13 @@ const httpOptions = {
   providedIn: 'root'
 })
 export class MediaService {
+  private _updateSnapshot = new Subject<void>();
+  updateSnapshot$ = this._updateSnapshot.asObservable().pipe(debounceTime(10));
   constructor(private http: HttpClient, private router: Router) { }
 
+  updateSnapshots() {
+    this._updateSnapshot.next();
+  }
   getMediaFile(id: string) {
     return this.http.get(API_URL + `/api/media/${id}`, { responseType: 'blob', observe: 'response' });
   }
@@ -70,6 +76,16 @@ export class MediaService {
 
   albumUniqueName(name: string) {
     return this.http.get(API_URL + `/api/media/unique-album-name?name=${name}`);
+  }
+
+  static toVideoTime(duration: number) {
+    const minutes = Math.floor(duration / 60000);
+    const seconds = Math.floor((duration % 60000) / 1000);
+    return (
+      seconds == 60 ?
+        (minutes + 1) + ":00" :
+        minutes + ":" + (seconds < 10 ? "0" : "") + seconds
+    );
   }
 
 }

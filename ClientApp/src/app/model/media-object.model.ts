@@ -26,11 +26,6 @@ export class MediaObject {
         this.favorite = mediaObject.favorite;
         this.ownerId = mediaObject.ownerId;
         this.snapshot$ = new AsyncSubject();
-        this.snapshot$.subscribe({
-            complete: () => {
-                this.isLoading = false;
-            }
-        });
     }
 
     isVideo() {

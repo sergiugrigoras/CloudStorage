@@ -1,6 +1,6 @@
 import { BreakpointObserver, BreakpointState } from '@angular/cdk/layout';
 import { HttpEvent, HttpEventType } from '@angular/common/http';
-import { Component, HostListener, OnDestroy, OnInit, TemplateRef, ViewChild } from '@angular/core';
+import {Component, HostListener, OnDestroy, OnInit, TemplateRef, ViewChild} from '@angular/core';
 import { AbstractControl, FormControl, FormGroup, ValidationErrors, Validators } from '@angular/forms';
 import {MatDialog, MatDialogConfig} from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
@@ -10,13 +10,15 @@ import {
   Observable,
   catchError,
   debounceTime,
-  forkJoin,
   fromEvent,
   map,
   retry,
   switchMap,
   tap,
-  ReplaySubject
+  ReplaySubject,
+  throttleTime,
+  Subject,
+  takeUntil
 } from 'rxjs';
 import { MediaAlbum } from 'src/app/model/media-album.model';
 import { MediaObject, SnapshotUrl } from 'src/app/model/media-object.model';
@@ -37,8 +39,6 @@ export class MediaComponent implements OnInit, OnDestroy {
   favoriteFilter = false;
   videoFilter = true;
   pictureFilter = true;
-
-
   twoColumnsViewMap: Map<number, MediaObject[]>;
   threeColumnsViewMap: Map<number, MediaObject[]>;
   activeMediaObject: MediaObject;
@@ -58,25 +58,32 @@ export class MediaComponent implements OnInit, OnDestroy {
   newAlbumForm = new FormGroup({
     name: new FormControl('', [Validators.required, Validators.minLength(5)], this.uniqueAlbumName.bind(this))
   });
-  dialogConfig: MatDialogConfig<any> = {
+  dialogConfig: MatDialogConfig = {
     width: '500px',
     disableClose: false,
     hasBackdrop: true,
   };
+  private readonly destroy$ = new Subject<void>();
+
   constructor(
     private mediaService: MediaService,
     public breakpointObserver: BreakpointObserver,
     private sanitizer: DomSanitizer,
     private dialog: MatDialog,
-    private snackBar: MatSnackBar
+    private snackBar: MatSnackBar,
   ) { }
 
   ngOnDestroy(): void {
-
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   ngOnInit(): void {
-    fromEvent(document, 'mousewheel').pipe(debounceTime(250)).subscribe((event: Event) => {
+    fromEvent(document, 'mousewheel')
+      .pipe(
+        takeUntil(this.destroy$),
+        throttleTime(150))
+      .subscribe((event: Event) => {
       if (!this.viewMedia) return;
       const wheelEvent = event as WheelEvent;
       if (wheelEvent.deltaY > 0) {
@@ -86,8 +93,12 @@ export class MediaComponent implements OnInit, OnDestroy {
       }
 
     });
+
     this.breakpointObserver
       .observe(['(min-width: 1200px)', '(max-width: 768px)'])
+      .pipe(
+        takeUntil(this.destroy$)
+      )
       .subscribe((state: BreakpointState) => {
         if (!state.matches) {
           this.columnView = 'two-columns';
@@ -101,7 +112,10 @@ export class MediaComponent implements OnInit, OnDestroy {
     this.fetchMediaObjects();
 
     this.albumFilterCtrl.valueChanges
-      .pipe(debounceTime(250))
+      .pipe(
+        takeUntil(this.destroy$),
+        debounceTime(250)
+      )
       .subscribe(() => {
         this.filterAlbums();
       });
@@ -133,7 +147,6 @@ export class MediaComponent implements OnInit, OnDestroy {
       complete: () => {
         this.buildColumnsMap();
         this.mediaReady = true;
-        this.fetchSnapshots();
       }
     }
 
@@ -197,8 +210,12 @@ export class MediaComponent implements OnInit, OnDestroy {
     })
   }
 
-  fetchSnapshots() {
-    const snapshot = (mediaObject: MediaObject) => this.mediaService.getSnapshotFile(mediaObject.id)
+  fetchSnapshot($event: MediaObject) {
+    this.snapshot$($event).subscribe();
+  }
+
+  private snapshot$(mediaObject: MediaObject) {
+    return this.mediaService.getSnapshotFile(mediaObject.id)
       .pipe(
         retry(3),
         catchError((error: any) => {
@@ -211,9 +228,8 @@ export class MediaComponent implements OnInit, OnDestroy {
           this.snapshotUrls.set(mediaObject.id, { url, safeUrl });
           mediaObject.snapshot$.next(safeUrl);
           mediaObject.snapshot$.complete();
+          mediaObject.isLoading = false;
         }));
-
-    forkJoin(this.filteredMediaObjects.map(mediaObject => snapshot(mediaObject))).subscribe();
   }
 
   private buildColumnsMap() {
@@ -276,6 +292,7 @@ export class MediaComponent implements OnInit, OnDestroy {
     }
     this.filteredMediaObjects = filtered;
     this.buildColumnsMap();
+    this.mediaService.updateSnapshots();
   }
 
   parseFolder() {

@@ -57,7 +57,11 @@
     <div class="media__container" *ngIf="mediaReady && columnView === 'one-column'">
         <div class="media__column">
             <ng-container *ngFor="let item of filteredMediaObjects">
-                <app-media-item [item]="item" (open)="openMedia($event)"></app-media-item>
+                <app-media-item
+                  [item]="item"
+                  (open)="openMedia($event)"
+                  (fetchSnapshot)="fetchSnapshot($event)"
+                ></app-media-item>
             </ng-container>
         </div>
     </div>
@@ -65,12 +69,20 @@
     <div class="media__container" *ngIf="mediaReady && columnView === 'two-columns'">
         <div class="media__column">
             <ng-container *ngFor="let item of getMediaForColumn(2, 0)">
-                <app-media-item [item]="item" (open)="openMedia($event)"></app-media-item>
+                <app-media-item
+                  [item]="item"
+                  (open)="openMedia($event)"
+                  (fetchSnapshot)="fetchSnapshot($event)"
+                ></app-media-item>
             </ng-container>
         </div>
         <div class="media__column">
             <ng-container *ngFor="let item of getMediaForColumn(2, 1)">
-                <app-media-item [item]="item" (open)="openMedia($event)"></app-media-item>
+                <app-media-item
+                  [item]="item"
+                  (open)="openMedia($event)"
+                  (fetchSnapshot)="fetchSnapshot($event)"
+                ></app-media-item>
             </ng-container>
         </div>
     </div>
@@ -78,17 +90,29 @@
     <div class="media__container" *ngIf="mediaReady && columnView === 'three-columns'">
         <div class="media__column">
             <ng-container *ngFor="let item of getMediaForColumn(3, 0)">
-                <app-media-item [item]="item" (open)="openMedia($event)"></app-media-item>
+                <app-media-item
+                  [item]="item"
+                  (open)="openMedia($event)"
+                  (fetchSnapshot)="fetchSnapshot($event)"
+                ></app-media-item>
             </ng-container>
         </div>
         <div class="media__column">
             <ng-container *ngFor="let item of getMediaForColumn(3, 1)">
-                <app-media-item [item]="item" (open)="openMedia($event)"></app-media-item>
+                <app-media-item
+                  [item]="item"
+                  (open)="openMedia($event)"
+                  (fetchSnapshot)="fetchSnapshot($event)"
+                ></app-media-item>
             </ng-container>
         </div>
         <div class="media__column">
             <ng-container *ngFor="let item of getMediaForColumn(3, 2)">
-                <app-media-item [item]="item" (open)="openMedia($event)"></app-media-item>
+                <app-media-item
+                  [item]="item"
+                  (open)="openMedia($event)"
+                  (fetchSnapshot)="fetchSnapshot($event)"
+                ></app-media-item>
             </ng-container>
         </div>
     </div>
