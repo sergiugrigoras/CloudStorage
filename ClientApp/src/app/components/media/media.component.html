@@ -1,167 +1,179 @@
-<div class="media-item__view" *ngIf="viewMedia" (click)="hideControls = !hideControls">
-    <video *ngIf="activeMediaObject?.isVideo()" autoplay [muted]="'muted'" loop controls
-        [src]="'/api/content/'+activeMediaObject?.id">
-    </video>
-    <img *ngIf="!activeMediaObject?.isVideo()" id="image" [src]="'/api/content/'+activeMediaObject?.id" />
-    <span class="material-icons control control__close" (click)="closeDialog($event)">
-        close
-    </span>
-    <span class="material-icons control control__favorite" [ngClass]="getFavoriteControlClassList()"
-        (click)="favoriteToggle($event)">
-        {{ activeMediaObject?.favorite ? 'favorite' : 'favorite_border' }}
-    </span>
-    <span class="material-icons control control__left" [ngClass]="hideControls ? 'control--invisible' : ''"
-        (click)="scrollBack($event)">navigate_before</span>
-    <span class="material-icons control control__right" [ngClass]="hideControls ? 'control--invisible' : ''"
-        (click)="scrollForward($event)">navigate_next</span>
-</div>
-
-<div *ngIf="mediaReady && !viewMedia; else loading">
-    <div class="media__controls">
-        <div class="media__controls-filters">
-            <mat-slide-toggle [(ngModel)]="favoriteFilter" (ngModelChange)="filterChanged()"
-                color="primary">Favorite</mat-slide-toggle>
-            <mat-checkbox color="primary" [(ngModel)]="videoFilter"
-                (ngModelChange)="filterChanged()">Video</mat-checkbox>
-            <mat-checkbox color="primary" [(ngModel)]="pictureFilter"
-                (ngModelChange)="filterChanged()">Picture</mat-checkbox>
-            <span matTooltip="Filtered/Total/Selected">|
-                {{filteredMediaObjects.length}}/{{totalItems}}/{{totalSelected}}</span>
-        </div>
-        <div class="media__controls-tasks">
-            <input type="file" #inputFiles placeholder="Choose file" (change)="uploadFiles(inputFiles)"
-                style="display:none;" multiple>
-            <button mat-icon-button color="primary" aria-label="Add To Album" matTooltip="Add To Album"
-                    (click)="addSelectedToAlbum()">
-              <span class="material-icons-outlined">collections</span>
-            </button>
-            <button mat-icon-button color="primary" aria-label="Upload" matTooltip="Upload media files"
-                (click)="inputFiles.click()">
-              <span class="material-icons-outlined">cloud_upload</span>
-            </button>
-            <button mat-icon-button color="primary" aria-label="Sync Folder" matTooltip="Sync Media Folder"
-                (click)="parseFolder()">
-              <span class="material-icons-outlined">sync</span>
-            </button>
-        </div>
+<div *ngIf="mediaReady; else loading">
+  <div class="media__controls">
+    <button
+      mat-icon-button
+      color="primary"
+      aria-label="Show Favorites"
+      [matTooltip]="favoriteFilter ? 'Show All' : 'Show Favorites'"
+      [routerLink]="favoriteFilter ? '/media' : '/media/favorites'"
+    >
+      <span class="material-icons-outlined">{{favoriteFilter ? 'apps' : 'favorite'}}</span>
+    </button>
+    <div class="media__controls-tasks">
+      <input type="file" #inputFiles placeholder="Choose file" (change)="uploadFiles(inputFiles)"
+             style="display:none;" multiple>
+      <button mat-icon-button color="primary" aria-label="Add To Album" matTooltip="Add To Album"
+              (click)="addSelectedToAlbum()">
+        <span class="material-icons-outlined">collections</span>
+      </button>
+      <button mat-icon-button color="primary" aria-label="Upload" matTooltip="Upload media files"
+              (click)="inputFiles.click()">
+        <span class="material-icons-outlined">cloud_upload</span>
+      </button>
+      <button mat-icon-button color="primary" aria-label="Sync Folder" matTooltip="Sync Media Folder"
+              (click)="parseFolder()">
+        <span class="material-icons-outlined">sync</span>
+      </button>
     </div>
-    <mat-divider class="media__divider"></mat-divider>
-    <div *ngIf="uploading" class="media_upload-progress">
-        <mat-progress-bar mode="determinate" [value]="uploadProgress"></mat-progress-bar>
-    </div>
+  </div>
+  <mat-divider class="media__divider"></mat-divider>
+  <div *ngIf="uploading" class="media_upload-progress">
+    <mat-progress-bar mode="determinate" [value]="uploadProgress"></mat-progress-bar>
+  </div>
 
-    <h3 *ngIf="filteredMediaObjects.length < 1">
-        No content.
-    </h3>
+  <h3 *ngIf="displayedMediaObjects.length < 1">
+    No content.
+  </h3>
 
-    <div class="media__container" *ngIf="mediaReady && columnView === 'one-column'">
-        <div class="media__column">
-            <ng-container *ngFor="let item of filteredMediaObjects">
-                <app-media-item
-                  [item]="item"
-                  (open)="openMedia($event)"
-                  (fetchSnapshot)="fetchSnapshot($event)"
-                ></app-media-item>
-            </ng-container>
-        </div>
+  <div class="media__container" *ngIf="mediaReady && columnView === 'one-column'">
+    <div class="media__column">
+      <ng-container *ngFor="let item of displayedMediaObjects">
+        <app-media-item
+          [item]="item"
+          [xObserver]="intersectionObserver"
+          (open)="openMedia($event)"
+          [id]="'media-'+item.id"
+        ></app-media-item>
+      </ng-container>
     </div>
+  </div>
 
-    <div class="media__container" *ngIf="mediaReady && columnView === 'two-columns'">
-        <div class="media__column">
-            <ng-container *ngFor="let item of getMediaForColumn(2, 0)">
-                <app-media-item
-                  [item]="item"
-                  (open)="openMedia($event)"
-                  (fetchSnapshot)="fetchSnapshot($event)"
-                ></app-media-item>
-            </ng-container>
-        </div>
-        <div class="media__column">
-            <ng-container *ngFor="let item of getMediaForColumn(2, 1)">
-                <app-media-item
-                  [item]="item"
-                  (open)="openMedia($event)"
-                  (fetchSnapshot)="fetchSnapshot($event)"
-                ></app-media-item>
-            </ng-container>
-        </div>
+  <div class="media__container" *ngIf="mediaReady && columnView === 'two-columns'">
+    <div class="media__column">
+      <ng-container *ngFor="let item of twoColumns.getColumn(0)">
+        <app-media-item
+          [item]="item"
+          [xObserver]="intersectionObserver"
+          (open)="openMedia($event)"
+        ></app-media-item>
+      </ng-container>
     </div>
+    <div class="media__column">
+      <ng-container *ngFor="let item of twoColumns.getColumn(1)">
+        <app-media-item
+          [item]="item"
+          [xObserver]="intersectionObserver"
+          (open)="openMedia($event)"
+        ></app-media-item>
+      </ng-container>
+    </div>
+  </div>
 
-    <div class="media__container" *ngIf="mediaReady && columnView === 'three-columns'">
-        <div class="media__column">
-            <ng-container *ngFor="let item of getMediaForColumn(3, 0)">
-                <app-media-item
-                  [item]="item"
-                  (open)="openMedia($event)"
-                  (fetchSnapshot)="fetchSnapshot($event)"
-                ></app-media-item>
-            </ng-container>
-        </div>
-        <div class="media__column">
-            <ng-container *ngFor="let item of getMediaForColumn(3, 1)">
-                <app-media-item
-                  [item]="item"
-                  (open)="openMedia($event)"
-                  (fetchSnapshot)="fetchSnapshot($event)"
-                ></app-media-item>
-            </ng-container>
-        </div>
-        <div class="media__column">
-            <ng-container *ngFor="let item of getMediaForColumn(3, 2)">
-                <app-media-item
-                  [item]="item"
-                  (open)="openMedia($event)"
-                  (fetchSnapshot)="fetchSnapshot($event)"
-                ></app-media-item>
-            </ng-container>
-        </div>
+  <div class="media__container" *ngIf="mediaReady && columnView === 'three-columns'">
+    <div class="media__column">
+      <ng-container *ngFor="let item of threeColumns.getColumn(0)">
+        <app-media-item
+          [item]="item"
+          [xObserver]="intersectionObserver"
+          (open)="openMedia($event)"
+        ></app-media-item>
+      </ng-container>
     </div>
+    <div class="media__column">
+      <ng-container *ngFor="let item of threeColumns.getColumn(1)">
+        <app-media-item
+          [item]="item"
+          [xObserver]="intersectionObserver"
+          (open)="openMedia($event)"
+        ></app-media-item>
+      </ng-container>
+    </div>
+    <div class="media__column">
+      <ng-container *ngFor="let item of threeColumns.getColumn(2)">
+        <app-media-item
+          [item]="item"
+          [xObserver]="intersectionObserver"
+          (open)="openMedia($event)"
+        ></app-media-item>
+      </ng-container>
+    </div>
+  </div>
 </div>
 
 <ng-template #loading>
-    <mat-spinner *ngIf="!viewMedia"></mat-spinner>
+  <mat-spinner></mat-spinner>
 </ng-template>
 
 <ng-template #newAlbum>
-    <div mat-dialog-title class="media__dialog-title">New Album</div>
-    <form [formGroup]="newAlbumForm" mat-dialog-content class="media__dialog-content">
-        <p></p>
-        <div>
-            <mat-form-field appearance="outline">
-                <mat-label>Album Name</mat-label>
-                <input matInput #albumNameInput formControlName="name">
-                <mat-error>{{newAlbumErrorMessage()}}</mat-error>
-            </mat-form-field>
-        </div>
-    </form>
-    <div mat-dialog-actions class="media__dialog-actions">
-        <button mat-raised-button color="primary" [mat-dialog-close]="albumNameInput.value"
-            [disabled]="newAlbumForm.invalid">Create</button>
-        <button mat-raised-button color="accent" [mat-dialog-close]="false">Cancel</button>
+  <div mat-dialog-title class="media__dialog-title">New Album</div>
+  <form [formGroup]="newAlbumForm" mat-dialog-content class="media__dialog-content">
+    <p></p>
+    <div>
+      <mat-form-field appearance="outline">
+        <mat-label>Album Name</mat-label>
+        <input matInput #albumNameInput formControlName="name">
+        <mat-error>{{newAlbumErrorMessage()}}</mat-error>
+      </mat-form-field>
     </div>
+  </form>
+  <div mat-dialog-actions class="media__dialog-actions">
+    <button mat-raised-button color="primary" [mat-dialog-close]="albumNameInput.value"
+            [disabled]="newAlbumForm.invalid">Create
+    </button>
+    <button mat-raised-button color="accent" [mat-dialog-close]="false">Cancel</button>
+  </div>
 </ng-template>
 
 <ng-template #addToAlbum>
-    <div mat-dialog-title class="media__dialog-title">Add to album</div>
-    <div mat-dialog-content class="media__dialog-content">
-        <p></p>
-        <div>
-            <mat-form-field appearance="outline">
-                <mat-label>Select Album</mat-label>
-                <mat-select #albumSelect [multiple]="true" ngModel>
-                  <mat-option>
-                    <ngx-mat-select-search [formControl]="albumFilterCtrl" placeholderLabel="Search" noEntriesFoundLabel="No results."></ngx-mat-select-search>
-                  </mat-option>
-                  <mat-option *ngFor="let item of filteredAlbums$ | async" [value]="item">{{item.name}}</mat-option>
-                </mat-select>
-            </mat-form-field>
-        </div>
+  <div mat-dialog-title class="media__dialog-title">Add to album</div>
+  <div mat-dialog-content class="media__dialog-content">
+    <p></p>
+    <div>
+      <mat-form-field appearance="outline">
+        <mat-label>Select Album</mat-label>
+        <mat-select #albumSelect [multiple]="true" ngModel>
+          <mat-option>
+            <ngx-mat-select-search [formControl]="albumFilterCtrl" placeholderLabel="Search"
+                                   noEntriesFoundLabel="No results."></ngx-mat-select-search>
+          </mat-option>
+          <mat-option *ngFor="let item of filteredAlbums$ | async" [value]="item">{{item.name}}</mat-option>
+        </mat-select>
+      </mat-form-field>
     </div>
-    <div mat-dialog-actions class="media__dialog-actions">
-        <button mat-raised-button color="primary" [mat-dialog-close]="albumSelect.value"
-            [disabled]="!albumSelect.value">Add</button>
-        <button mat-raised-button color="primary" [mat-dialog-close]="'new'">New Album</button>
-        <span class="spacer"></span>
-        <button mat-raised-button color="accent" [mat-dialog-close]="false">Cancel</button>
-    </div>
+  </div>
+  <div mat-dialog-actions class="media__dialog-actions">
+    <button mat-raised-button color="primary" [mat-dialog-close]="albumSelect.value"
+            [disabled]="!albumSelect.value">Add
+    </button>
+    <button mat-raised-button color="primary" [mat-dialog-close]="'new'">New Album</button>
+    <span class="spacer"></span>
+    <button mat-raised-button color="accent" [mat-dialog-close]="false">Cancel</button>
+  </div>
+</ng-template>
+
+
+<ng-template #mediaViewDialog>
+  <div class="media-item__view">
+    <video
+      *ngIf="activeMediaObject.isVideo"
+      [muted]="'muted'"
+      autoplay
+      loop
+      controls
+      [src]="'/api/content/'+activeMediaObject?.id"
+    >
+    </video>
+    <img *ngIf="!activeMediaObject.isVideo" [src]="'/api/content/'+activeMediaObject?.id"/>
+    <span class="material-icons control control__close" (click)="closeDialog($event)">
+      close
+    </span>
+    <span class="material-icons control control__favorite" [ngClass]="getFavoriteControlClassList()"
+          (click)="favoriteToggle($event)">
+            {{ activeMediaObject?.favorite ? 'favorite' : 'favorite_border' }}
+        </span>
+    <span class="material-icons control control__left" [ngClass]="hideControls ? 'control--invisible' : ''"
+          (click)="scrollBack($event)">navigate_before</span>
+    <span class="material-icons control control__right" [ngClass]="hideControls ? 'control--invisible' : ''"
+          (click)="scrollForward($event)">navigate_next</span>
+  </div>
 </ng-template>

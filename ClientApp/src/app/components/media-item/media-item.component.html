@@ -1,6 +1,6 @@
 <div class="media-item__snapshot">
     <img *ngIf="!item.isLoading" [src]="item.snapshot$ | async" (click)="openItem()" />
-    <span *ngIf="item.isVideo()" class="media-item__snapshot-duration">{{getVideoDuration(item.duration)}}</span>
+    <span *ngIf="item.isVideo" class="media-item__snapshot-duration">{{item.videoLength}}</span>
     <div class="media-item__snapshot-placeholder" *ngIf="item.isLoading"
         [ngStyle]="{'aspect-ratio': item.width / item.height}">
         <mat-progress-bar mode="indeterminate"></mat-progress-bar>

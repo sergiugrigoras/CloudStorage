@@ -1,64 +1,67 @@
-import {AfterViewInit, Component, ElementRef, EventEmitter, Input, OnDestroy, OnInit, Output} from '@angular/core';
+import {
+  AfterViewInit,
+  Component,
+  ElementRef,
+  EventEmitter,
+  Input,
+  OnDestroy,
+  OnInit,
+  Output
+} from '@angular/core';
 import { MediaObject } from 'src/app/model/media-object.model';
 import {MediaService} from "../../services/media.service";
-import {fromEvent, Subject, takeUntil, throttleTime} from "rxjs";
+import {catchError, EMPTY, retry, Subject, takeUntil, tap} from "rxjs";
+import {DomSanitizer} from "@angular/platform-browser";
 
 @Component({
   selector: 'app-media-item',
   templateUrl: './media-item.component.html',
   styleUrls: ['./media-item.component.scss']
 })
-export class MediaItemComponent implements AfterViewInit, OnInit, OnDestroy{
+export class MediaItemComponent implements OnInit, OnDestroy, AfterViewInit{
   @Input() item: MediaObject;
+  @Input() xObserver: IntersectionObserver;
+  url: string;
   @Output() open = new EventEmitter<string>();
-  @Output() fetchSnapshot = new EventEmitter<MediaObject>();
   private readonly destroy$ = new Subject<void>();
-  constructor(private element: ElementRef, private mediaService: MediaService) {
-  }
-  ngAfterViewInit(): void {
-    this.loadIfVisible();
+  constructor(
+    private mediaService: MediaService,
+    private sanitizer: DomSanitizer,
+    private el: ElementRef) {
   }
 
   openItem() {
     this.open.emit(this.item.id);
   }
 
-  getVideoDuration(duration: number) {
-    return MediaService.toVideoTime(duration);
-  }
-
-  private loadIfVisible() {
-    if (this.visibleInViewport() && this.item.isLoading) {
-      this.fetchSnapshot.emit(this.item);
-    }
-  }
-
-  private visibleInViewport() {
-    const rect = this.element?.nativeElement.getBoundingClientRect();
-    return rect && rect.top <= window.innerHeight * 2;
-  }
-
   ngOnInit(): void {
-    fromEvent(document, 'scroll')
+    this.mediaService.getSnapshotFile(this.item.id)
       .pipe(
         takeUntil(this.destroy$),
-        throttleTime(150)
-      )
-      .subscribe(() => {
-        this.loadIfVisible();
-      });
-
-    this.mediaService.updateSnapshot$
-      .pipe(
-        takeUntil(this.destroy$),
-      )
-      .subscribe(() => {
-      this.loadIfVisible();
-    });
+        retry(3),
+        catchError((error: any) => {
+          return EMPTY;
+        }),
+        tap(response => {
+          this.url = URL.createObjectURL(response.body);
+          const safeUrl = this.sanitizer.bypassSecurityTrustUrl(this.url);
+          this.item.snapshot$.next(safeUrl);
+          this.item.snapshot$.complete();
+          this.item.isLoading = false;
+        }))
+      .subscribe();
   }
 
   ngOnDestroy() {
     this.destroy$.next();
     this.destroy$.complete();
+    // URL.revokeObjectURL(this.url);
+  }
+
+  ngAfterViewInit(): void {
+    const element = this.el?.nativeElement;
+    if (element && this.xObserver) {
+      this.xObserver.observe(element);
+    }
   }
 }

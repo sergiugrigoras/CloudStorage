@@ -29,10 +29,10 @@ namespace CloudStorage.Controllers
 
         }
         [HttpGet("all")]
-        public async Task<IActionResult> GetMediaFolderAsync()
+        public async Task<IActionResult> GetMediaFolderAsync(bool favorites)
         {
             var user = await _userService.GetUserFromPrincipalAsync(User);
-            var result = await _mediaService.GetAllMediFilesAsync(user);
+            var result = await _mediaService.GetAllMediFilesAsync(user, favorites);
             return new JsonResult(result);
         }
 

@@ -2,9 +2,8 @@ import { BreakpointObserver, BreakpointState } from '@angular/cdk/layout';
 import { HttpEvent, HttpEventType } from '@angular/common/http';
 import {Component, HostListener, OnDestroy, OnInit, TemplateRef, ViewChild} from '@angular/core';
 import { AbstractControl, FormControl, FormGroup, ValidationErrors, Validators } from '@angular/forms';
-import {MatDialog, MatDialogConfig} from '@angular/material/dialog';
+import {MatDialog, MatDialogConfig, MatDialogRef} from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { DomSanitizer } from '@angular/platform-browser';
 import {
   EMPTY,
   Observable,
@@ -21,11 +20,14 @@ import {
   takeUntil
 } from 'rxjs';
 import { MediaAlbum } from 'src/app/model/media-album.model';
-import { MediaObject, SnapshotUrl } from 'src/app/model/media-object.model';
+import { MediaObject } from 'src/app/model/media-object.model';
 import { MediaService } from 'src/app/services/media.service';
+import {ActivatedRoute} from "@angular/router";
+import {OverlayContainer} from "@angular/cdk/overlay";
 
-const KEY_UPDATE_INTERVAL_SECONDS = 60;
+const KEY_UPDATE_INTERVAL = 60000; // 1 minute
 const SNACKBAR_OPTIONS = { duration: 3000 };
+const LOAD_BY_DEFAULT_COUNT = 1;
 @Component({
   selector: 'app-media',
   templateUrl: './media.component.html',
@@ -33,25 +35,21 @@ const SNACKBAR_OPTIONS = { duration: 3000 };
 })
 export class MediaComponent implements OnInit, OnDestroy {
   private allMediaObjects: MediaObject[] = [];
-  filteredMediaObjects: MediaObject[];
+  displayedMediaObjects: MediaObject[];
   mediaReady = false;
   columnView: string;
-  favoriteFilter = false;
-  videoFilter = true;
-  pictureFilter = true;
-  twoColumnsViewMap: Map<number, MediaObject[]>;
-  threeColumnsViewMap: Map<number, MediaObject[]>;
+  twoColumns = new MultipleColumnsCollection(2);
+  threeColumns = new MultipleColumnsCollection(3);
   activeMediaObject: MediaObject;
   activeIndex: number;
   hideControls = false;
-  viewMedia = false;
   timer: NodeJS.Timer;
   uploading = false;
   uploadProgress = 0;
-  currentScroll = 0;
-  snapshotUrls: Map<string, SnapshotUrl> = new Map<string, SnapshotUrl>();
+  favoriteFilter: boolean;
   @ViewChild('newAlbum', { static: true }) newAlbumDialog: TemplateRef<never>;
   @ViewChild('addToAlbum', { static: true }) addToAlbumDialog: TemplateRef<never>;
+  @ViewChild('mediaViewDialog', { static: true }) mediaViewDialog: TemplateRef<never>;
   albumFilterCtrl: FormControl<string> = new FormControl<string>('');
   filteredAlbums$: ReplaySubject<MediaAlbum[]> = new ReplaySubject<MediaAlbum[]>(1);
   allMediaAlbums: MediaAlbum[];
@@ -63,35 +61,71 @@ export class MediaComponent implements OnInit, OnDestroy {
     disableClose: false,
     hasBackdrop: true,
   };
+
+  viewDialogConfig: MatDialogConfig = {
+    maxWidth: '98vw',
+    maxHeight: '98vh',
+    hasBackdrop: true,
+    disableClose: true,
+  };
+  dialogRef: MatDialogRef<any>;
   private readonly destroy$ = new Subject<void>();
+  itemsLoaded = 0;
+  intersectionObserver = new IntersectionObserver((entries: IntersectionObserverEntry[]) => {
+    const visible = entries.filter(x => x.isIntersecting);
+    this.loadItemsToView(visible.length);
+    visible.forEach(x => this.intersectionObserver.unobserve(x.target));
+  }, {threshold: 0});
 
   constructor(
     private mediaService: MediaService,
     public breakpointObserver: BreakpointObserver,
-    private sanitizer: DomSanitizer,
     private dialog: MatDialog,
+    private overlay: OverlayContainer,
     private snackBar: MatSnackBar,
+    private route: ActivatedRoute
   ) { }
 
+  @HostListener('document:keydown', ['$event'])
+  private keyListener(event: KeyboardEvent) {
+    switch (event.key) {
+      case 'Escape' : {
+        this.closeDialog();
+        break;
+      }
+      case 'ArrowLeft': {
+        this.scrollMediaBack();
+        break;
+      }
+      case 'ArrowRight': {
+        this.scrollMediaForward()
+        break;
+      }
+      default:
+        break;
+    }
+  }
+
   ngOnDestroy(): void {
+    this.overlay.getContainerElement().classList.remove('media');
     this.destroy$.next();
     this.destroy$.complete();
   }
 
   ngOnInit(): void {
+    this.favoriteFilter = this.route.snapshot.data['favorites'] ?? false;
+
     fromEvent(document, 'mousewheel')
       .pipe(
         takeUntil(this.destroy$),
         throttleTime(150))
       .subscribe((event: Event) => {
-      if (!this.viewMedia) return;
       const wheelEvent = event as WheelEvent;
       if (wheelEvent.deltaY > 0) {
         this.scrollMediaBack();
       } else {
         this.scrollMediaForward();
       }
-
     });
 
     this.breakpointObserver
@@ -109,8 +143,6 @@ export class MediaComponent implements OnInit, OnDestroy {
         }
       });
 
-    this.fetchMediaObjects();
-
     this.albumFilterCtrl.valueChanges
       .pipe(
         takeUntil(this.destroy$),
@@ -119,6 +151,8 @@ export class MediaComponent implements OnInit, OnDestroy {
       .subscribe(() => {
         this.filterAlbums();
       });
+
+    this.fetchMediaObjects();
   }
 
   uniqueAlbumName(control: AbstractControl): Observable<ValidationErrors | null> {
@@ -133,166 +167,74 @@ export class MediaComponent implements OnInit, OnDestroy {
     return this.allMediaObjects?.length;
   }
   get totalSelected() {
-    return this.filteredMediaObjects.reduce((sum: number, current: MediaObject) => current.isSelected ? ++sum : sum, 0)
+    return this.displayedMediaObjects.reduce((sum: number, current: MediaObject) => current.isSelected ? ++sum : sum, 0)
   }
 
   private fetchMediaObjects() {
     this.mediaReady = false;
-    const allMediaObserver = {
-      next: () => { },
-      error: (error: any) => {
-        console.error(error);
-        this.mediaReady = true;
-      },
-      complete: () => {
-        this.buildColumnsMap();
-        this.mediaReady = true;
-      }
-    }
 
-    this.mediaService.getAllMediaFiles()
+    this.mediaService.getAllMediaFiles(this.favoriteFilter)
       .pipe(
         tap((mediaObjects: MediaObject[]) => {
           this.allMediaObjects = mediaObjects.map(x => new MediaObject(x));
-          this.filteredMediaObjects = this.allMediaObjects.slice();
-        })
-      ).subscribe(allMediaObserver);
-  }
-
-  openMedia(id: string) {
-    this.currentScroll = window.scrollY;
-    this.hideControls = false;
-
-    this.mediaService.addContentAccesKeyCookie()
-      .pipe(
+          this.displayedMediaObjects = [];
+          this.loadItemsToView(LOAD_BY_DEFAULT_COUNT);
+        }),
+        catchError(error => {
+          console.error(error);
+          return EMPTY;
+        }),
         tap(() => {
+          this.mediaReady = true;
+        }),
+      ).subscribe(() => {});
+  }
+
+  loadItemsToView(count: number) {
+    if (count === 0) return;
+    const newItems = this.allMediaObjects.slice(this.itemsLoaded, this.itemsLoaded + count);
+    this.displayedMediaObjects.push(...newItems);
+    this.twoColumns.addItems(...newItems);
+    this.threeColumns.addItems(...newItems);
+    this.itemsLoaded = this.itemsLoaded + newItems.length;
+  }
+  openMedia(id: string) {
+    this.hideControls = false;
+    this.overlay.getContainerElement().classList.add('media');
+    this.mediaService.addContentAccessKeyCookie()
+      .pipe(
+        switchMap(() => {
           this.activeMediaObject = this.getMediaObjectById(id);
-          this.activeIndex = this.filteredMediaObjects.indexOf(this.activeMediaObject);
+          this.activeIndex = this.displayedMediaObjects.indexOf(this.activeMediaObject);
           this.updateAccessKey();
-          this.viewMedia = true;
-        }))
-      .subscribe();
+          this.dialogRef = this.dialog.open(this.mediaViewDialog, this.viewDialogConfig);
+          return this.dialogRef.afterClosed();
+        }),
+        switchMap(() => {
+          window.clearTimeout(this.timer);
+          this.activeMediaObject = null;
+          this.overlay.getContainerElement().classList.remove('media');
+          return this.mediaService.removeContentAccesKey();
+        })
+      ).subscribe();
   }
 
-  updateAccessKey() {
+  private updateAccessKey() {
     this.timer = setInterval(() => {
-      this.mediaService.addContentAccesKeyCookie().subscribe();
-    }, KEY_UPDATE_INTERVAL_SECONDS * 1000);
-  }
-
-
-  @HostListener('document:keydown', ['$event'])
-  private escKeyListner(event: KeyboardEvent) {
-    if (event.key === "Escape" && this.viewMedia) {
-      this.closeDialog();
-    }
+      this.mediaService.addContentAccessKeyCookie().subscribe();
+    }, KEY_UPDATE_INTERVAL);
   }
 
   closeDialog($event?: MouseEvent) {
     $event?.stopPropagation();
-    this.viewMedia = false;
-    setTimeout(() => {
-      window.scrollTo(0, this.currentScroll);
-    }, 25);
-    window.clearTimeout(this.timer);
-    this.activeMediaObject = null;
-    this.mediaService.removeContentAccesKey().subscribe();
+    this.dialogRef?.close();
   }
 
   favoriteToggle($event: MouseEvent) {
     $event.stopPropagation();
     this.mediaService.toggleFavorite(this.activeMediaObject.id).subscribe((result) => {
       this.activeMediaObject.favorite = result;
-      if (this.favoriteFilter) {
-        this.filteredMediaObjects = this.allMediaObjects.filter(x => x.favorite);
-        this.buildColumnsMap();
-      }
-    })
-  }
-
-  fetchSnapshot($event: MediaObject) {
-    this.snapshot$($event).subscribe();
-  }
-
-  private snapshot$(mediaObject: MediaObject) {
-    return this.mediaService.getSnapshotFile(mediaObject.id)
-      .pipe(
-        retry(3),
-        catchError((error: any) => {
-          return EMPTY;
-        }),
-        tap(response => {
-          const blob = response.body as Blob;
-          const url = URL.createObjectURL(blob);
-          const safeUrl = this.sanitizer.bypassSecurityTrustUrl(url);
-          this.snapshotUrls.set(mediaObject.id, { url, safeUrl });
-          mediaObject.snapshot$.next(safeUrl);
-          mediaObject.snapshot$.complete();
-          mediaObject.isLoading = false;
-        }));
-  }
-
-  private buildColumnsMap() {
-    this.twoColumnsViewMap = new Map<number, MediaObject[]>([
-      [0, []],
-      [1, []],
-    ]);
-    this.threeColumnsViewMap = new Map<number, MediaObject[]>([
-      [0, []],
-      [1, []],
-      [2, []],
-    ]);
-
-    const twoColumnsOffset = [0, 0];
-    const threeColumnsOffset = [0, 0, 0];
-
-    const getMinIndex = (numberOfColumns: 2 | 3) => {
-      switch (numberOfColumns) {
-        case 2: return twoColumnsOffset.indexOf(Math.min(...twoColumnsOffset));
-        case 3: return threeColumnsOffset.indexOf(Math.min(...threeColumnsOffset));
-        default: return 0;
-      }
-    }
-
-    for (const mediaObject of this.filteredMediaObjects) {
-      const minIndexTwoColumns = getMinIndex(2);
-      this.twoColumnsViewMap.get(minIndexTwoColumns).push(mediaObject);
-      twoColumnsOffset[minIndexTwoColumns] = twoColumnsOffset[minIndexTwoColumns] + (mediaObject.height/mediaObject.width);
-
-      const minIndexThreeColumns = getMinIndex(3);
-      this.threeColumnsViewMap.get(minIndexThreeColumns).push(mediaObject);
-      threeColumnsOffset[minIndexThreeColumns] = threeColumnsOffset[minIndexThreeColumns] + (mediaObject.height/mediaObject.width);
-    }
-  }
-
-  getMediaForColumn(numberOfColumns: number, columnIndex: number) {
-    switch (numberOfColumns) {
-      case 2: {
-        return this.twoColumnsViewMap.get(columnIndex);
-      }
-      case 3: {
-        return this.threeColumnsViewMap.get(columnIndex);
-      }
-      default: {
-        return this.filteredMediaObjects;
-      }
-    }
-  }
-
-  filterChanged() {
-    let filtered = this.allMediaObjects.slice();
-    if (this.favoriteFilter) {
-      filtered = this.allMediaObjects.filter(x => x.favorite);
-    }
-    if (!this.videoFilter) {
-      filtered = filtered.filter(x => !x.isVideo());
-    }
-    if (!this.pictureFilter) {
-      filtered = filtered.filter(x => x.isVideo());
-    }
-    this.filteredMediaObjects = filtered;
-    this.buildColumnsMap();
-    this.mediaService.updateSnapshots();
+    });
   }
 
   parseFolder() {
@@ -345,7 +287,7 @@ export class MediaComponent implements OnInit, OnDestroy {
   addSelectedToAlbum() {
     const addToAlbumObserver = {
       next: () => {
-        this.filteredMediaObjects.forEach(x => x.isSelected = false);
+        this.displayedMediaObjects.forEach(x => x.isSelected = false);
         this.snackBar.open(`Success.`, 'Ok', SNACKBAR_OPTIONS);
       },
       error: (error: unknown) => {
@@ -367,7 +309,7 @@ export class MediaComponent implements OnInit, OnDestroy {
       }),
       switchMap((dialogResult: unknown) => {
         if (Array.isArray(dialogResult) && dialogResult.length > 0) {
-          const mediaObjectsIds = this.filteredMediaObjects.filter(x => x.isSelected).map(x => x.id);
+          const mediaObjectsIds = this.displayedMediaObjects.filter(x => x.isSelected).map(x => x.id);
           const albumsIds = dialogResult.map((x: MediaAlbum) => x.id);
           return this.mediaService.addToAlbum({ albumsIds, mediaObjectsIds });
         }
@@ -390,21 +332,21 @@ export class MediaComponent implements OnInit, OnDestroy {
   }
 
   private scrollMediaForward() {
-    if (this.activeIndex === this.filteredMediaObjects.length - 1) {
+    if (this.activeIndex === this.displayedMediaObjects.length - 1) {
       this.activeIndex = 0;
     } else {
       this.activeIndex++;
     }
-    this.activeMediaObject = this.filteredMediaObjects[this.activeIndex];
+    this.activeMediaObject = this.displayedMediaObjects[this.activeIndex];
   }
 
   private scrollMediaBack() {
     if (this.activeIndex === 0) {
-      this.activeIndex = this.filteredMediaObjects.length - 1;
+      this.activeIndex = this.displayedMediaObjects.length - 1;
     } else {
       this.activeIndex--;
     }
-    this.activeMediaObject = this.filteredMediaObjects[this.activeIndex];
+    this.activeMediaObject = this.displayedMediaObjects[this.activeIndex];
   }
 
   getFavoriteControlClassList() {
@@ -441,5 +383,34 @@ export class MediaComponent implements OnInit, OnDestroy {
     this.filteredAlbums$.next(
       this.allMediaAlbums.filter(album => album.name.toLowerCase().indexOf(search) > -1)
     );
+  }
+}
+
+export class MultipleColumnsCollection {
+  private readonly numberOfColumns: number;
+  private readonly columns: Array<Array<MediaObject>>;
+  private readonly offsets: number[];
+
+  constructor(numberOfColumns: number) {
+    this.numberOfColumns = numberOfColumns;
+    this.columns = Array(numberOfColumns).fill(undefined).map(() => []);
+    this.offsets = Array(numberOfColumns).fill(0);
+  }
+
+  addItems(...items: MediaObject[]) {
+    for (let item of items) {
+      const index = this.smallestColumnIndex();
+      this.columns[index].push(item);
+      this.offsets[index] = this.offsets[index] + (item.height/item.width);
+    }
+  }
+
+  getColumn(index: number) {
+    if (index >= this.numberOfColumns) return undefined;
+    return this.columns[index];
+  }
+
+  private smallestColumnIndex(): number  {
+    return this.offsets.indexOf(Math.min(...this.offsets));
   }
 }

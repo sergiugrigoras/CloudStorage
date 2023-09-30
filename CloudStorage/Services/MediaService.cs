@@ -10,12 +10,13 @@ using static System.Net.Mime.MediaTypeNames;
 using FFMpegCore.Enums;
 using Microsoft.AspNetCore.Components.Forms;
 using System.Net.Http.Headers;
+using System.Linq.Expressions;
 
 namespace CloudStorage.Services
 {
     public interface IMediaService 
     {
-        Task<IEnumerable<MediaObjectViewModel>> GetAllMediFilesAsync(User user);
+        Task<IEnumerable<MediaObjectViewModel>> GetAllMediFilesAsync(User user, bool favoritesOnly = false);
         Task<Stream> GetSnapshotAsync(User user, Guid mediaFileId);
         Task<Stream> GetMediaAsync(Guid id);
         Task<MediaObject> GetMediaObjectByIdAsync(Guid id);
@@ -40,8 +41,16 @@ namespace CloudStorage.Services
             _context = context;
             _storageUrl = configuration.GetValue<string>("Storage:url");
         }
-        public async Task<IEnumerable<MediaObjectViewModel>> GetAllMediFilesAsync(User user)
+
+        public async Task<IEnumerable<MediaObjectViewModel>> GetAllMediFilesAsync(User user, bool favoritesOnly = false)
         {
+            if (favoritesOnly)
+            {
+                return await _context.MediaObjects
+                    .Where(x => x.OwnerId == user.Id && x.Favorite)
+                    .Select(x => new MediaObjectViewModel(x))
+                    .ToListAsync();
+            }
             return await _context.MediaObjects
                 .Where(x => x.OwnerId == user.Id)
                 .Select(x => new MediaObjectViewModel(x))

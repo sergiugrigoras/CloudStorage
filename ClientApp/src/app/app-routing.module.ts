@@ -22,6 +22,8 @@ const routes: Routes = [
   { path: 'profile', component: ProfileComponent, canActivate: [AuthGuard] },
   { path: 'drive', component: DriveComponent, canActivate: [AuthGuard] },
   { path: 'media', component: MediaComponent, canActivate: [AuthGuard] },
+  { path: 'media/favorites', component: MediaComponent, data: {favorites: true}, canActivate: [AuthGuard] },
+  { path: 'media/:**', redirectTo: '/media' },
   { path: 'notes', component: NotesComponent, canActivate: [AuthGuard] },
   { path: 'note', component: ViewNoteComponent },
   { path: 'note/:id', component: ViewNoteComponent },
