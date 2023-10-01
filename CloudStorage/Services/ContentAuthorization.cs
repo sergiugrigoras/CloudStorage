@@ -1,11 +1,9 @@
-﻿using Microsoft.IdentityModel.Tokens;
-using System.Diagnostics;
-
-namespace CloudStorage.Services
+﻿namespace CloudStorage.Services
 {
     public class ContentAuthorization
     {
         private Dictionary<Guid, AuthorizationKeys> UserKeys { get; set; }
+        private readonly ReaderWriterLockSlim dictLock = new();
         public ContentAuthorization() 
         {
             UserKeys = new Dictionary<Guid, AuthorizationKeys>();
@@ -14,13 +12,29 @@ namespace CloudStorage.Services
         {
             var key = GenerateKey();
 
-            if (UserKeys.TryGetValue(userId, out var keys))
+            dictLock.EnterWriteLock();
+            var authKeys = GetAuthorizationKeysForUser(userId);
+            if (authKeys != null)
             {
-                keys.AddKey(key);
+                try
+                {
+                    authKeys.AddKey(key);
+                }
+                finally
+                {
+                    dictLock.ExitWriteLock();
+                }
             }
             else
-            { 
-                UserKeys.Add(userId, new AuthorizationKeys().AddKey(key));
+            {
+                try
+                {
+                    UserKeys.Add(userId, new AuthorizationKeys().AddKey(key));
+                }
+                finally
+                {
+                    dictLock.ExitWriteLock();
+                }
             }
 
             return key;
@@ -28,14 +42,41 @@ namespace CloudStorage.Services
 
         public void RemoveKeyForUser(Guid userId)
         {
-            UserKeys.Remove(userId);
+            dictLock.EnterWriteLock();
+            try
+            {
+                UserKeys.Remove(userId);
+            }
+            finally
+            {
+                dictLock.ExitWriteLock();
+            }
         }
 
         public bool ValidKey(Guid userId, string key)
         {
             if (string.IsNullOrWhiteSpace(key)) return false;
-            var containsKey = UserKeys.TryGetValue(userId, out var keys);
-            return containsKey && keys.Validate(key);
+            dictLock.EnterReadLock();
+            try
+            {
+                var authKeys = GetAuthorizationKeysForUser(userId);
+                if (authKeys == null)
+                    return false;
+
+                return authKeys.Validate(key);
+            }
+            finally
+            {
+                dictLock.ExitReadLock();
+            }
+        }
+
+        private AuthorizationKeys GetAuthorizationKeysForUser(Guid userId) 
+        {
+            if (UserKeys.TryGetValue(userId, out var keys))
+                return keys;
+
+            return null;
         }
 
         private static string GenerateKey()
@@ -51,28 +92,28 @@ namespace CloudStorage.Services
 
     public class AuthorizationKeys
     {
-        private Key _currentKey { get; set; }
-        private Key _previousKey { get; set; }
+        private Key CurrentKey { get; set; }
+        private Key PreviousKey { get; set; }
 
         public AuthorizationKeys AddKey(string keyValue)
         {
-            _previousKey = _currentKey;
-            _currentKey = new Key(keyValue);
-            _previousKey ??= _currentKey;
+            PreviousKey = CurrentKey;
+            CurrentKey = new Key(keyValue);
+            PreviousKey ??= CurrentKey;
             return this;
         }
 
         public bool Validate(string key)
         {
-            return _currentKey.IsValid(key) || _previousKey.IsValid(key);
+            return CurrentKey.IsValid(key) || PreviousKey.IsValid(key);
         }
 
     }
 
     public class Key
     {
-        private string _value;
-        private DateTime _expirationDate;
+        private readonly string _value;
+        private readonly DateTime _expirationDate;
         public Key(string keyValue) 
         {
             _value = keyValue;
