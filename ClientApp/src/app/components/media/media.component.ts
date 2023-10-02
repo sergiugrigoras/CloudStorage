@@ -43,7 +43,7 @@ export class MediaComponent implements OnInit, OnDestroy {
   activeMediaObject: MediaObject;
   activeIndex: number;
   hideControls = false;
-  timer: NodeJS.Timer;
+  updateAccessKeyIntervalId: number;
   uploading = false;
   uploadProgress = 0;
   favoriteFilter: boolean;
@@ -211,7 +211,7 @@ export class MediaComponent implements OnInit, OnDestroy {
           return this.dialogRef.afterClosed();
         }),
         switchMap(() => {
-          window.clearTimeout(this.timer);
+          window.clearTimeout(this.updateAccessKeyIntervalId);
           this.activeMediaObject = null;
           this.overlay.getContainerElement().classList.remove('media');
           return this.mediaService.removeContentAccesKey();
@@ -220,7 +220,7 @@ export class MediaComponent implements OnInit, OnDestroy {
   }
 
   private updateAccessKey() {
-    this.timer = setInterval(() => {
+    this.updateAccessKeyIntervalId = window.setInterval(() => {
       this.mediaService.addContentAccessKeyCookie().subscribe();
     }, KEY_UPDATE_INTERVAL);
   }
