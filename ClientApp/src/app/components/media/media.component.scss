@@ -73,6 +73,8 @@ div.media-item__view {
   font-size: 36px;
   color: white;
   opacity: 0.4;
+  background-color: black;
+  border-radius: 50%;
   -webkit-user-select: none;
   /* Safari */
   -moz-user-select: none;
@@ -83,6 +85,10 @@ div.media-item__view {
   /* Standard */
   cursor: pointer;
 
+  &--disabled {
+    pointer-events: none;
+    opacity: 0.1;
+  }
   &--invisible {
     display: none;
   }
@@ -93,8 +99,17 @@ div.media-item__view {
   }
 
   &__close {
-    top: 0;
     left: 0;
+  }
+
+  &__favorite {
+    right: 0;
+  }
+
+  &__close,
+  &__favorite {
+    top: 0;
+    font-size: 3rem;
   }
 
   &__left {
@@ -110,11 +125,7 @@ div.media-item__view {
     font-size: 5rem;
   }
 
-  &__favorite {
-    top: 0;
-    right: 0;
 
-  }
 }
 
 

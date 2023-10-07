@@ -167,13 +167,13 @@
     <span class="material-icons control control__close" (click)="closeDialog($event)">
       close
     </span>
-    <span class="material-icons control control__favorite" [ngClass]="getFavoriteControlClassList()"
+    <span class="material-icons control control__favorite" [ngClass]="activeMediaObject?.favorite ? 'control--pink': ''"
           (click)="favoriteToggle($event)">
             {{ activeMediaObject?.favorite ? 'favorite' : 'favorite_border' }}
         </span>
-    <span class="material-icons control control__left" [ngClass]="hideControls ? 'control--invisible' : ''"
+    <span class="material-icons control control__left" [ngClass]="activeIndex === 0 ? 'control--disabled': ''"
           (click)="scrollBack($event)">navigate_before</span>
-    <span class="material-icons control control__right" [ngClass]="hideControls ? 'control--invisible' : ''"
+    <span class="material-icons control control__right" [ngClass]="activeIndex === maxScrollIndex ? 'control--disabled': ''"
           (click)="scrollForward($event)">navigate_next</span>
   </div>
 </ng-template>

@@ -22,8 +22,8 @@ import {
 import { MediaAlbum } from 'src/app/model/media-album.model';
 import { MediaObject } from 'src/app/model/media-object.model';
 import { MediaService } from 'src/app/services/media.service';
-import {ActivatedRoute} from "@angular/router";
-import {OverlayContainer} from "@angular/cdk/overlay";
+import { ActivatedRoute } from "@angular/router";
+import { OverlayContainer } from "@angular/cdk/overlay";
 
 const KEY_UPDATE_INTERVAL = 60000; // 1 minute
 const SNACKBAR_OPTIONS = { duration: 3000 };
@@ -42,7 +42,9 @@ export class MediaComponent implements OnInit, OnDestroy {
   threeColumns = new MultipleColumnsCollection(3);
   activeMediaObject: MediaObject;
   activeIndex: number;
-  hideControls = false;
+  get maxScrollIndex() {
+    return this.allMediaObjects.length - 1;
+  }
   updateAccessKeyIntervalId: number;
   uploading = false;
   uploadProgress = 0;
@@ -199,7 +201,6 @@ export class MediaComponent implements OnInit, OnDestroy {
     this.itemsLoaded = this.itemsLoaded + newItems.length;
   }
   openMedia(id: string) {
-    this.hideControls = false;
     this.overlay.getContainerElement().classList.add('media');
     this.mediaService.addContentAccessKeyCookie()
       .pipe(
@@ -332,31 +333,20 @@ export class MediaComponent implements OnInit, OnDestroy {
   }
 
   private scrollMediaForward() {
-    if (this.activeIndex === this.displayedMediaObjects.length - 1) {
-      this.activeIndex = 0;
-    } else {
-      this.activeIndex++;
+    if (this.activeIndex >= this.maxScrollIndex) {
+      return;
     }
-    this.activeMediaObject = this.displayedMediaObjects[this.activeIndex];
+    if (this.activeIndex === this.displayedMediaObjects.length - 1) {
+      this.loadItemsToView(LOAD_BY_DEFAULT_COUNT);
+    }
+    this.activeMediaObject = this.displayedMediaObjects[++this.activeIndex];
   }
 
   private scrollMediaBack() {
     if (this.activeIndex === 0) {
-      this.activeIndex = this.displayedMediaObjects.length - 1;
-    } else {
-      this.activeIndex--;
+      return;
     }
-    this.activeMediaObject = this.displayedMediaObjects[this.activeIndex];
-  }
-
-  getFavoriteControlClassList() {
-    if (this.hideControls) {
-      return 'control--invisible';
-    } else if (this.activeMediaObject?.favorite) {
-      return 'control--pink'
-    } else {
-      return '';
-    }
+    this.activeMediaObject = this.displayedMediaObjects[--this.activeIndex];
   }
 
   private getMediaObjectById(id: string) {
