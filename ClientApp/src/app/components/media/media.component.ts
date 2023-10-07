@@ -115,6 +115,7 @@ export class MediaComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
+    location.hash = '';
     this.favoriteFilter = this.route.snapshot.data['favorites'] ?? false;
 
     fromEvent(document, 'mousewheel')
@@ -201,6 +202,7 @@ export class MediaComponent implements OnInit, OnDestroy {
     this.itemsLoaded = this.itemsLoaded + newItems.length;
   }
   openMedia(id: string) {
+    location.hash = 'view';
     this.overlay.getContainerElement().classList.add('media');
     this.mediaService.addContentAccessKeyCookie()
       .pipe(
@@ -212,6 +214,9 @@ export class MediaComponent implements OnInit, OnDestroy {
           return this.dialogRef.afterClosed();
         }),
         switchMap(() => {
+          if (location.hash === '#view') {
+            history.back();
+          }
           window.clearTimeout(this.updateAccessKeyIntervalId);
           this.activeMediaObject = null;
           this.overlay.getContainerElement().classList.remove('media');
