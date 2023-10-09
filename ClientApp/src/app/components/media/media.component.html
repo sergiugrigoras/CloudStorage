@@ -12,6 +12,10 @@
     <div class="media__controls-tasks">
       <input type="file" #inputFiles placeholder="Choose file" (change)="uploadFiles(inputFiles)"
              style="display:none;" multiple>
+      <button mat-icon-button color="primary" aria-label="Albums List" matTooltip="All Albums"
+              (click)="showAlbumsList()">
+        <span class="material-icons-outlined">format_list_bulleted</span>
+      </button>
       <button mat-icon-button color="primary" aria-label="Add To Album" matTooltip="Add To Album"
               (click)="addSelectedToAlbum()">
         <span class="material-icons-outlined">collections</span>
@@ -175,5 +179,23 @@
           (click)="scrollBack($event)">navigate_before</span>
     <span class="material-icons control control__right" [ngClass]="activeIndex === maxScrollIndex ? 'control--disabled': ''"
           (click)="scrollForward($event)">navigate_next</span>
+  </div>
+</ng-template>
+
+
+<ng-template #allAlbums>
+  <div mat-dialog-title>All Media Albums</div>
+  <div mat-dialog-content>
+    <mat-selection-list #albumList [multiple]="false" hideSingleSelectionIndicator>
+      <mat-list-option *ngFor="let album of allMediaAlbums$ | async" [value]="album">
+        <mat-icon matListItemIcon>collections</mat-icon>
+        <span matListItemTitle>{{album.name}}</span>
+        <span matListItemLine>Created: {{album.createDate | date: 'mediumDate'}}</span>
+      </mat-list-option>
+    </mat-selection-list>
+  </div>
+  <div mat-dialog-actions>
+    <button type="button" mat-raised-button color="primary" [mat-dialog-close]="albumList.selectedOptions.selected[0]?.value" [disabled]="!albumList.selectedOptions.hasValue()">View</button>
+    <button type="button" mat-raised-button color="accent" [mat-dialog-close]="false">Close</button>
   </div>
 </ng-template>

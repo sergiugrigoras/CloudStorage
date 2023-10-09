@@ -52,9 +52,11 @@ export class MediaComponent implements OnInit, OnDestroy {
   @ViewChild('newAlbum', { static: true }) newAlbumDialog: TemplateRef<never>;
   @ViewChild('addToAlbum', { static: true }) addToAlbumDialog: TemplateRef<never>;
   @ViewChild('mediaViewDialog', { static: true }) mediaViewDialog: TemplateRef<never>;
+  @ViewChild('allAlbums', { static: true }) allAlbumsDialog: TemplateRef<never>;
   albumFilterCtrl: FormControl<string> = new FormControl<string>('');
   filteredAlbums$: ReplaySubject<MediaAlbum[]> = new ReplaySubject<MediaAlbum[]>(1);
   allMediaAlbums: MediaAlbum[];
+  allMediaAlbums$ = this.mediaService.getAllAlbums();
   newAlbumForm = new FormGroup({
     name: new FormControl('', [Validators.required, Validators.minLength(5)], this.uniqueAlbumName.bind(this))
   });
@@ -379,6 +381,19 @@ export class MediaComponent implements OnInit, OnDestroy {
       this.allMediaAlbums.filter(album => album.name.toLowerCase().indexOf(search) > -1)
     );
   }
+
+  showAlbumsList() {
+    this.dialog.open(this.allAlbumsDialog, this.dialogConfig).afterClosed()
+      .pipe(
+        switchMap(result => {
+          if (result instanceof MediaAlbum) {
+            return this.mediaService.getAlbumContent(result.name);
+          }
+          return EMPTY;
+        })
+      ).subscribe();
+  }
+
 }
 
 export class MultipleColumnsCollection {

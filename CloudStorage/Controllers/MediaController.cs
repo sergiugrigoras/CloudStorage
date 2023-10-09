@@ -149,5 +149,13 @@ namespace CloudStorage.Controllers
             var isUnique = await _mediaService.UniqueAlbumNameAsync(user, name);
             return new JsonResult(isUnique);
         }
+
+        [HttpGet("album")]
+        public async Task<IActionResult> GetAlbumContentAsync(string name)
+        {
+            var user = await _userService.GetUserFromPrincipalAsync(User);
+            var result = await _mediaService.GetAlbumContentAsync(user, name);
+            return new JsonResult(result);
+        }
     }
 }

@@ -72,4 +72,8 @@ export class MediaService {
     return this.http.get(API_URL + `/api/media/unique-album-name?name=${name}`);
   }
 
+  getAlbumContent(name: string) {
+    return this.http.get<MediaObject[]>(API_URL + `/api/media/album?name=${name}`);
+  }
+
 }

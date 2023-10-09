@@ -27,6 +27,7 @@ namespace CloudStorage.Services
         Task <IEnumerable<MediaAlbum>> GetAllAlbumsAsync(User user);
         Task AddMediaToAlbumAsync(User user, ICollection<Guid> mediaIds, ICollection<Guid> albumIds);
         Task<bool> UniqueAlbumNameAsync(User user, string name);
+        Task<IEnumerable<MediaObjectViewModel>> GetAlbumContentAsync(User user, string albumName);
     }
     public class MediaService: IMediaService
     {
@@ -329,6 +330,25 @@ namespace CloudStorage.Services
             if (name == null || user == null) return false;
             var exists = await _context.MediaAlbums.AnyAsync(x => x.Name == name.Trim().ToLower() && x.OwnerId == user.Id);
             return !exists;
+        }
+
+        public async Task<IEnumerable<MediaObjectViewModel>> GetAlbumContentAsync(User user, string albumName)
+        {
+            var album = await _context.MediaAlbums
+                .AsNoTracking()
+                .Include(x => x.MediaObjects)
+                .Where(x => x.OwnerId == user.Id && x.Name == albumName).FirstOrDefaultAsync();
+            
+            if (album == null)
+                ThrowException(404, "Album Not Found");
+
+            var result = album.MediaObjects
+                .AsParallel()
+                .Where(x => x.OwnerId == user.Id)
+                .Select(x => new MediaObjectViewModel(x))
+                .ToList();
+
+            return result;
         }
     }
 
