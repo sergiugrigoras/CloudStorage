@@ -1,54 +1,61 @@
 .media-item__snapshot {
-    position: relative;
-    margin-bottom: .5rem;
-    cursor: pointer;
+  position: relative;
+  margin-bottom: .5rem;
+  cursor: pointer;
+  box-sizing: border-box;
+
+  img {
+    width: 100%;
+    vertical-align: middle;
+    border-radius: 4px;
+  }
+
+  &-placeholder {
     box-sizing: border-box;
+    border: 1px solid #cfcfcf;
+    background-image: linear-gradient(to right, #303030, #4a4a4a, #666666, #838383, #a1a1a1);
+    border-radius: 4px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+  }
 
-    img {
-        width: 100%;
-        vertical-align: middle;
-        border-radius: 4px;
-    }
+  &-duration {
+    position: absolute;
+    bottom: 5px;
+    right: 5px;
+    color: white;
+    background-color: black;
+    opacity: 0.8;
+    font-weight: 700;
+    padding: 0 4px;
+    border-radius: 2px;
+  }
 
-    &-placeholder {
-        box-sizing: border-box;
-        border: 1px solid #cfcfcf;
-        background-image: linear-gradient(to right, #303030, #4a4a4a, #666666, #838383, #a1a1a1);
-        border-radius: 4px;
-        overflow: hidden;
-        display: flex;
-        flex-direction: column;
-        justify-content: flex-end;
-    }
+  &-button-select {
+    position: absolute;
+    left: 4px;
+    top: 4px;
+    display: none;
+  }
 
-    &-duration {
-        position: absolute;
-        bottom: 5px;
-        right: 5px;
-        color: white;
-        background-color: black;
-        opacity: 0.8;
-        font-weight: 700;
-        padding: 0 4px;
-        border-radius: 2px;
-    }
+  &-button-open {
+    position: absolute;
+    right: 4px;
+    top: 4px;
+  }
 
-    &-check {
-        position: absolute;
-        left: 4px;
-        top: 4px;
-    }
-
-    &-highlight {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        box-sizing: border-box;
-        border-style: solid;
-        border-width: 4px;
-        border-radius: 4px;
-        pointer-events: none;
-    }
+  &-highlight {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    box-sizing: border-box;
+    border-style: solid;
+    border-width: 4px;
+    border-radius: 4px;
+    pointer-events: none;
+  }
 }

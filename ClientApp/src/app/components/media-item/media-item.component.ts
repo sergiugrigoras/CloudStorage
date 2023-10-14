@@ -2,7 +2,7 @@ import {
   AfterViewInit,
   Component,
   ElementRef,
-  EventEmitter,
+  EventEmitter, HostListener,
   Input,
   OnDestroy,
   OnInit,
@@ -24,17 +24,39 @@ export class MediaItemComponent implements OnInit, OnDestroy, AfterViewInit{
   url: string;
   @Output() open = new EventEmitter<string>();
   private readonly destroy$ = new Subject<void>();
+  selectMode: boolean;
   constructor(
     private mediaService: MediaService,
     private sanitizer: DomSanitizer,
     private el: ElementRef) {
   }
 
+  itemTouched() {
+    if (this.selectMode) {
+      this.item.isSelected = !this.item.isSelected;
+    } else {
+      this.open.emit(this.item.id);
+    }
+  }
   openItem() {
     this.open.emit(this.item.id);
   }
 
+  @HostListener('contextmenu', ['$event'])
+  onRightClick($event: Event) {
+    $event.preventDefault();
+    this.item.isSelected = !this.item.isSelected;
+    this.mediaService.enableSelectMode();
+  }
+
   ngOnInit(): void {
+    this.mediaService.selectMode$
+      .pipe(
+        takeUntil(this.destroy$)
+      )
+      .subscribe(selectMode => {
+      this.selectMode = selectMode;
+    });
     this.mediaService.getSnapshotFile(this.item.id)
       .pipe(
         takeUntil(this.destroy$),

@@ -1,15 +1,22 @@
 .media__controls {
-  padding-top: 1.5rem;
+  padding: .8rem 0;
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
 
+  &-numbers {
+    font-size: 1.2rem;
+    font-weight: 600;
+    -webkit-user-select: none;
+    user-select: none;
+    display: flex;
+    align-items: center;
+  }
   > div {
     flex: 1;
     display: flex;
     align-items: center;
-    padding-bottom: .8rem;
   }
 
   &-filters {

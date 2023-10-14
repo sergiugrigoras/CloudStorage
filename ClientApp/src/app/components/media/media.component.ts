@@ -22,7 +22,7 @@ import {
 import { MediaAlbum } from 'src/app/model/media-album.model';
 import { MediaObject } from 'src/app/model/media-object.model';
 import { MediaService } from 'src/app/services/media.service';
-import { ActivatedRoute } from "@angular/router";
+import {ActivatedRoute, Router} from "@angular/router";
 import { OverlayContainer } from "@angular/cdk/overlay";
 
 const KEY_UPDATE_INTERVAL = 60000; // 1 minute
@@ -38,10 +38,12 @@ export class MediaComponent implements OnInit, OnDestroy {
   displayedMediaObjects: MediaObject[];
   mediaReady = false;
   columnView: string;
-  twoColumns = new MultipleColumnsCollection(2);
-  threeColumns = new MultipleColumnsCollection(3);
+  twoColumns: MultipleColumnsCollection;
+  threeColumns: MultipleColumnsCollection;
   activeMediaObject: MediaObject;
   activeIndex: number;
+  selectMode: boolean;
+  private allAlbumDialogRef: MatDialogRef<never, any>;
   get maxScrollIndex() {
     return this.allMediaObjects.length - 1;
   }
@@ -74,7 +76,7 @@ export class MediaComponent implements OnInit, OnDestroy {
   };
   dialogRef: MatDialogRef<any>;
   private readonly destroy$ = new Subject<void>();
-  itemsLoaded = 0;
+  itemsLoaded: number;
   intersectionObserver = new IntersectionObserver((entries: IntersectionObserverEntry[]) => {
     const visible = entries.filter(x => x.isIntersecting);
     this.loadItemsToView(visible.length);
@@ -87,7 +89,8 @@ export class MediaComponent implements OnInit, OnDestroy {
     private dialog: MatDialog,
     private overlay: OverlayContainer,
     private snackBar: MatSnackBar,
-    private route: ActivatedRoute
+    private route: ActivatedRoute,
+    private router: Router,
   ) { }
 
   @HostListener('document:keydown', ['$event'])
@@ -117,8 +120,46 @@ export class MediaComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
+    this.mediaService.selectMode$
+      .pipe(
+        takeUntil(this.destroy$)
+      )
+      .subscribe(selectMode => {
+      this.selectMode = selectMode;
+    });
     location.hash = '';
-    this.favoriteFilter = this.route.snapshot.data['favorites'] ?? false;
+    this.route.paramMap
+      .pipe(
+        takeUntil(this.destroy$),
+        switchMap(params => {
+          this.mediaService.disableSelectMode();
+          if (params.get('page') === 'album' && params.get('id')) {
+            this.favoriteFilter = true;
+            return this.mediaService.getAlbumContent(params.get('id'));
+          } else if (params.get('page') === 'favorites') {
+            this.favoriteFilter = true;
+            return this.mediaService.getAllMediaFiles(this.favoriteFilter);
+          } else {
+            this.favoriteFilter = false;
+            return this.mediaService.getAllMediaFiles(this.favoriteFilter);
+          }
+        }),
+        catchError(error => {
+          console.error(error);
+          return EMPTY;
+        }),
+        tap((mediaObjects: MediaObject[]) => {
+          this.allMediaObjects = mediaObjects.map(x => new MediaObject(x));
+          this.displayedMediaObjects = [];
+          this.twoColumns = new MultipleColumnsCollection(2);
+          this.threeColumns = new MultipleColumnsCollection(3);
+          this.itemsLoaded = 0;
+          this.loadItemsToView(LOAD_BY_DEFAULT_COUNT);
+        }),
+        tap(() => {
+          this.mediaReady = true;
+        }),
+      ).subscribe();
 
     fromEvent(document, 'mousewheel')
       .pipe(
@@ -157,7 +198,6 @@ export class MediaComponent implements OnInit, OnDestroy {
         this.filterAlbums();
       });
 
-    this.fetchMediaObjects();
   }
 
   uniqueAlbumName(control: AbstractControl): Observable<ValidationErrors | null> {
@@ -172,27 +212,7 @@ export class MediaComponent implements OnInit, OnDestroy {
     return this.allMediaObjects?.length;
   }
   get totalSelected() {
-    return this.displayedMediaObjects.reduce((sum: number, current: MediaObject) => current.isSelected ? ++sum : sum, 0)
-  }
-
-  private fetchMediaObjects() {
-    this.mediaReady = false;
-
-    this.mediaService.getAllMediaFiles(this.favoriteFilter)
-      .pipe(
-        tap((mediaObjects: MediaObject[]) => {
-          this.allMediaObjects = mediaObjects.map(x => new MediaObject(x));
-          this.displayedMediaObjects = [];
-          this.loadItemsToView(LOAD_BY_DEFAULT_COUNT);
-        }),
-        catchError(error => {
-          console.error(error);
-          return EMPTY;
-        }),
-        tap(() => {
-          this.mediaReady = true;
-        }),
-      ).subscribe(() => {});
+    return this.allMediaObjects.reduce((sum: number, current: MediaObject) => current.isSelected ? ++sum : sum, 0)
   }
 
   loadItemsToView(count: number) {
@@ -246,10 +266,8 @@ export class MediaComponent implements OnInit, OnDestroy {
   }
 
   parseFolder() {
-    console.log('Starting folder Parse!');
     this.mediaService.parseFolder().subscribe(() => {
-      console.log('Parse done!');
-      this.fetchMediaObjects();
+      console.log('Done.');
     });
   }
 
@@ -263,7 +281,7 @@ export class MediaComponent implements OnInit, OnDestroy {
       const uploadObserver = {
         next: (event: HttpEvent<Object>) => {
           if (event.type === HttpEventType.Response) {
-            this.fetchMediaObjects();
+            this.snackBar.open(`Upload complete.`, 'Ok', SNACKBAR_OPTIONS);
           }
           if (event.type === HttpEventType.UploadProgress && event.total) {
             this.uploadProgress = Math.floor((event.loaded / event.total) * 100);
@@ -383,17 +401,31 @@ export class MediaComponent implements OnInit, OnDestroy {
   }
 
   showAlbumsList() {
-    this.dialog.open(this.allAlbumsDialog, this.dialogConfig).afterClosed()
-      .pipe(
-        switchMap(result => {
-          if (result instanceof MediaAlbum) {
-            return this.mediaService.getAlbumContent(result.name);
-          }
-          return EMPTY;
-        })
-      ).subscribe();
+    this.allAlbumDialogRef = this.dialog.open(this.allAlbumsDialog, this.dialogConfig);
+    this.allAlbumDialogRef.afterClosed()
+      .subscribe(result => {
+        if (result instanceof MediaAlbum) {
+          void this.router.navigate(['/media', 'album', result.name]);
+        } else if (result === 'favorites') {
+          void this.router.navigate(['/media', 'favorites']);
+        } else if (result === 'home') {
+          void this.router.navigate(['/media']);
+        }
+    });
   }
 
+  navigateToAlbum(album: MediaAlbum | string) {
+    this.allAlbumDialogRef?.close(album);
+  }
+
+  selectAll() {
+    this.allMediaObjects.forEach(x => x.isSelected = true);
+  }
+
+  deselectAll() {
+    this.allMediaObjects.forEach(x => x.isSelected = false);
+    this.mediaService.disableSelectMode();
+  }
 }
 
 export class MultipleColumnsCollection {

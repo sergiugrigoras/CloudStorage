@@ -1,17 +1,24 @@
 <div *ngIf="mediaReady; else loading">
   <div class="media__controls">
-    <button
-      mat-icon-button
-      color="primary"
-      aria-label="Show Favorites"
-      [matTooltip]="favoriteFilter ? 'Show All' : 'Show Favorites'"
-      [routerLink]="favoriteFilter ? '/media' : '/media/favorites'"
-    >
-      <span class="material-icons-outlined">{{favoriteFilter ? 'apps' : 'favorite'}}</span>
-    </button>
+    <span *ngIf="selectMode" [matTooltip]="'Selected'" class="media__controls-numbers">
+      <span class="material-icons-outlined">
+        check_box
+      </span>
+      <span>&nbsp;{{totalSelected}}</span>
+    </span>
     <div class="media__controls-tasks">
       <input type="file" #inputFiles placeholder="Choose file" (change)="uploadFiles(inputFiles)"
              style="display:none;" multiple>
+      <ng-container *ngIf="selectMode">
+        <button mat-icon-button color="primary" aria-label="Select All" matTooltip="Select All"
+                (click)="selectAll()">
+          <span class="material-icons-outlined">select_all</span>
+        </button>
+        <button mat-icon-button color="primary" aria-label="Deselect All" matTooltip="Deselect All"
+                (click)="deselectAll()">
+          <span class="material-icons-outlined">deselect</span>
+        </button>
+      </ng-container>
       <button mat-icon-button color="primary" aria-label="Albums List" matTooltip="All Albums"
               (click)="showAlbumsList()">
         <span class="material-icons-outlined">format_list_bulleted</span>
@@ -23,10 +30,6 @@
       <button mat-icon-button color="primary" aria-label="Upload" matTooltip="Upload media files"
               (click)="inputFiles.click()">
         <span class="material-icons-outlined">cloud_upload</span>
-      </button>
-      <button mat-icon-button color="primary" aria-label="Sync Folder" matTooltip="Sync Media Folder"
-              (click)="parseFolder()">
-        <span class="material-icons-outlined">sync</span>
       </button>
     </div>
   </div>
@@ -187,7 +190,15 @@
   <div mat-dialog-title>All Media Albums</div>
   <div mat-dialog-content>
     <mat-selection-list #albumList [multiple]="false" hideSingleSelectionIndicator>
-      <mat-list-option *ngFor="let album of allMediaAlbums$ | async" [value]="album">
+      <mat-list-option value="home" (dblclick)="navigateToAlbum('home')">
+        <mat-icon matListItemIcon>home</mat-icon>
+        <span matListItemTitle>Home</span>
+      </mat-list-option>
+      <mat-list-option value="favorites" (dblclick)="navigateToAlbum('favorites')">
+        <mat-icon matListItemIcon>favorite</mat-icon>
+        <span matListItemTitle>Favorites</span>
+      </mat-list-option>
+      <mat-list-option *ngFor="let album of allMediaAlbums$ | async" [value]="album" (dblclick)="navigateToAlbum(album)">
         <mat-icon matListItemIcon>collections</mat-icon>
         <span matListItemTitle>{{album.name}}</span>
         <span matListItemLine>Created: {{album.createDate | date: 'mediumDate'}}</span>

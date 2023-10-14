@@ -3,7 +3,7 @@ import { Injectable } from '@angular/core';
 import { Router } from '@angular/router';
 import { environment } from 'src/environments/environment';
 import { MediaObject } from '../model/media-object.model';
-import {Observable, map} from 'rxjs';
+import {Observable, map, Subject, BehaviorSubject} from 'rxjs';
 import { MediaAlbum } from '../model/media-album.model';
 
 const API_URL: string = environment.baseUrl;
@@ -16,8 +16,16 @@ const httpOptions = {
   providedIn: 'root'
 })
 export class MediaService {
+  private _selectMode = new BehaviorSubject<boolean>(false);
+  selectMode$ = this._selectMode.asObservable();
   constructor(private http: HttpClient, private router: Router) { }
 
+  enableSelectMode() {
+    this._selectMode.next(true);
+  }
+  disableSelectMode() {
+    this._selectMode.next(false);
+  }
   getMediaFile(id: string) {
     return this.http.get(API_URL + `/api/media/${id}`, { responseType: 'blob', observe: 'response' });
   }

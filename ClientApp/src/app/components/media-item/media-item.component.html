@@ -1,10 +1,19 @@
 <div class="media-item__snapshot">
-    <img *ngIf="!item.isLoading" [src]="item.snapshot$ | async" (click)="openItem()" />
+    <img *ngIf="!item.isLoading" [src]="item.snapshot$ | async" (click)="itemTouched()"/>
     <span *ngIf="item.isVideo" class="media-item__snapshot-duration">{{item.videoLength}}</span>
     <div class="media-item__snapshot-placeholder" *ngIf="item.isLoading"
         [ngStyle]="{'aspect-ratio': item.width / item.height}">
         <mat-progress-bar mode="indeterminate"></mat-progress-bar>
     </div>
-    <mat-checkbox color="primary" class="media-item__snapshot-check" [(ngModel)]="item.isSelected"></mat-checkbox>
+  <button mat-icon-button color="primary" class="media-item__snapshot-button-select" type="button" (click)="item.isSelected = !item.isSelected; $event.stopPropagation()" *ngIf="selectMode">
+      <span class="material-icons-outlined">
+        {{item.isSelected ? 'check_box' : 'check_box_outline_blank'}}
+      </span>
+  </button>
+  <button mat-icon-button color="primary" class="media-item__snapshot-button-open" type="button" (click)="openItem(); $event.stopPropagation()" *ngIf="selectMode">
+      <span class="material-icons-outlined">
+        open_in_full
+      </span>
+  </button>
     <div *ngIf="item.isSelected" class="media-item__snapshot-highlight theme-color-border "></div>
 </div>
