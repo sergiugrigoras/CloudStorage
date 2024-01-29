@@ -14,7 +14,8 @@ var builder = WebApplication.CreateBuilder(args);
 var connectionString = builder.Configuration.GetConnectionString("DB");
 var _key = builder.Configuration.GetValue<string>("Jwt:Key");
 var _issuer = builder.Configuration.GetValue<string>("Jwt:Issuer");
-var inMemory = builder.Configuration.GetValue<bool>("InMemoryDb");
+var inMemory = builder.Configuration.GetValue<bool>("Database:InMemory");
+var sqlite = builder.Configuration.GetValue<string>("Database:Sqlite");
 
 // Add services to the container.
 builder.Services.AddDbContext<AppDbContext>(options =>
@@ -22,6 +23,10 @@ builder.Services.AddDbContext<AppDbContext>(options =>
     if (inMemory)
     {
         options.UseInMemoryDatabase("InMemoryDB");
+    }
+    else if (!string.IsNullOrEmpty(sqlite))
+    {
+        options.UseSqlite($"Data Source={sqlite}");
     }
     else
     {
@@ -84,6 +89,11 @@ builder.Services.AddSpaYarp();
 
 var app = builder.Build();
 
+using (var scope = app.Services.CreateScope())
+{
+    var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    dbContext.Database.EnsureCreated();
+}
 if (app.Environment.IsDevelopment())
 {
     app.UseDeveloperExceptionPage();
