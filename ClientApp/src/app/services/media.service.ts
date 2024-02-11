@@ -1,8 +1,8 @@
-import { HttpClient, HttpEvent, HttpHeaders } from '@angular/common/http';
+import {HttpClient, HttpEvent, HttpHeaders, HttpParams} from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Router } from '@angular/router';
 import { environment } from 'src/environments/environment';
-import { MediaObject } from '../model/media-object.model';
+import {MediaObject, MediaObjectFilter} from '../model/media-object.model';
 import {Observable, map, Subject, BehaviorSubject} from 'rxjs';
 import { MediaAlbum } from '../model/media-album.model';
 
@@ -38,8 +38,8 @@ export class MediaService {
     return this.http.post(API_URL + `/api/media/parse`, null);
   }
 
-  getAllMediaFiles(favorites: boolean = false) {
-    return this.http.get<MediaObject[]>(API_URL + `/api/media/all?favorites=${favorites}`);
+  getAllMediaFiles(filter: MediaObjectFilter) {
+    return this.http.post<MediaObject[]>(API_URL + `/api/media/all`, filter);
   }
 
   addContentAccessKeyCookie() {
@@ -82,6 +82,15 @@ export class MediaService {
 
   getAlbumContent(name: string) {
     return this.http.get<MediaObject[]>(API_URL + `/api/media/album?name=${name}`);
+  }
+
+  deleteMediaObjects(id: string[], permanent: boolean) {
+    const httpParams = new HttpParams().set('permanent', permanent);
+    return this.http.delete<any>(API_URL + `/api/media`, { body: {ids: id}, params: httpParams});
+  }
+
+  restoreMediaObjects(id: string[]) {
+    return this.http.post<string[]>(API_URL + `/api/media/restore`, {body: {ids: id}});
   }
 
 }

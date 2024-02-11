@@ -16,7 +16,7 @@ namespace CloudStorage.Services
 {
     public interface IMediaService 
     {
-        Task<IEnumerable<MediaObjectViewModel>> GetAllMediFilesAsync(User user, bool favoritesOnly = false);
+        Task<IEnumerable<MediaObjectViewModel>> GetAllMediaFilesAsync(User user, MediaObjectFilter filter);
         Task<Stream> GetSnapshotAsync(User user, Guid mediaFileId);
         Task<Stream> GetMediaAsync(Guid id);
         Task<MediaObject> GetMediaObjectByIdAsync(Guid id);
@@ -28,6 +28,8 @@ namespace CloudStorage.Services
         Task AddMediaToAlbumAsync(User user, ICollection<Guid> mediaIds, ICollection<Guid> albumIds);
         Task<bool> UniqueAlbumNameAsync(User user, string name);
         Task<IEnumerable<MediaObjectViewModel>> GetAlbumContentAsync(User user, string albumName);
+        Task<IEnumerable<Guid>> DeleteMediaObjectsAsync(User user, MediaObjectFilter filter, bool permanent);
+        Task<IEnumerable<Guid>> RestoreMediaObjectsAsync(User user, MediaObjectFilter filter);
     }
     public class MediaService: IMediaService
     {
@@ -43,19 +45,14 @@ namespace CloudStorage.Services
             _storageUrl = configuration.GetValue<string>("Storage:url");
         }
 
-        public async Task<IEnumerable<MediaObjectViewModel>> GetAllMediFilesAsync(User user, bool favoritesOnly = false)
+        public async Task<IEnumerable<MediaObjectViewModel>> GetAllMediaFilesAsync(User user, MediaObjectFilter filter)
         {
-            if (favoritesOnly)
-            {
-                return await _context.MediaObjects
-                    .Where(x => x.OwnerId == user.Id && x.Favorite)
+            
+            var expression = filter.ToExpression().AndAlso(x => x.OwnerId == user.Id);
+            return await _context.MediaObjects
+                    .Where(expression)
                     .Select(x => new MediaObjectViewModel(x))
                     .ToListAsync();
-            }
-            return await _context.MediaObjects
-                .Where(x => x.OwnerId == user.Id)
-                .Select(x => new MediaObjectViewModel(x))
-                .ToListAsync();
         }
 
         public async Task<Stream> GetSnapshotAsync(User user, Guid mediaFileId)
@@ -336,7 +333,7 @@ namespace CloudStorage.Services
         {
             var album = await _context.MediaAlbums
                 .AsNoTracking()
-                .Include(x => x.MediaObjects)
+                .Include(x => x.MediaObjects.Where(m => !m.MarkedForDeletion))
                 .Where(x => x.OwnerId == user.Id && x.Name == albumName).FirstOrDefaultAsync();
             
             if (album == null)
@@ -349,6 +346,44 @@ namespace CloudStorage.Services
                 .ToList();
 
             return result;
+        }
+
+        public async Task<IEnumerable<Guid>> DeleteMediaObjectsAsync(User user, MediaObjectFilter filter, bool permanent)
+        {
+            var expression = filter.ToExpression().AndAlso(x => x.OwnerId == user.Id);
+            var mediaObjects = await _context.MediaObjects.Where(expression).ToListAsync();
+            if (permanent)
+            {
+                var mediaFolder = GetUserMediaFolder(user.Id);
+                foreach (var mediaObject in mediaObjects)
+                {
+                   
+                    var mediaFile = Path.Combine(mediaFolder, mediaObject.UploadFileName);
+                    DeleteFile(mediaFile);
+                }
+
+                _context.MediaObjects.RemoveRange(mediaObjects);
+            }
+            else
+            {
+                foreach (var media in mediaObjects)
+                    media.MarkedForDeletion = true;
+            }
+                
+            var result = mediaObjects.Select(x => x.Id);
+            await _context.SaveChangesAsync();
+            return result;
+        }
+
+        public async Task<IEnumerable<Guid>> RestoreMediaObjectsAsync(User user, MediaObjectFilter filter)
+        {
+            var expression = filter.ToExpression().AndAlso(x => x.OwnerId == user.Id);
+            var mediaObjects = await _context.MediaObjects.Where(expression).ToListAsync();
+            foreach (var mediaObject in mediaObjects)
+                mediaObject.MarkedForDeletion = false;
+
+            await _context.SaveChangesAsync();
+            return mediaObjects.Select(x => x.Id);
         }
     }
 

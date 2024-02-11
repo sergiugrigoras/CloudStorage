@@ -15,6 +15,7 @@ namespace CloudStorage.ViewModels
             Duration = mediaObject.Duration;
             Favorite = mediaObject.Favorite;
             OwnerId = mediaObject.OwnerId;
+            MarkedForDeletion = mediaObject.MarkedForDeletion;
         }
 
         public MediaObjectViewModel() { }
@@ -33,6 +34,7 @@ namespace CloudStorage.ViewModels
         public int? Duration { get; set; }
 
         public bool Favorite { get; set; }
+        public bool MarkedForDeletion { get; set; }
 
         public Guid OwnerId { get; set; }
     }

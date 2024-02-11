@@ -28,11 +28,11 @@ namespace CloudStorage.Controllers
             _contentAuthorization = contentAuthorization;
 
         }
-        [HttpGet("all")]
-        public async Task<IActionResult> GetMediaFolderAsync(bool favorites)
+        [HttpPost("all")]
+        public async Task<IActionResult> GetMediaFolderAsync([FromBody]MediaObjectFilter filter)
         {
             var user = await _userService.GetUserFromPrincipalAsync(User);
-            var result = await _mediaService.GetAllMediFilesAsync(user, favorites);
+            var result = await _mediaService.GetAllMediaFilesAsync(user, filter);
             return new JsonResult(result);
         }
 
@@ -156,6 +156,22 @@ namespace CloudStorage.Controllers
             var user = await _userService.GetUserFromPrincipalAsync(User);
             var result = await _mediaService.GetAlbumContentAsync(user, name);
             return new JsonResult(result);
+        }
+
+        [HttpDelete]
+        public async Task<IActionResult> DeleteMediaAsync([FromBody] MediaObjectFilter filter, bool permanent = false)
+        {
+            var user = await _userService.GetUserFromPrincipalAsync(User);
+            await _mediaService.DeleteMediaObjectsAsync(user, filter, permanent);
+            return Ok();
+        }
+
+        [HttpPost("restore")]
+        public async Task<IActionResult> RestoreMediaAsync([FromBody] MediaObjectFilter filter)
+        {
+            var user = await _userService.GetUserFromPrincipalAsync(User);
+            await _mediaService.RestoreMediaObjectsAsync(user, filter);
+            return Ok();
         }
     }
 }

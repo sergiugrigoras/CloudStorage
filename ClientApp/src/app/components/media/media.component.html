@@ -18,19 +18,33 @@
                 (click)="deselectAll()">
           <span class="material-icons-outlined">deselect</span>
         </button>
+        <button *ngIf="page !== 'trash'" mat-icon-button color="primary" aria-label="Add To Album" matTooltip="Add To Album"
+                (click)="addSelectedToAlbum()" [disabled]="totalSelected < 1">
+          <span class="material-icons-outlined">collections</span>
+        </button>
+        <button mat-icon-button color="accent" aria-label="Delete" matTooltip="Delete Selected"
+                (click)="deleteSelected()" [disabled]="totalSelected < 1">
+          <span class="material-icons-outlined">delete</span>
+        </button>
+        <button *ngIf="page === 'trash'" mat-icon-button color="accent" aria-label="Restore" matTooltip="Restore media files"
+                (click)="restoreSelected()" [disabled]="totalSelected < 1">
+          <span class="material-icons-outlined">settings_backup_restore</span>
+        </button>
       </ng-container>
-      <button mat-icon-button color="primary" aria-label="Albums List" matTooltip="All Albums"
-              (click)="showAlbumsList()">
-        <span class="material-icons-outlined">format_list_bulleted</span>
-      </button>
-      <button mat-icon-button color="primary" aria-label="Add To Album" matTooltip="Add To Album"
-              (click)="addSelectedToAlbum()">
-        <span class="material-icons-outlined">collections</span>
-      </button>
-      <button mat-icon-button color="primary" aria-label="Upload" matTooltip="Upload media files"
-              (click)="inputFiles.click()">
-        <span class="material-icons-outlined">cloud_upload</span>
-      </button>
+      <ng-container *ngIf="!selectMode">
+        <button mat-icon-button color="primary" aria-label="Select Items" matTooltip="Select Items"
+                (click)="enableSelectMode()">
+          <span class="material-icons-outlined">highlight_alt</span>
+        </button>
+        <button mat-icon-button color="primary" aria-label="Albums List" matTooltip="All Albums"
+                (click)="showAlbumsList()">
+          <span class="material-icons-outlined">format_list_bulleted</span>
+        </button>
+        <button *ngIf="page === 'home'" mat-icon-button color="primary" aria-label="Upload" matTooltip="Upload media files"
+                (click)="inputFiles.click()">
+          <span class="material-icons-outlined">cloud_upload</span>
+        </button>
+      </ng-container>
     </div>
   </div>
   <mat-divider class="media__divider"></mat-divider>
@@ -38,8 +52,8 @@
     <mat-progress-bar mode="determinate" [value]="uploadProgress"></mat-progress-bar>
   </div>
 
-  <h3 *ngIf="displayedMediaObjects.length < 1">
-    No content.
+  <h3>
+    {{getPageName()}}<span *ngIf="displayedMediaObjects.length < 1"> - No content.</span>
   </h3>
 
   <div class="media__container" *ngIf="mediaReady && columnView === 'one-column'">
@@ -203,10 +217,29 @@
         <span matListItemTitle>{{album.name}}</span>
         <span matListItemLine>Created: {{album.createDate | date: 'mediumDate'}}</span>
       </mat-list-option>
+      <mat-divider></mat-divider>
+      <mat-list-option value="trash" (dblclick)="navigateToAlbum('trash')">
+        <mat-icon matListItemIcon>delete</mat-icon>
+        <span matListItemTitle>Trash</span>
+      </mat-list-option>
     </mat-selection-list>
   </div>
   <div mat-dialog-actions>
     <button type="button" mat-raised-button color="primary" [mat-dialog-close]="albumList.selectedOptions.selected[0]?.value" [disabled]="!albumList.selectedOptions.hasValue()">View</button>
     <button type="button" mat-raised-button color="accent" [mat-dialog-close]="false">Close</button>
+  </div>
+</ng-template>
+
+<ng-template #deleteConfirm>
+  <div mat-dialog-title>Delete Confirmation</div>
+  <div mat-dialog-content>
+    <div>Are you sure want to {{ page === 'trash' || deletePermanently ? 'permanently' : '' }} delete {{ totalSelected }} items(s) ?</div>
+    <div *ngIf="page !== 'trash'">
+      <mat-checkbox [(ngModel)]="deletePermanently">Permanently Delete</mat-checkbox>
+    </div>
+  </div>
+  <div mat-dialog-actions>
+    <button type="button" mat-raised-button color="primary" [mat-dialog-close]="true">Delete</button>
+    <button type="button" mat-raised-button color="accent" [mat-dialog-close]="false">Cancel</button>
   </div>
 </ng-template>

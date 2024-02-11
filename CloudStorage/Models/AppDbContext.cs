@@ -67,6 +67,9 @@ namespace CloudStorage.Models
                     .IsRequired()
                     .HasMaxLength(255)
                     .IsUnicode(false);
+                entity.Property(e => e.MarkedForDeletion)
+                    .IsRequired()
+                    .HasDefaultValue(false);
 
                 entity.HasOne(d => d.Owner).WithMany(p => p.MediaObjects)
                     .HasForeignKey(d => d.OwnerId)

@@ -1,5 +1,5 @@
 import { BreakpointObserver, BreakpointState } from '@angular/cdk/layout';
-import { HttpEvent, HttpEventType } from '@angular/common/http';
+import {HttpErrorResponse, HttpEvent, HttpEventType} from '@angular/common/http';
 import {Component, HostListener, OnDestroy, OnInit, TemplateRef, ViewChild} from '@angular/core';
 import { AbstractControl, FormControl, FormGroup, ValidationErrors, Validators } from '@angular/forms';
 import {MatDialog, MatDialogConfig, MatDialogRef} from '@angular/material/dialog';
@@ -50,11 +50,11 @@ export class MediaComponent implements OnInit, OnDestroy {
   updateAccessKeyIntervalId: number;
   uploading = false;
   uploadProgress = 0;
-  favoriteFilter: boolean;
   @ViewChild('newAlbum', { static: true }) newAlbumDialog: TemplateRef<never>;
   @ViewChild('addToAlbum', { static: true }) addToAlbumDialog: TemplateRef<never>;
   @ViewChild('mediaViewDialog', { static: true }) mediaViewDialog: TemplateRef<never>;
   @ViewChild('allAlbums', { static: true }) allAlbumsDialog: TemplateRef<never>;
+  @ViewChild('deleteConfirm', { static: true }) deleteDialog: TemplateRef<never>;
   albumFilterCtrl: FormControl<string> = new FormControl<string>('');
   filteredAlbums$: ReplaySubject<MediaAlbum[]> = new ReplaySubject<MediaAlbum[]>(1);
   allMediaAlbums: MediaAlbum[];
@@ -82,6 +82,9 @@ export class MediaComponent implements OnInit, OnDestroy {
     this.loadItemsToView(visible.length);
     visible.forEach(x => this.intersectionObserver.unobserve(x.target));
   }, {threshold: 0});
+  page: 'home' | 'album' | 'favorites' | 'trash';
+  albumName = '';
+  deletePermanently = false;
 
   constructor(
     private mediaService: MediaService,
@@ -133,15 +136,21 @@ export class MediaComponent implements OnInit, OnDestroy {
         takeUntil(this.destroy$),
         switchMap(params => {
           this.mediaService.disableSelectMode();
-          if (params.get('page') === 'album' && params.get('id')) {
-            this.favoriteFilter = true;
-            return this.mediaService.getAlbumContent(params.get('id'));
-          } else if (params.get('page') === 'favorites') {
-            this.favoriteFilter = true;
-            return this.mediaService.getAllMediaFiles(this.favoriteFilter);
+          const page = params.get('page');
+          const id = params.get('id');
+          if (page === 'album' && id) {
+            this.page = page;
+            this.albumName = id;
+            return this.mediaService.getAlbumContent(id);
+          } else if (page === 'favorites') {
+            this.page = page;
+            return this.mediaService.getAllMediaFiles({favorite: true, deleted: false});
+          } else if (page === 'trash') {
+            this.page = page;
+            return this.mediaService.getAllMediaFiles({deleted: true});
           } else {
-            this.favoriteFilter = false;
-            return this.mediaService.getAllMediaFiles(this.favoriteFilter);
+            this.page = 'home';
+            return this.mediaService.getAllMediaFiles({deleted: false})
           }
         }),
         catchError(error => {
@@ -347,6 +356,50 @@ export class MediaComponent implements OnInit, OnDestroy {
     ).subscribe(addToAlbumObserver);
   }
 
+  deleteSelected() {
+    const ids = this.selectedItemsIds();
+    if (ids.length === 0) return;
+    const deleteObserver = {
+      next: () => {
+        window.location.reload();
+      },
+      error: (error: HttpErrorResponse) => {
+        console.error(error);
+        this.snackBar.open(`An error occurred.`, 'Ok', SNACKBAR_OPTIONS);
+      }
+    }
+
+    this.dialog.open(this.deleteDialog, this.dialogConfig).afterClosed()
+      .pipe(
+        switchMap(dialogResult => {
+          if (dialogResult) {
+            return this.mediaService.deleteMediaObjects(ids, this.page === 'trash' || this.deletePermanently)
+          }
+          this.deletePermanently = false;
+          return EMPTY;
+        })
+      ).subscribe(deleteObserver)
+  }
+
+  restoreSelected() {
+    const ids = this.selectedItemsIds();
+    if (ids.length === 0) return;
+    const restoreObserver = {
+      next: () => {
+        window.location.reload();
+      },
+      error: (error: HttpErrorResponse) => {
+        console.error(error);
+        this.snackBar.open(`An error occurred.`, 'Ok', SNACKBAR_OPTIONS);
+      }
+    };
+    this.mediaService.restoreMediaObjects(ids).subscribe(restoreObserver);
+  }
+
+  private selectedItemsIds() {
+    return this.displayedMediaObjects.filter(x => x.isSelected).map(x => x.id);
+  }
+
   scrollBack($event: MouseEvent) {
     $event.stopPropagation();
     this.scrollMediaBack();
@@ -410,6 +463,8 @@ export class MediaComponent implements OnInit, OnDestroy {
           void this.router.navigate(['/media', 'favorites']);
         } else if (result === 'home') {
           void this.router.navigate(['/media']);
+        } else if (result === 'trash') {
+          void this.router.navigate(['/media', 'trash']);
         }
     });
   }
@@ -425,6 +480,20 @@ export class MediaComponent implements OnInit, OnDestroy {
   deselectAll() {
     this.allMediaObjects.forEach(x => x.isSelected = false);
     this.mediaService.disableSelectMode();
+  }
+
+  enableSelectMode() {
+    this.mediaService.enableSelectMode();
+  }
+
+  getPageName() {
+    switch (this.page) {
+      case "home": return "Home";
+      case "favorites": return "Favorite";
+      case "trash": return "Trash";
+      case "album": return this.albumName;
+      default: return "";
+    }
   }
 }
 

@@ -16,8 +16,8 @@ export class MediaObject {
   isLoading = true;
   isSelected = false;
   isVideo: boolean;
-
-  constructor(mediaObject: any) {
+  markedForDeletion: boolean;
+  constructor(mediaObject: MediaObject) {
     this.id = mediaObject.id;
     this.uploadFileName = mediaObject.uploadFileName;
     this.contentType = mediaObject.contentType;
@@ -30,6 +30,7 @@ export class MediaObject {
     this.snapshot$ = new AsyncSubject();
     this.videoLength = this.getVideoLength();
     this.isVideo = this.contentType.startsWith('video');
+    this.markedForDeletion = mediaObject.markedForDeletion;
   }
 
   private getVideoLength() {
@@ -41,4 +42,10 @@ export class MediaObject {
         minutes + ":" + (seconds < 10 ? "0" : "") + seconds
     );
   }
+}
+
+export interface MediaObjectFilter {
+  favorite?: boolean;
+  deleted?: boolean;
+  ids?: string[];
 }
