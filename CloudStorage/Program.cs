@@ -10,27 +10,24 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Configuration.AddEnvironmentVariables(prefix: "CloudStorage_");
 
-var connectionString = builder.Configuration.GetConnectionString("DB");
-var _key = builder.Configuration.GetValue<string>("Jwt:Key");
-var _issuer = builder.Configuration.GetValue<string>("Jwt:Issuer");
-var inMemory = builder.Configuration.GetValue<bool>("Database:InMemory");
+var jwtKey = builder.Configuration.GetValue<string>("Jwt:Key");
+var jwtIssuer = builder.Configuration.GetValue<string>("Jwt:Issuer");
 var sqlite = builder.Configuration.GetValue<string>("Database:Sqlite");
-
+var mssql = builder.Configuration.GetValue<string>("Database:MsSql");
+var inMemoryDb = false;
 // Add services to the container.
 builder.Services.AddDbContext<AppDbContext>(options =>
 {
-    if (inMemory)
-    {
-        options.UseInMemoryDatabase("InMemoryDB");
-    }
+    if (!string.IsNullOrEmpty(mssql))
+        options.UseSqlServer(mssql, builder => builder.EnableRetryOnFailure(5, TimeSpan.FromSeconds(10), null));
     else if (!string.IsNullOrEmpty(sqlite))
-    {
         options.UseSqlite($"Data Source={sqlite}");
-    }
     else
     {
-        options.UseSqlServer(connectionString, builder => builder.EnableRetryOnFailure(5, TimeSpan.FromSeconds(10), null));
+        options.UseInMemoryDatabase("db");
+        inMemoryDb = true;
     }
 });
 
@@ -57,12 +54,12 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJw
     x.TokenValidationParameters = new TokenValidationParameters
     {
         ValidateIssuerSigningKey = true,
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_key)),
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
         ValidateIssuer = true,
         ValidateAudience = true,
         ValidateLifetime = true,
-        ValidIssuer = _issuer,
-        ValidAudience = _issuer
+        ValidIssuer = jwtIssuer,
+        ValidAudience = jwtIssuer
     };
 });
 
@@ -74,15 +71,9 @@ builder.Services.AddTransient<IUserService, UserService>();
 builder.Services.AddTransient<INoteService, NoteService>();
 // builder.Services.AddTransient<IShareService, ShareService>();
 if (builder.Environment.IsProduction())
-{
     builder.Services.AddSingleton<IMailService, MailService>();
-
-}
 else
-{
     builder.Services.AddSingleton<IMailService>(s => new DevMailService(builder.Environment.ContentRootPath));
-
-}
 
 builder.Services.AddControllers();
 builder.Services.AddSpaYarp();
@@ -97,10 +88,8 @@ using (var scope = app.Services.CreateScope())
 if (app.Environment.IsDevelopment())
 {
     app.UseDeveloperExceptionPage();
-    if (inMemory) 
-    {
+    if (inMemoryDb)
         app.SeedInMemoryDb();
-    }
 }
 app.UseCors("EnableCORS");
 // Configure the HTTP request pipeline.
