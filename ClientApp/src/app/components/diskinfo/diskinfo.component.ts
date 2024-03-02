@@ -1,4 +1,4 @@
-import { DiskModel } from './../../interfaces/disk.interface';
+import { DiskInfoModel } from './../../interfaces/disk.interface';
 import { Component, Input, OnInit } from '@angular/core';
 
 @Component({
@@ -7,14 +7,9 @@ import { Component, Input, OnInit } from '@angular/core';
   styleUrls: ['./diskinfo.component.css']
 })
 export class DiskinfoComponent implements OnInit {
-  @Input('disk') disk: DiskModel = { usedBytes: 0, totalBytes: 0, diskUsed: 0 }
+  @Input('disk') disk: DiskInfoModel = { used: 0, total: 0, usedPercentage: '' }
   constructor() { }
 
   ngOnInit(): void {
   }
-
-  getBgType() {
-    return (this.disk.diskUsed <= 70) ? 'success' : (this.disk.diskUsed <= 90) ? 'warning' : 'danger';
-  }
-
 }

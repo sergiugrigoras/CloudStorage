@@ -21,7 +21,7 @@ var inMemoryDb = false;
 builder.Services.AddDbContext<AppDbContext>(options =>
 {
     if (!string.IsNullOrEmpty(mssql))
-        options.UseSqlServer(mssql, builder => builder.EnableRetryOnFailure(5, TimeSpan.FromSeconds(10), null));
+        options.UseSqlServer(mssql, optionsAction => optionsAction.EnableRetryOnFailure(5, TimeSpan.FromSeconds(10), null));
     else if (!string.IsNullOrEmpty(sqlite))
         options.UseSqlite($"Data Source={sqlite}");
     else
@@ -69,7 +69,6 @@ builder.Services.AddTransient<IFsoService, FsoService>();
 builder.Services.AddTransient<IMediaService, MediaService>();
 builder.Services.AddTransient<IUserService, UserService>();
 builder.Services.AddTransient<INoteService, NoteService>();
-// builder.Services.AddTransient<IShareService, ShareService>();
 if (builder.Environment.IsProduction())
     builder.Services.AddSingleton<IMailService, MailService>();
 else

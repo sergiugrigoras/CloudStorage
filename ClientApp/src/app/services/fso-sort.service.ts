@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { FsoModel } from '../interfaces/fso.interface';
+import { FsoModel } from '../model/fso.model';
 
 @Injectable({
   providedIn: 'root'

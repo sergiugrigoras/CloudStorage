@@ -1,9 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
+﻿namespace CloudStorage.Models;
 
-namespace CloudStorage.Models;
-
-public partial class MediaAlbum
+public class MediaAlbum
 {
     public Guid Id { get; set; }
 

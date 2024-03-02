@@ -2,6 +2,6 @@
     <!-- <ngb-progressbar [animated]="true" [type]="getBgType()" [value]="disk.diskUsed"><span>{{ disk.diskUsed }}%</span>
     </ngb-progressbar> -->
 
-    <div class="used-bytes">{{ disk.usedBytes | readableBytes: 2 }}</div>
-    <div class="total-bytes">{{ disk.totalBytes | readableBytes: 0 }}</div>
+    <div class="used-bytes">{{ disk.used | readableBytes: 2 }}</div>
+    <div class="total-bytes">{{ disk.total | readableBytes: 0 }}</div>
 </div>

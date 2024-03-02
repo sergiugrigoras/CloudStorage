@@ -1,8 +1,19 @@
 <div class="mat-elevation-z6 toolbar-container">
-    <button *ngFor="let button of buttons" mat-icon-button aria-label="button.label" [matTooltip]="button.label"
-        (click)="emitEvent(button.event)" [disabled]="button.isDisabled()">
-        <span class="material-icons">
-            {{button.icon}}
-        </span>
+  <ng-container *ngFor="let button of buttons">
+    <button
+      mat-icon-button
+      [matTooltip]="button.label"
+      (click)="emitEvent(button.event)"
+      [disabled]="button.isDisabled()"
+      [matMenuTriggerFor]="button.menu === 'sort-menu' ? sortMenu : null"
+
+    >
+      <span class="material-icons" [matBadge]="button.badgeValue()" matBadgeColor="warn" matBadgePosition="below after" matBadgeSize="medium">{{ button.icon }}</span>
     </button>
+  </ng-container>
+  <mat-menu #sortMenu="matMenu">
+    <button mat-menu-item (click)="emitEvent('sortName')">Name</button>
+    <button mat-menu-item (click)="emitEvent('sortSize')">Size</button>
+    <button mat-menu-item (click)="emitEvent('sortDate')">Date</button>
+  </mat-menu>
 </div>

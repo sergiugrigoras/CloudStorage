@@ -1,5 +1,5 @@
 import { DriveService } from 'src/app/services/drive.service';
-import { FsoModel } from './../../interfaces/fso.interface';
+import { FsoModel } from '../../model/fso.model';
 import { Component, Input, OnChanges, OnInit, SimpleChanges } from '@angular/core';
 
 @Component({
@@ -7,15 +7,12 @@ import { Component, Input, OnChanges, OnInit, SimpleChanges } from '@angular/cor
   templateUrl: './pathbar.component.html',
   styleUrls: ['./pathbar.component.scss']
 })
-export class PathbarComponent implements OnInit, OnChanges {
+export class PathbarComponent implements OnChanges {
   @Input('folder') folder: FsoModel;
   fullPathArr: FsoModel[] = [];
   constructor(private driveService: DriveService) {
   }
 
-  ngOnInit(): void {
-
-  }
 
   ngOnChanges(changes: SimpleChanges) {
     const folderId = (changes['folder'].currentValue as FsoModel).id;

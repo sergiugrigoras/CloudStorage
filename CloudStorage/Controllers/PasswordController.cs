@@ -11,23 +11,17 @@ namespace CloudStorage.Controllers
     [Authorize]
     [Route("api/[controller]")]
     [ApiController]
-    public class PasswordController : ControllerBase
+    public class PasswordController(ITokenService tokenService, IMailService mailService, IUserService userService)
+        : ControllerBase
     {
-        private readonly ITokenService _tokenService;
-        private readonly IMailService _mailService;
-        private readonly IUserService _userService;
-
-        public PasswordController(AppDbContext userContext, ITokenService tokenService, IMailService mailService, IUserService userService)
-        {
-            _tokenService = tokenService ?? throw new ArgumentNullException(nameof(tokenService));
-            _mailService = mailService ?? throw new ArgumentNullException(nameof(mailService));
-            _userService = userService ?? throw new ArgumentNullException(nameof(userService));
-        }
+        private readonly ITokenService _tokenService = tokenService ?? throw new ArgumentNullException(nameof(tokenService));
+        private readonly IMailService _mailService = mailService ?? throw new ArgumentNullException(nameof(mailService));
+        private readonly IUserService _userService = userService ?? throw new ArgumentNullException(nameof(userService));
 
         [HttpPost, Route("change")]
         public async Task<IActionResult> ChangePasswordAsync([FromBody] Password pass)
         {
-            var user = await _userService.GetUserFromPrincipalAsync(User);
+            var user = await _userService.GetUserAsync(User);
             if (user == null) return Unauthorized();
 
             if (!BC.Verify(pass.OldPassword, user.Password)) return BadRequest("Invalid Password");

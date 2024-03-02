@@ -7,40 +7,14 @@
 </p>
 
 <div *ngIf="isLoggedIn" class="items-box">
-
-    <mat-card class="card" routerLink="/drive">
-        <mat-card-content class="card-content">
+  <ng-container *ngFor="let card of cards">
+    <mat-card class="card" [routerLink]="card.link">
+      <mat-card-content class="card-content">
             <span class="material-icons icon-big">
-                backup
+                {{card.icon}}
             </span>
-            <span class="card-label">Drive</span>
-        </mat-card-content>
+        <span class="card-label">{{card.label}}</span>
+      </mat-card-content>
     </mat-card>
-
-    <mat-card class="card" routerLink="/media">
-        <mat-card-content class="card-content">
-            <span class="material-icons icon-big">
-                image
-            </span>
-            <span class="card-label">Media</span>
-        </mat-card-content>
-    </mat-card>
-
-    <mat-card class="card" routerLink="/notes">
-        <mat-card-content class="card-content">
-            <span class="material-icons icon-big">
-                edit_note
-            </span>
-            <span class="card-label">Notes</span>
-        </mat-card-content>
-    </mat-card>
-
-    <mat-card class="card" routerLink="/shares">
-        <mat-card-content class="card-content">
-            <span class="material-icons icon-big">
-                share
-            </span>
-            <span class="card-label">Shares</span>
-        </mat-card-content>
-    </mat-card>
+  </ng-container>
 </div>

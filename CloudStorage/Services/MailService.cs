@@ -1,53 +1,40 @@
-﻿using Microsoft.AspNetCore.Hosting;
-using Microsoft.Extensions.Hosting;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Net.Mail;
-using System.Threading.Tasks;
+﻿using System.Net.Mail;
 
-namespace CloudStorage.Services
+namespace CloudStorage.Services;
+
+public interface IMailService
 {
-    public interface IMailService
+    void SendEmail(MailAddress toEmailAddress, MailAddress fromEmailAddress, string emailSubject, string emailBody);
+}
+public class MailService : IMailService
+{
+    public void SendEmail(MailAddress toEmailAddress, MailAddress fromEmailAddress, string emailSubject, string emailBody)
     {
-        void SendEmail(MailAddress toEmailAddress, MailAddress fromEmailAddress, string emailSubject, string emailBody);
-    }
-    public class MailService : IMailService
-    {
-        public void SendEmail(MailAddress toEmailAddress, MailAddress fromEmailAddress, string emailSubject, string emailBody)
-        {
-            MailMessage message = new MailMessage(fromEmailAddress, toEmailAddress);
-            message.Subject = emailSubject;
-            message.Body = emailBody;
+        var message = new MailMessage(fromEmailAddress, toEmailAddress);
+        message.Subject = emailSubject;
+        message.Body = emailBody;
 
-            SmtpClient client = new SmtpClient("localhost", 25);
-            try
-            {
-                client.Send(message);
-            }
-            catch (SmtpException ex)
-            {
-                throw ex;
-            }
+        var client = new SmtpClient("localhost", 25);
+        try
+        {
+            client.Send(message);
+        }
+        catch (SmtpException ex)
+        {
+            Console.WriteLine(ex.Message);
         }
     }
+}
 
-    public class DevMailService : IMailService
+public class DevMailService(string rootDir) : IMailService
+{
+    public void SendEmail(MailAddress toEmailAddress, MailAddress fromEmailAddress, string emailSubject, string emailBody)
     {
-        private readonly string _rootDir;
-        public DevMailService(string rootDir)
+        var pathToSave = Path.Combine(rootDir, "mails", "outbox");
+        if (!Directory.Exists(pathToSave))
         {
-            _rootDir = rootDir;
+            Directory.CreateDirectory(pathToSave);
         }
-        public void SendEmail(MailAddress toEmailAddress, MailAddress fromEmailAddress, string emailSubject, string emailBody)
-        {
-            var pathToSave = Path.Combine(_rootDir, "mails", "outbox");
-            if (!Directory.Exists(pathToSave))
-            {
-                Directory.CreateDirectory(pathToSave);
-            }
-            File.WriteAllText(Path.Combine(pathToSave, toEmailAddress.Address.Replace("@", "_at_")), $"{emailSubject}\n{emailBody}");
-        }
+        File.WriteAllText(Path.Combine(pathToSave, toEmailAddress.Address.Replace("@", "_at_")), $"{emailSubject}\n{emailBody}");
     }
 }

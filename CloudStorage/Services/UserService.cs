@@ -1,147 +1,123 @@
 ﻿using BC = BCrypt.Net.BCrypt;
 using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
-using System.Linq;
 using System.Security.Claims;
-using System.Security.Principal;
-using System.Threading.Tasks;
 using System.Security.Cryptography;
 using CloudStorage.Models;
 
-namespace CloudStorage.Services
-{
-    public interface IUserService
-    {
-        Task<User> GetUserFromPrincipalAsync(ClaimsPrincipal principal);
-        Task<User> GetUserByNameAsync(string name);
-        Task<User> GetUserByEmailAsync(string email);
-        Task<User> GetUserByIdAsync(Guid id);
-        Task UpdateUserAsync(User user);
-        Task CreateUserAsync(User user);
-        List<Claim> GetUserClaims(User user);
-        Task<ResetToken> CreateResetTokenAsync(User user, string token);
-        Task<ResetToken> GetResetTokenByIdAsync(int id);
-        Task UpdateResetTokenAsync(ResetToken ResetToken);
+namespace CloudStorage.Services;
 
-        string GenerateToken();
+public interface IUserService
+{
+    Task<User> GetUserAsync(ClaimsPrincipal principal);
+    Task<User> GetUserByNameAsync(string name);
+    Task<User> GetUserByEmailAsync(string email);
+    Task<User> GetUserByIdAsync(Guid id);
+    Task UpdateUserAsync(User user);
+    Task CreateUserAsync(User user);
+    IEnumerable<Claim> GetUserClaims(User user);
+    Task<ResetToken> CreateResetTokenAsync(User user, string token);
+    Task<ResetToken> GetResetTokenByIdAsync(int id);
+    Task UpdateResetTokenAsync(ResetToken resetToken);
+
+    string GenerateToken();
+}
+
+public class UserService(AppDbContext context) : IUserService
+{
+    public async Task CreateUserAsync(User user)
+    {
+        await context.Users.AddAsync(user);
+        await context.SaveChangesAsync();
     }
 
-    public class UserService : IUserService
+    public async Task<ResetToken> CreateResetTokenAsync(User user, string token)
     {
-        private readonly AppDbContext _context;
-        public UserService(AppDbContext context)
+        var resetToken = new ResetToken
         {
-            _context = context;
-        }
+            UserId = user.Id,
+            TokenHash = BC.HashPassword(token),
+            ExpirationDate = DateTime.Now.AddHours(1)
+        };
 
-        public async Task CreateUserAsync(User user)
+        await context.ResetTokens.AddAsync(resetToken);
+        await context.SaveChangesAsync();
+        return resetToken;
+    }
+
+    public async Task<User> GetUserByEmailAsync(string email)
+    {
+        if (email == null)
         {
-            await _context.Users.AddAsync(user);
-            await _context.SaveChangesAsync();
+            return null;
         }
+        var user = await context.Users.FirstOrDefaultAsync(x => x.Email.ToLower() == email.ToLower());
+        return user;
+    }
 
-        public async Task<ResetToken> CreateResetTokenAsync(User user, string token)
+    public async Task<User> GetUserByNameAsync(string name)
+    {
+        if (name == null)
         {
-            var ResetToken = new ResetToken();
-            ResetToken.UserId = user.Id;
-            ResetToken.TokenHash = BC.HashPassword(token);
-            ResetToken.ExpirationDate = DateTime.Now.AddHours(1);
-
-            await _context.ResetTokens.AddAsync(ResetToken);
-            await _context.SaveChangesAsync();
-            return ResetToken;
+            return null;
         }
+        var user = await context.Users.FirstOrDefaultAsync(x => x.Username.ToLower() == name.ToLower());
+        return user;
+    }
 
-        public async Task<User> GetUserByEmailAsync(string email)
+    public IEnumerable<Claim> GetUserClaims(User user)
+    {
+        if (user == null) return null;
+        return new List<Claim>
         {
-            if (email == null)
-            {
-                return null;
-            }
-            var user = await _context.Users.FirstOrDefaultAsync(x => x.Email.ToLower() == email.ToLower());
-            return user;
-        }
+            new(ClaimTypes.Name, user.Username),
+            new(JwtRegisteredClaimNames.Email, user.Email),
+            new(JwtRegisteredClaimNames.Jti, user.Id.ToString()),
+        };
+    }
 
-        public async Task<User> GetUserByNameAsync(string name)
+    public async Task<User> GetUserAsync(ClaimsPrincipal principal)
+    {
+        var jti = principal.FindFirst(JwtRegisteredClaimNames.Jti);
+        if (jti == null) return null;
+        var value = jti.Value;
+        if (!Guid.TryParse(value, out var userId)) return null;
+        var user = await context.Users.FindAsync(userId);
+        return user;
+    }
+
+    public async Task UpdateUserAsync(User user)
+    {
+        context.Users.Update(user);
+        await context.SaveChangesAsync();
+    }
+
+    public string GenerateToken()
+    {
+        var randomNumber = new byte[64];
+        using (var rng = RandomNumberGenerator.Create())
         {
-            if (name == null)
-            {
-                return null;
-            }
-            var user = await _context.Users.FirstOrDefaultAsync(x => x.Username.ToLower() == name.ToLower());
-            return user;
+            rng.GetBytes(randomNumber);
         }
+        var token = Convert.ToBase64String(randomNumber).TrimEnd('=').Replace('+', '-').Replace('/', '_');
+        return token;
+    }
 
-        public List<Claim> GetUserClaims(User user)
-        {
-            if (user != null)
-            {
-                return new List<Claim>
-                {
-                        new Claim(ClaimTypes.Name, user.Username),
-                        new Claim(JwtRegisteredClaimNames.Email,user.Email),
-                        new Claim(JwtRegisteredClaimNames.Jti,user.Id.ToString()),
-                };
-            }
-            else
-                return null;
+    public async Task<ResetToken> GetResetTokenByIdAsync(int id)
+    {
+        var resetToken = await context.ResetTokens.FindAsync(id);
+        return resetToken;
+    }
 
-        }
+    public async Task<User> GetUserByIdAsync(Guid id)
+    {
+        var user = await context.Users.FindAsync(id);
+        return user;
+    }
 
-        public async Task<User> GetUserFromPrincipalAsync(ClaimsPrincipal principal)
-        {
-            if (principal.FindFirst(JwtRegisteredClaimNames.Jti) == null)
-            {
-                return null;
-            }
-            else
-            {
-                var id = principal.FindFirst(JwtRegisteredClaimNames.Jti).Value;
-                if (Guid.TryParse(id, out Guid userId))
-                {
-                    var user = await _context.Users.FindAsync(userId);
-                    return user;
-                }
-                return null;
-            }
-
-        }
-
-        public async Task UpdateUserAsync(User user)
-        {
-            _context.Users.Update(user);
-            await _context.SaveChangesAsync();
-        }
-
-        public string GenerateToken()
-        {
-            var randomNumber = new byte[64];
-            using (var rng = RandomNumberGenerator.Create())
-            {
-                rng.GetBytes(randomNumber);
-            }
-            var token = Convert.ToBase64String(randomNumber).TrimEnd('=').Replace('+', '-').Replace('/', '_');
-            return token;
-        }
-
-        public async Task<ResetToken> GetResetTokenByIdAsync(int id)
-        {
-            var ResetToken = await _context.ResetTokens.FindAsync(id);
-            return ResetToken;
-        }
-
-        public async Task<User> GetUserByIdAsync(Guid id)
-        {
-            var user = await _context.Users.FindAsync(id);
-            return user;
-        }
-
-        public async Task UpdateResetTokenAsync(ResetToken ResetToken)
-        {
-            _context.ResetTokens.Update(ResetToken);
-            await _context.SaveChangesAsync();
-        }
+    public async Task UpdateResetTokenAsync(ResetToken resetToken)
+    {
+        context.ResetTokens.Update(resetToken);
+        await context.SaveChangesAsync();
     }
 }

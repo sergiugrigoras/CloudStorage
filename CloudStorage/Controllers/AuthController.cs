@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using CloudStorage.Services;
 using CloudStorage.Models;
+using CloudStorage.ViewModels;
 
 namespace CloudStorage.Controllers
 {
@@ -80,12 +81,19 @@ namespace CloudStorage.Controllers
             request.RefreshTokenExpiryTime = DateTime.Now.AddDays(7);
 
             await _userService.CreateUserAsync(request);
-            await _fsoService.CreateFsoAsync("root", null, null, true, null, request.Id);
+            FileSystemObjectViewModel model = new()
+            {
+                Name = "root",
+                IsFolder = true,
+                OwnerId = request.Id
+            };
+            await _fsoService.CreateAsync(model);
 
-            return Ok(new TokenApiModel(accessToken, refreshToken));
+            var token = new TokenApiModel(accessToken, refreshToken);
+            return new JsonResult(token);
         }
 
-        [HttpPost("checkunique")]
+        [HttpPost("check-unique")]
         public async Task<bool> UniqueUsernameAsync([FromBody] User request)
         {
             return await _userService.GetUserByNameAsync(request.Username) == null && await _userService.GetUserByEmailAsync(request.Email) == null;

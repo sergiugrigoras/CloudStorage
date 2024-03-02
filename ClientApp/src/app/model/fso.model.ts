@@ -9,6 +9,7 @@ export class FsoModel {
     ownerId: string;
     children: FsoModel[];
     isSelected: boolean;
+    isCut: boolean;
 
     constructor(fso: any) {
         this.id = fso.id;
@@ -21,5 +22,30 @@ export class FsoModel {
         this.ownerId = fso.ownerId;
         this.children = fso.children?.map((x: any) => new FsoModel(x));
         this.isSelected = false;
+        this.isCut = false;
     }
+}
+
+export interface FsoMoveResultModel {
+  success: FsoModel[];
+  fail: FsoModel[];
+}
+
+export class FsoTouchHelper {
+  private readonly time: Record<number, number>;
+  private readonly threshold: number;
+  constructor(threshold: number) {
+    this.threshold = threshold;
+    this.time = {};
+  }
+  public touch(id: number): boolean {
+    const now = Date.now();
+    const value = this.time[id] ?? 0;
+    this.time[id] = now;
+    return this.inThresholdRange(now - value);
+  }
+
+  private inThresholdRange(value: number) {
+    return value <= this.threshold;
+  }
 }

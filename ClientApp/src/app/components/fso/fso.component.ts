@@ -1,4 +1,4 @@
-import { FsoModel } from './../../interfaces/fso.interface';
+import { FsoModel } from '../../model/fso.model';
 import { Component, Input, OnInit, Output, EventEmitter } from '@angular/core';
 
 @Component({

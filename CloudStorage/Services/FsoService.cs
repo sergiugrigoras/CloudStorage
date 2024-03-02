@@ -14,37 +14,33 @@ using System.Linq;
 using System.Resources;
 using System.Security.Cryptography;
 using System.Threading.Tasks;
+using CloudStorage.ViewModels;
 
 namespace CloudStorage.Services
 {
     public interface IFsoService
     {
-        Task<FileSystemObject> GetFsoByIdAsync(int id);
-        Task<List<FileSystemObject>> GetFsoListByIdAsync(int[] idArray);
-        Task<long> GetFsoSizeByIdAsync(int id);
-        bool CheckOwner(FileSystemObject fso, User user);
-        Task<List<FileSystemObject>> GetFsoFullPathAsync(FileSystemObject fso);
-        Task<List<FileSystemObject>> GetFsoContentAsync(FileSystemObject fso);
-        Task AddFsoAsync(FileSystemObject fso);
-        Task UpdateFsoAsync(FileSystemObject fso);
-        FileSystemObjectViewModel ToDTO(FileSystemObject fso);
-        List<FileSystemObjectViewModel> ToDTO(List<FileSystemObject> list);
-        Task DeleteFsoAsync(FileSystemObject fso, User user);
-        Task<FileSystemObject> CreateFsoAsync(string name, string fileName, long? fileSize, bool isFolder, int? parentId, Guid ownerId);
-        Task<string> CreateFileAsync(IFormFile file, User user);
-        Task<Stream> GetFileAsync(FileSystemObject root, List<FileSystemObject> fsoList, User user);
-        Task<FileSystemObject> CheckParentFso(List<FileSystemObject> fsoList);
+        Task<FileSystemObject> GetByIdAsync(int id);
+        Task<FileSystemObject> FindAsync(string name, int parentId);
+        Task<IEnumerable<FileSystemObject>> GetFullPathAsync(FileSystemObject fso);
+        Task RenameAsync(FileSystemObject fso, string newName);
+        Task DeleteAsync(FileSystemObject fso);
+        Task<FileSystemObject> CreateAsync(FileSystemObjectViewModel model);
+        Task<string> StoreFileAsync(IFormFile file, Guid userId);
+        Task<Stream> GetFileAsync(FileSystemObject root, ICollection<FileSystemObject> fsoList);
         Task MoveFsoAsync(FileSystemObject fso, FileSystemObject destination);
-
-        Task SetContentOfDTO(FileSystemObjectViewModel fsoDTO);
-        Task<FileSystemObject> GetUserRoot(Guid userId);
-        Task<FileSystemObject> GetFolderContent(int id, Guid userId);
+        Task<FileSystemObject> GetUserRootAsync(Guid userId);
+        Task LoadFolderContentAsync(FileSystemObject fso);
+        Task<long> GetFsoSizeByIdAsync(int id);
+        Task<bool> UniqueName(string name, int parentId, bool isFolder);
+        Task<string> GetDistinctNameAsync(string name, int parentId, bool isFolder, uint counter = 0);
     }
-    public class FsoService : IFsoService
+    public class FsoService(AppDbContext context, IConfiguration configuration) : IFsoService
     {
-        private readonly AppDbContext _context;
-        private readonly string _storageUrl;
-        private static IDictionary<string, string> _mappings = new Dictionary<string, string>(StringComparer.InvariantCultureIgnoreCase) {
+        private const string DriveDirName = "drive";
+        private readonly string _storageUrl = configuration.GetValue<string>("Storage:url");
+        private static readonly Dictionary<string, string> Mappings = new(StringComparer.InvariantCultureIgnoreCase) 
+        {
         #region mime types
         {".323", "text/h323"},
         {".3g2", "video/3gpp2"},
@@ -608,197 +604,143 @@ namespace CloudStorage.Services
         {".zip", "application/x-zip-compressed"},
         #endregion
         };
-        public FsoService(AppDbContext context, IConfiguration configuration)
+        
+        public async Task<FileSystemObject> CreateAsync(FileSystemObjectViewModel model)
         {
-            _context = context;
-            _storageUrl = configuration.GetValue<string>("Storage:url");
-        }
-
-        public async Task AddFsoAsync(FileSystemObject fso)
-        {
-            await _context.FileSystemObjects.AddAsync(fso);
-            await _context.SaveChangesAsync();
-        }
-
-        public bool CheckOwner(FileSystemObject fso, User user)
-        {
-            return fso.OwnerId == user.Id;
-        }
-
-        public async Task<FileSystemObject> CreateFsoAsync(string name, string fileName, long? fileSize, bool isFolder, int? parentId, Guid ownerId)
-        {
-            FileSystemObject fso = new FileSystemObject();
-            fso.Name = name;
-            fso.FileName = fileName;
-            fso.FileSize = fileSize;
-            fso.IsFolder = isFolder;
-            fso.ParentId = parentId;
-            fso.Date = DateTime.Now;
-            fso.OwnerId = ownerId;
-            _context.FileSystemObjects.Add(fso);
-            await _context.SaveChangesAsync();
+            FileSystemObject fso = new()
+            {
+                Name = model.Name,
+                FileName = model.FileName,
+                FileSize = model.FileSize,
+                IsFolder = model.IsFolder,
+                ParentId = model.ParentId,
+                Date = DateTime.UtcNow,
+                OwnerId = model.OwnerId
+            };
+            context.FileSystemObjects.Add(fso);
+            await context.SaveChangesAsync();
             return fso;
         }
 
-        public async Task DeleteFsoAsync(FileSystemObject fso, User user)
+        public async Task DeleteAsync(FileSystemObject fso)
         {
-            if (!fso.IsFolder)
+            if (fso.IsFolder)
             {
-                _context.FileSystemObjects.Remove(fso);
-                await _context.SaveChangesAsync();
-                try
-                {
-                    DeleteFile(fso, user);
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine(ex.Message);
-                }
+                var children = await GetFsoContentAsync(fso);
+                foreach (var child in children)
+                    await DeleteAsync(child);
+
+                context.FileSystemObjects.Remove(fso);
+                await context.SaveChangesAsync();
             }
             else
             {
-                var fsoContent = await _context.FileSystemObjects.Where(f => f.ParentId == fso.Id).ToListAsync();
-                foreach (var f in fsoContent)
-                {
-                    await DeleteFsoAsync(f, user);
-                }
-                _context.FileSystemObjects.Remove(fso);
-                await _context.SaveChangesAsync();
+                context.FileSystemObjects.Remove(fso);
+                await context.SaveChangesAsync();
+                DeleteFile(fso);
             }
         }
 
-        public async Task<FileSystemObject> GetFsoByIdAsync(int id)
+        public async Task<FileSystemObject> GetByIdAsync(int id)
         {
-            return await _context.FileSystemObjects.FindAsync(id);
+            return await context.FileSystemObjects.FindAsync(id);
         }
 
-        public async Task<List<FileSystemObject>> GetFsoContentAsync(FileSystemObject fso)
+        public async Task<FileSystemObject> FindAsync(string name, int parentId)
         {
-            return await _context.FileSystemObjects.Where(f => f.ParentId == fso.Id).ToListAsync();
+            return await context.FileSystemObjects.FirstOrDefaultAsync(x => x.ParentId == parentId && x.Name == name);
         }
 
-        public async Task<List<FileSystemObject>> GetFsoFullPathAsync(FileSystemObject fso)
+        public async Task<IEnumerable<FileSystemObject>> GetFullPathAsync(FileSystemObject fso)
         {
             var parser = fso;
             var result = new List<FileSystemObject>();
             while (parser != null)
             {
                 result.Insert(0, parser);
-                parser = await _context.FileSystemObjects.FindAsync(parser.ParentId);
+                parser = await context.FileSystemObjects
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(x => x.Id == parser.ParentId);
             }
             return result;
         }
-
-        public async Task<List<FileSystemObject>> GetFsoListByIdAsync(int[] idArray)
+        
+        public async Task RenameAsync(FileSystemObject fso, string newName)
         {
-            var result = new List<FileSystemObject>();
-            foreach (var id in idArray)
+            if (fso == null || fso.Name.Equals(newName)) return;
+            if (fso.Name == newName) return;
+            var exists = await context.FileSystemObjects
+                .FirstOrDefaultAsync(x =>
+                    x.ParentId == fso.ParentId && x.IsFolder == fso.IsFolder && x.Name == newName);
+            if (exists == null)
             {
-                var fso = await _context.FileSystemObjects.FindAsync(id);
-                result.Add(fso);
-            }
-            return result;
-        }
-
-        public async Task<long> GetFsoSizeByIdAsync(int id)
-        {
-            long bytesCount = 0;
-            var fso = await _context.FileSystemObjects.FindAsync(id);
-            if (!fso.IsFolder)
-            {
-                bytesCount = (long)fso.FileSize;
+                fso.Name = newName;
+                context.FileSystemObjects.Update(fso);
+                await context.SaveChangesAsync();
             }
             else
             {
-                var content = await _context.FileSystemObjects.Where(f => f.ParentId == fso.Id).ToListAsync();
-                foreach (var f in content)
-                {
-                    bytesCount += await GetFsoSizeByIdAsync(f.Id);
-                }
+                throw new Exception("Name is not unique.");
             }
-            return bytesCount;
         }
 
-        public FileSystemObjectViewModel ToDTO(FileSystemObject fso)
+        public async Task<string> StoreFileAsync(IFormFile file, Guid userId)
         {
-            return new FileSystemObjectViewModel(fso);
-        }
-
-        public List<FileSystemObjectViewModel> ToDTO(List<FileSystemObject> list)
-        {
-            var result = new List<FileSystemObjectViewModel>();
-            foreach (var f in list)
-            {
-                result.Add(new FileSystemObjectViewModel(f));
-            }
-            return result;
-        }
-
-        public async Task UpdateFsoAsync(FileSystemObject fso)
-        {
-            var fsoToUpdate = await _context.FileSystemObjects.FindAsync(fso.Id);
-            fsoToUpdate.Name = fso.Name;
-            await _context.SaveChangesAsync();
-        }
-
-        public async Task<string> CreateFileAsync(IFormFile file, User user)
-        {
-            var userDirectory = Path.Combine(_storageUrl, user.Id.ToString().ToString());
+            var userDirectory = GetStorageLocation(userId);
+            if (string.IsNullOrEmpty(userDirectory)) return null;
             if (!Directory.Exists(userDirectory))
-            {
                 Directory.CreateDirectory(userDirectory);
-            }
+            
             var fileName = Guid.NewGuid().ToString();
-            var fileFullPath = Path.Combine(userDirectory, fileName);
-            using (var stream = System.IO.File.Create(fileFullPath))
-            {
-                await file.CopyToAsync(stream);
-            }
+            var filePath = Path.Combine(userDirectory, fileName);
+            await using var stream = File.Create(filePath);
+            await file.CopyToAsync(stream);
 
             return fileName;
         }
 
-        public async Task<Stream> GetFileAsync(FileSystemObject root, List<FileSystemObject> fsoList, User user)
+        public async Task<Stream> GetFileAsync(FileSystemObject root, ICollection<FileSystemObject> fsoList)
         {
             var ms = new MemoryStream();
 
-            if (fsoList.Count == 1 && !fsoList[0].IsFolder)
+            var first = fsoList.First();
+            if (fsoList.Count == 1 && !first.IsFolder)
             {
-                var fileFullPath = Path.Combine(_storageUrl, user.Id.ToString().ToString(), fsoList[0].FileName);
-                using (var stream = new FileStream(fileFullPath, FileMode.Open))
-                {
-                    await stream.CopyToAsync(ms);
-                }
-                ms.Seek(0, SeekOrigin.Begin);
+                var fileFullPath = Path.Combine(GetStorageLocation(root.OwnerId), fsoList.First().FileName);
+                await using var stream = new FileStream(fileFullPath, FileMode.Open);
+                await stream.CopyToAsync(ms);
             }
             else
             {
-
-                ZipArchive archive = new ZipArchive(ms, ZipArchiveMode.Create, true);
+                var archive = new ZipArchive(ms, ZipArchiveMode.Create, true);
                 foreach (var fso in fsoList)
-                {
-                    await AddFsoToArchiveAsync(archive, fso, root, user);
-                }
+                    await AddFsoToArchiveAsync(archive, fso, root);
                 archive.Dispose();
-                ms.Seek(0, SeekOrigin.Begin);
             }
-
+            ms.Seek(0, SeekOrigin.Begin);
             return ms;
         }
 
-        private async Task AddFsoToArchiveAsync(ZipArchive archive, FileSystemObject fso, FileSystemObject root, User user)
+        private async Task<IEnumerable<FileSystemObject>> GetFsoContentAsync(FileSystemObject fso)
         {
-            string fsoPath = String.Empty;
-            var parser = await GetFsoByIdAsync((int)fso.ParentId);
+            return await context.FileSystemObjects
+                .AsNoTracking()
+                .Where(f => f.ParentId == fso.Id).ToArrayAsync();
+        }
+        
+        private async Task AddFsoToArchiveAsync(ZipArchive archive, FileSystemObject fso, FileSystemObject root)
+        {
+            var fsoPath = string.Empty;
+            var parser = await GetByIdAsync(fso.ParentId.GetValueOrDefault());
             while (parser.Id != root.Id)
             {
                 fsoPath = fsoPath.Insert(0, parser.Name + "/");
-                parser = await GetFsoByIdAsync((int)parser.ParentId);
+                parser = await GetByIdAsync(parser.ParentId.GetValueOrDefault());
             }
 
             if (!fso.IsFolder)
             {
-                var fullPath = Path.Combine(_storageUrl, user.Id.ToString().ToString(), fso.FileName);
+                var fullPath = Path.Combine(GetStorageLocation(fso.OwnerId), fso.FileName);
                 archive.CreateEntryFromFile(fullPath, fsoPath + fso.Name, CompressionLevel.Optimal);
             }
             else
@@ -806,154 +748,103 @@ namespace CloudStorage.Services
                 archive.CreateEntry(fsoPath + fso.Name + "/");
                 foreach (var c in await GetFsoContentAsync(fso))
                 {
-                    await AddFsoToArchiveAsync(archive, c, root, user);
+                    await AddFsoToArchiveAsync(archive, c, root);
                 }
             }
         }
-
-        private void DeleteFile(FileSystemObject fso, User user)
+        
+        public async Task<long> GetFsoSizeByIdAsync(int id)
         {
-            var fileFullPath = Path.Combine(_storageUrl, user.Id.ToString(), fso.FileName);
-            if (System.IO.File.Exists(fileFullPath))
+            long bytesCount = 0;
+            var fso = await context.FileSystemObjects.FindAsync(id);
+            if (fso == null) return 0;
+            if (fso.IsFolder)
             {
-                try
-                {
-                    System.IO.File.Delete(fileFullPath);
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine(ex.Message);
-                }
-            }
-        }
-
-        public static string GetMimeType(string extension)
-        {
-            if (extension == null)
-            {
-                return "application/octet-stream";
-            }
-            if (!extension.StartsWith("."))
-            {
-                extension = "." + extension;
-            }
-
-            string mime;
-
-            return _mappings.TryGetValue(extension, out mime) ? mime : "application/octet-stream";
-        }
-
-        public async Task<FileSystemObject> CheckParentFso(List<FileSystemObject> fsoList)
-        {
-            if (fsoList == null)
-            {
-                return null;
-            }
-            var parent = await _context.FileSystemObjects.FindAsync(fsoList[0].ParentId);
-            if (parent == null)
-            {
-                return null;
-            }
-            bool sameParent = true;
-            foreach (var fso in fsoList)
-            {
-                if (fso.ParentId != parent.Id)
-                {
-                    sameParent = false;
-                }
-            }
-            if (sameParent)
-            {
-                return parent;
+                var content = await context.FileSystemObjects
+                    .Where(f => f.ParentId == fso.Id)
+                    .ToArrayAsync();
+                foreach (var item in content)
+                    bytesCount += await GetFsoSizeByIdAsync(item.Id);
             }
             else
-            {
-                return null;
-            }
+                bytesCount = fso.FileSize.GetValueOrDefault();
 
+            return bytesCount;
         }
 
-        public async Task SetContentOfDTO(FileSystemObjectViewModel fsoDTO)
+        public async Task<bool> UniqueName(string name, int parentId, bool isFolder)
         {
-            if (fsoDTO.IsFolder)
-            {
-                fsoDTO.FileSize = await GetFsoSizeByIdAsync(fsoDTO.Id);
-                var folderContentList = await _context.FileSystemObjects.Where(f => f.ParentId == fsoDTO.Id).OrderBy(f => f.Name).OrderByDescending(f => f.IsFolder).ToListAsync();
-                fsoDTO.Children = new List<FileSystemObjectViewModel>();
-                foreach (var fso in folderContentList)
-                {
-                    var child = new FileSystemObjectViewModel(fso);
-                    if (child.IsFolder)
-                    {
-                        await SetContentOfDTO(child);
-                    }
-                    fsoDTO.Children.Add(child);
-                }
-            }
+            var exists = await context.FileSystemObjects
+                .AsNoTracking()
+                .FirstOrDefaultAsync(x => x.ParentId == parentId && x.Name == name && x.IsFolder == isFolder);
+            return exists == null;
         }
 
+        public async Task<string> GetDistinctNameAsync(string name, int parentId, bool isFolder, uint counter = 0)
+        {
+            var suggestedName = counter == 0
+                ? name
+                : $"{Path.GetFileNameWithoutExtension(name)}({counter}){Path.GetExtension(name)}";
+            var exists = await context.FileSystemObjects
+                .FirstOrDefaultAsync(x => x.IsFolder == isFolder && x.ParentId == parentId && x.Name == suggestedName);
+            if (exists == null) return suggestedName;
+            
+            return await GetDistinctNameAsync(name, parentId, isFolder, ++counter);
+        }
+
+        private void DeleteFile(FileSystemObject fso)
+        {
+            var file = Path.Combine(GetStorageLocation(fso.OwnerId), fso.FileName);
+            if (!File.Exists(file)) return;
+            try
+            {
+                File.Delete(file);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+            }
+        }
+        
+        public static string GetMimeType(string extension)
+        {
+            if (extension == null) return "application/octet-stream";
+            if (!extension.StartsWith('.'))
+                extension = "." + extension;
+            return Mappings.TryGetValue(extension, out var mime) ? mime : "application/octet-stream";
+        }
+        
         public async Task MoveFsoAsync(FileSystemObject fso, FileSystemObject destination)
         {
-            if ((fso != null && destination != null) && (fso.ParentId != destination.Id))
+            if (fso == null || destination == null || fso.ParentId == destination.Id)
+                throw new FsoException("Bad move request.");
+
+            if (fso.IsFolder)
             {
-
-                var destinationFullPath = await GetFsoFullPathAsync(destination);
-                if (destinationFullPath.Contains(fso))
-                {
+                var destinationFullPath = await GetFullPathAsync(destination);
+                if (destinationFullPath.Select(x => x.Id).Contains(fso.Id))
                     throw new FsoException("Destination is a subfolder of source");
-                }
-
-                var existingFso = await _context.FileSystemObjects.Where(f => f.ParentId == destination.Id).FirstOrDefaultAsync(f => f.Name == fso.Name);
-
-                if (existingFso == null)
-                {
-                    fso.ParentId = destination.Id;
-                    _context.FileSystemObjects.Update(fso);
-                    await _context.SaveChangesAsync();
-                }
-                else
-                {
-                    var counter = 1;
-                    var fsoNewName = Path.GetFileNameWithoutExtension(fso.Name) + $"({counter})";
-
-                    while (await _context.FileSystemObjects.Where(f => f.ParentId == destination.Id).FirstOrDefaultAsync(f => f.Name == fsoNewName + Path.GetExtension(fso.Name)) != null)
-                    {
-                        counter++;
-                        fsoNewName = Path.GetFileNameWithoutExtension(fso.Name) + $"({counter})";
-                    }
-
-                    fso.Name = fsoNewName +Path.GetExtension(fso.Name);
-                    fso.ParentId = destination.Id;
-                    _context.FileSystemObjects.Update(fso);
-                    await _context.SaveChangesAsync();
-                }
             }
+            
+            var distinctName = await GetDistinctNameAsync(fso.Name, destination.Id, fso.IsFolder);
+            fso.Name = distinctName;
+            fso.ParentId = destination.Id;
+            context.FileSystemObjects.Update(fso);
+            await context.SaveChangesAsync();
         }
 
-        public async Task<FileSystemObject> GetFolderContent(int id, Guid userId)
+        public async Task LoadFolderContentAsync(FileSystemObject fso)
         {
-            var folder = await _context.FileSystemObjects.FirstOrDefaultAsync(x => x.Id == id);
-            if (folder == null) ThrowException(404, "Folder Not Found");
-            if (folder.OwnerId != userId) ThrowException(403, "Forbidden");
-
-            _context.Entry(folder).Collection(x => x.Children).Load();
-            return folder;
+            if (fso == null) return;
+            await context.Entry(fso).Collection(x => x.Children).LoadAsync();
         }
 
-        public async Task<FileSystemObject> GetUserRoot(Guid userId)
+        public async Task<FileSystemObject> GetUserRootAsync(Guid userId)
         {
-            var rootFolder = await _context.FileSystemObjects.FirstOrDefaultAsync(x => x.OwnerId == userId && x.ParentId == null && x.IsFolder);
-            _context.Entry(rootFolder).Collection(x => x.Children).Load();
-            return rootFolder;
+            return await context.FileSystemObjects.FirstOrDefaultAsync(x => x.OwnerId == userId && x.ParentId == null && x.IsFolder);
         }
-
-        private void ThrowException(int statusCode, string statusMessage)
-        {
-            var ex = new Exception(string.Format("{0} - {1}", statusMessage, statusCode.ToString()));
-            ex.Data.Add(statusCode.ToString(), statusMessage);
-            throw ex;
-        }
-
+        
+        private string GetStorageLocation(Guid userId) => Path.Combine(_storageUrl, userId.ToString(), DriveDirName);
     }
 
 

@@ -30,9 +30,9 @@ export class AuthService {
 
   checkUniqueLogin(login: string): Observable<boolean> {
     if (login.includes('@'))
-      return this.http.post<boolean>(apiUrl + '/api/auth/checkunique', { email: login }, httpOptions);
+      return this.http.post<boolean>(apiUrl + '/api/auth/check-unique', { email: login }, httpOptions);
     else
-      return this.http.post<boolean>(apiUrl + '/api/auth/checkunique', { username: login }, httpOptions);
+      return this.http.post<boolean>(apiUrl + '/api/auth/check-unique', { username: login }, httpOptions);
   }
 
   getUser(): string {
@@ -54,14 +54,14 @@ export class AuthService {
     return this.http.post<any>(apiUrl + '/api/auth/login', user)
       .pipe(
         tap(tokens => this.doLoginUser(user.username, tokens)),
-        mapTo(true),
+        map(() => true),
       );
   }
 
   loginWithToken(tokens: TokenModel): Observable<boolean> {
     return of(tokens).pipe(
       tap(tokens => this.doLoginUser(this.jwtHelper.decodeToken(tokens.accessToken).unique_name, tokens)),
-      mapTo(true),
+      map(() => true),
     );
   }
 
@@ -98,7 +98,7 @@ export class AuthService {
       catchError(error => {
         if (error instanceof HttpErrorResponse && error.status === 400) {
           this.doLogoutUser();
-          this.router.navigate(['/login']);
+          void this.router.navigate(['/login']);
           return throwError(() => error)
         } else {
           return throwError(() => error);

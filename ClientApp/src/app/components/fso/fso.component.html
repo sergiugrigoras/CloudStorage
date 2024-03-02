@@ -1,4 +1,4 @@
-<div class="fso" [class.fso-selected]="fso?.isSelected">
+<div class="fso" [class.fso-selected]="fso?.isSelected" [class.fso-cut]="fso?.isCut">
     <div class="fso-icon">
         <div *ngIf="(fso && fso.isFolder) || this.text" class="folder-icon-box">
             <span class="material-icons"> folder </span>

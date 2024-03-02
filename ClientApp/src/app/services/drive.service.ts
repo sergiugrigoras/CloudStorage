@@ -1,15 +1,12 @@
-import { DiskModel } from './../interfaces/disk.interface';
-import { FsoModel } from './../interfaces/fso.interface';
-import { environment } from './../../environments/environment';
+import { DiskInfoModel } from '../interfaces/disk.interface';
+import {FsoModel, FsoMoveResultModel} from '../model/fso.model';
+import { environment } from '../../environments/environment';
 import { HttpClient, HttpHeaders, HttpEvent, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Router } from '@angular/router';
-import { map, catchError, retry, tap } from 'rxjs/operators';
-import { throwError, Observable, Subject } from 'rxjs';
-import { ShareModel } from '../interfaces/share.interface';
+import {Observable, Subject, BehaviorSubject} from 'rxjs';
 
 
-const SHARE_URL = `${window.location.protocol}//${window.location.hostname}/files/`;
 const apiUrl: string = environment.baseUrl;
 const httpOptions = {
   headers: new HttpHeaders({
@@ -22,6 +19,7 @@ const httpOptions = {
 export class DriveService {
 
   openFolder$ = new Subject<number>();
+  clipboard$ = new BehaviorSubject<number[]>([]);
   constructor(private http: HttpClient, private router: Router) { }
 
   getUserRoot() {
@@ -32,117 +30,65 @@ export class DriveService {
     return this.http.get<FsoModel>(apiUrl + '/api/fso/folder/' + id);
   }
 
-  openFolder(id: number) {
-    this.openFolder$.next(id);
-  }
-
-
-
-
-  // Old endpoints
-
-  getFso(id: any) {
-    return this.http.get<FsoModel>(apiUrl + '/api/fso/' + id);
-  }
-
-
-
   getFullPath(id: any) {
-    return this.http.get<FsoModel[]>(apiUrl + '/api/fso/fullpath/' + id);
+    return this.http.get<FsoModel[]>(apiUrl + '/api/fso/full-path/' + id);
   }
 
-
-
-  getUserDiskInfo() {
-    return this.http.get<DiskModel>(apiUrl + '/api/fso/getuserdiskinfo');
+  validateEmail(input: string) {
+    const regularExpression = /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
+    return regularExpression.test(input?.toLowerCase());
   }
 
-  getShareUrl(shareId: string) {
-    return `${SHARE_URL}${shareId}`
+  getDiskInfo() {
+    return this.http.get<DiskInfoModel>(apiUrl + '/api/fso/drive-info');
   }
+
   addFolder(newFso: any) {
-    return this.http.post<FsoModel>(apiUrl + '/api/fso/addfolder', newFso, httpOptions);
+    return this.http.post<FsoModel>(apiUrl + '/api/fso/add-folder', newFso, httpOptions);
   }
 
-  delete(list: string[]) {
-    let csv = list.join(',');
+  delete(ids: number[]) {
     return this.http.delete(apiUrl + '/api/fso/delete', {
-      headers: { 'Content-Type': 'application/json' }, params: { fsoIdcsv: csv }
-    }).pipe(retry(3), map(data => {
-      return data;
-    }));
+      headers: { 'Content-Type': 'application/json' }, body: ids
+    });
   }
 
-  move(list: string[], destination: number) {
-    let csv = list.join(',');
+  move(list: number[], destination: number) {
     let params = new HttpParams()
-      .set('fsoIdcsv', csv)
-      .set('destinationDirId', String(destination));
+      .set('destinationId', destination);
 
-    return this.http.post(apiUrl + '/api/fso/move', null, {
+    return this.http.post<FsoMoveResultModel>(apiUrl + '/api/fso/move', list, {
       headers: { 'Content-Type': 'application/json' }, params
     });
   }
-  rename(fso: FsoModel) {
+
+  rename(fso: any) {
     return this.http.put(apiUrl + '/api/fso/rename', fso, httpOptions);
   }
 
-  upload(formData: FormData): Observable<HttpEvent<Object>> {
+  upload(formData: FormData) {
     return this.http.post(apiUrl + '/api/fso/upload', formData,
       {
         observe: 'events',
         reportProgress: true
       });
   }
-  download(list: string[]): Observable<HttpEvent<Object>> {
-    let csv = list.join(',');
-    let formData = new FormData();
-    formData.append('fsoIdcsv', csv);
-    return this.http.post<Blob>(apiUrl + '/api/fso/download', formData, {
+
+  download(list: number[]): Observable<HttpEvent<Object>> {
+    return this.http.post<Blob>(apiUrl + '/api/fso/download', list, {
       observe: 'events',
       reportProgress: true,
       responseType: 'blob' as 'json',
+      headers: { 'Content-Type': 'application/json' }
     });
   }
 
-
-
-  share(list: string[]) {
-    let csv = list.join(',');
-    let formData = new FormData();
-    formData.append('fsoIdcsv', csv);
-    return this.http.post(apiUrl + '/api/share/add', formData, {
-      responseType: 'text'
-    });
-  }
-
-  getShareContent(shareId: string) {
-    return this.http.get<FsoModel[]>(apiUrl + '/api/share/get/' + shareId);
-  }
-
-  getShareInfo(shareId: string) {
-    return this.http.get(apiUrl + '/api/share/getinfo/' + shareId);
-  }
-
-  deleteShare(shareId: string) {
-    return this.http.delete(apiUrl + '/api/share/delete/' + shareId, httpOptions);
-  }
-
-  sendShareEmail(id: string, email: string, url: string) {
-    return this.http.post(apiUrl + '/api/share/sendemail', undefined, {
-      headers: { 'Content-Type': 'application/json' }, params: { id, email, url }
-    });
-  }
-
-  downloadShare(shareId: string) {
-    return this.http.get<Blob>(apiUrl + '/api/share/download/' + shareId, {
-      observe: 'events',
-      reportProgress: true,
-      responseType: 'blob' as 'json',
-    });
-  }
-
-  getAllUsersShares() {
-    return this.http.get<ShareModel[]>(apiUrl + '/api/share/getall');
+  uniqueName(name: string, parentId: number, isFolder: boolean) {
+    let params = new HttpParams();
+    params = params
+      .set('parentId', parentId)
+      .set('name', name)
+      .set('isFolder', isFolder)
+    return this.http.get<boolean>(apiUrl + '/api/fso/unique', {params: params, headers: { 'Content-Type': 'application/json' } });
   }
 }

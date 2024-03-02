@@ -1,19 +1,23 @@
-import { environment } from './../../../environments/environment';
-import { FsoSortService } from './../../services/fso-sort.service';
-import { ProgressBarModel } from '../../interfaces/progress-bar.interface';
-import { DiskModel } from './../../interfaces/disk.interface';
-import { tap, catchError, delay } from 'rxjs/operators';
-import { Subscription, EMPTY, Subject } from 'rxjs';
-import { HttpEventType } from '@angular/common/http';
-import { FsoModel } from './../../interfaces/fso.interface';
-import { DriveService } from './../../services/drive.service';
-import { Component, ElementRef, Inject, OnInit, TemplateRef, ViewChild, OnDestroy, HostListener } from '@angular/core';
-import { DOCUMENT } from '@angular/common';
+import { FsoSortService } from '../../services/fso-sort.service';
+import { DiskInfoModel } from '../../interfaces/disk.interface';
+import {catchError, switchMap, distinctUntilChanged, first} from 'rxjs/operators';
+import {Subscription, EMPTY, Subject, forkJoin, Observable, map, debounceTime, of} from 'rxjs';
+import {HttpErrorResponse, HttpEvent, HttpEventType} from '@angular/common/http';
+import {FsoModel, FsoTouchHelper} from '../../model/fso.model';
+import { DriveService } from '../../services/drive.service';
+import { Component, ElementRef, OnInit, TemplateRef, ViewChild, OnDestroy, HostListener } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import {
+  AbstractControl,
+  AsyncValidatorFn,
+  FormControl,
+  ValidationErrors,
+  ValidatorFn,
+  Validators
+} from "@angular/forms";
 
-
-const SNACKBAR_OPTIONS = { duration: 5000 };
+const SNACKBAR_OPTIONS = { duration: 3000 };
 const DOUBLE_CLICK_THRESHOLD = 300;
 @Component({
   selector: 'app-drive',
@@ -21,53 +25,30 @@ const DOUBLE_CLICK_THRESHOLD = 300;
   styleUrls: ['./drive.component.scss'],
 })
 export class DriveComponent implements OnInit, OnDestroy {
-  private readonly DEFAULT_VIEW = 'listView';
   private readonly DEFAULT_SORT = this.fsoSortService.sortByNameAscFn;
-
-  drive: FsoModel;
   currentFolder: FsoModel;
   pageIsReady = false;
-  folder: FsoModel;
   focusIndex = 0;
-  newFolderName = '';
-  fullPath: FsoModel[];
-  disk: DiskModel;
   forbiddenChar: string[];
-  isFsoNameValid = false;
-  view: string;
-  progressBar: ProgressBarModel = {
-    progress: 0,
-    text: '',
-    inProgress: false,
-    loaded: 0,
-    total: 0,
-    background: 'success',
-  };
-  shareId = '';
-  validEmail = false;
-  scrHeight: number;
-  scrWidth: number;
+  progressBar = 0;
   @ViewChild('newFolderDialog', { static: true }) newFolderDialog: TemplateRef<any>;
-  @ViewChild('renameConfirmModal') renameConfirmModal?: TemplateRef<any>;
-  @ViewChild('deleteConfirmModal') deleteConfirmModal?: TemplateRef<any>;
-  @ViewChild('shareConfirmModal') shareConfirmModal?: TemplateRef<any>;
-  @ViewChild('inputFiles') inputFiles?: ElementRef;
+  @ViewChild('renameDialog') renameDialog: TemplateRef<any>;
+  @ViewChild('deleteConfirmDialog') deleteConfirmDialog: TemplateRef<any>;
+  @ViewChild('inputFiles') inputFiles: ElementRef<HTMLInputElement>;
   @ViewChild('loading', { static: true }) spinnerTemplate: TemplateRef<any>;
-  sorter: Subject<any> = new Subject<any>();
-  sorterSubscription: Subscription;
-  openFolderSubscription: Subscription;
-  sortedBy = this.DEFAULT_SORT;
-  apiCallsSubscription: Subscription;
-  private touchtime: any = {};
-
+  private sorter: Subject<any> = new Subject<any>();
+  private sortedBy = this.DEFAULT_SORT;
+  subscriptions = new Subscription();
+  private touchTime: any = {};
+  diskInfo: DiskInfoModel;
+  newFolderControl = new FormControl('', [Validators.required, this.noForbiddenCharactersValidator() ], this.uniqueFolderNameAsyncValidator());
+  renameControl = new FormControl('', Validators.required);
   constructor(
     private fsoSortService: FsoSortService,
     private driveService: DriveService,
     private _dialog: MatDialog,
     private _snackBar: MatSnackBar,
-    @Inject(DOCUMENT) document: Document
   ) {
-    this.disk = { usedBytes: 0, totalBytes: 0, diskUsed: 0 };
     this.forbiddenChar = ['<', '>', ':', '"', '/', '\\', '|', '?', '*'];
     for (let i = 0; i <= 31; i++) {
       this.forbiddenChar.unshift(String.fromCharCode(i));
@@ -75,10 +56,57 @@ export class DriveComponent implements OnInit, OnDestroy {
     this.forbiddenChar.unshift(String.fromCharCode(127));
   }
 
-  @HostListener('window:resize', ['$event'])
-  private getScreenSize() {
-    this.scrHeight = window.innerHeight;
-    this.scrWidth = window.innerWidth;
+  ngOnDestroy(): void {
+    this.subscriptions.unsubscribe();
+  }
+
+  ngOnInit() {
+    const openFolderSubscription = this.driveService.openFolder$.subscribe(id => {
+      this.openFolder(id, true);
+    });
+    this.subscriptions.add(openFolderSubscription);
+
+    forkJoin([
+      this.driveService.getDiskInfo(),
+      this.driveService.getUserRoot()
+    ]).subscribe({
+      next: result => {
+        this.currentFolder = new FsoModel(result[1]);
+        this.sortItems();
+        this.diskInfo = result[0];
+        this.pageIsReady = true;
+      },
+      error: () => {
+        this._snackBar.open(`An Error occurred.`, 'Ok', SNACKBAR_OPTIONS);
+      }
+    })
+
+    const sorterSubscription = this.sorter.subscribe((sortFn) => {
+      this.currentFolder.children.sort(sortFn);
+      this.sortedBy = sortFn;
+    });
+    this.subscriptions.add(sorterSubscription);
+  }
+
+  uniqueFolderNameAsyncValidator(): AsyncValidatorFn {
+    return (control: AbstractControl<string>): Observable<ValidationErrors | null> => control.valueChanges
+      .pipe(
+        debounceTime(250),
+        distinctUntilChanged(),
+        switchMap(value => this.driveService.uniqueName(value, this.currentFolder.id, true)),
+        catchError(() => of(false)),
+        map((unique: boolean) => (unique ? null : {nameNotUnique: true})),
+        first()
+      );
+  }
+
+  noForbiddenCharactersValidator(): ValidatorFn {
+    return (control: AbstractControl<string>): ValidationErrors | null => {
+      if (this.forbiddenChar?.some((c) => control.value?.includes(c))) {
+        return {forbiddenCharacters: true};
+      }
+      return null;
+    }
   }
 
   mobileAndTabletCheck = function () {
@@ -87,47 +115,12 @@ export class DriveComponent implements OnInit, OnDestroy {
     return check;
   };
 
-  ngOnDestroy(): void {
-    this.apiCallsSubscription?.unsubscribe();
-    this.sorterSubscription?.unsubscribe();
-    this.openFolderSubscription?.unsubscribe();
+  private findChildById(id: number): FsoModel | undefined {
+    return this.currentFolder.children.find((elem) => elem.id === id);
   }
 
-  ngOnInit() {
-    this.getScreenSize();
-    this.driveService.openFolder$.subscribe(id => {
-      this.openFolder(id, true);
-    });
-    this.driveService.getUserRoot()
-      .pipe(
-        catchError(error => {
-          this._snackBar.open(`An Error occurred.`, 'Ok', SNACKBAR_OPTIONS);
-          return EMPTY;
-        })
-      )
-      .subscribe(
-        {
-          next: (folder: FsoModel) => {
-            this.currentFolder = new FsoModel(folder);
-            this.setView();
-            this.sorter.next(this.sortedBy);
-            this.pageIsReady = true;
-          },
-          error: () => {
-            this._snackBar.open(`An Error occurred.`, 'Ok', SNACKBAR_OPTIONS);
-          }
-        }
-      );
-
-    this.sorterSubscription = this.sorter.subscribe((sortFn) => {
-      const sortElements = (sortFn: any) => {
-        if (this.currentFolder && this.currentFolder.children.length > 1) {
-          this.currentFolder.children = this.currentFolder.children.sort(sortFn);
-        }
-      };
-      sortElements(sortFn);
-      this.sortedBy = sortFn;
-    });
+  private getChildIndex(child: FsoModel): number {
+    return this.currentFolder.children.indexOf(child);
   }
 
 
@@ -143,340 +136,211 @@ export class DriveComponent implements OnInit, OnDestroy {
         })
       ).subscribe(folder => {
         this.currentFolder = new FsoModel(folder);
-        this.sorter.next(this.sortedBy);
-        // localStorage.setItem('folder', this.currentFolder.id.toString());
-        this.setView();
+        this.sortItems();
         spinnerRef.close();
       });
   }
 
-  private setView() {
-    let view = localStorage.getItem(`view`);
-    if (view) this.view = view;
-    else {
-      this.view = this.DEFAULT_VIEW;
-      localStorage.setItem(`view`, this.DEFAULT_VIEW);
-    }
-  }
-
-  fsoTouched(event: any, id: number) {
+  onFsoTouch(event: MouseEvent, id: number) {
     if (this.mobileAndTabletCheck()) {
-      const elem = this.currentFolder.children.find((elem) => elem.id == id);
-      if (elem) {
-        elem.isSelected = !elem.isSelected;
-      }
-      if (this.touchtime[id] === undefined) {
-        this.touchtime[id] = new Date().getTime();
-      } else {
-        if (((new Date().getTime()) - this.touchtime[id]) < DOUBLE_CLICK_THRESHOLD) {
-          this.openFolder(id, elem.isFolder);
-          this.touchtime[id] = undefined;
-        } else {
-          this.touchtime[id] = new Date().getTime();
-        }
-      }
-      return;
-    }
-    if (!event.ctrlKey && !event.shiftKey) {
-      let lastTouched = this.currentFolder.children.find((elem) => elem.id == id);
-      if (lastTouched) {
-        this.focusIndex = this.currentFolder.children.indexOf(lastTouched);
-        this.selectOneElement(lastTouched.id);
-      }
-    } else if (event.ctrlKey && !event.shiftKey) {
-      let lastTouched = this.currentFolder.children.find((elem) => elem.id == id);
-      if (lastTouched) {
-        this.focusIndex = this.currentFolder.children.indexOf(lastTouched);
-        lastTouched.isSelected = !lastTouched.isSelected;
-      }
+      this.processMobileEvent(id);
     } else {
-      let f = this.currentFolder.children.find((elem) => elem.id == id);
-      if (f) {
-        this.currentFolder.children.forEach((elem) => {
-          if (
-            this.between(
-              this.currentFolder.children.indexOf(elem),
-              this.focusIndex,
-              this.currentFolder.children.indexOf(f!)
-            )
-          ) {
-            elem.isSelected = true;
-          }
-          else elem.isSelected = false;
-        });
-      }
+      this.processDesktopEvent(event, id);
     }
   }
 
-  selectOneElement(id: number) {
+  touchHelper = new FsoTouchHelper(DOUBLE_CLICK_THRESHOLD);
+  private processMobileEvent(id: number) {
+    const elem = this.findChildById(id);
+    if (elem) {
+      elem.isSelected = !elem.isSelected;
+    }
+    if (this.touchHelper.touch(id)) {
+      this.openFolder(id, elem ? elem.isFolder : this.currentFolder.parentId === id);
+    }
+  }
+
+  private processDesktopEvent(event: MouseEvent, id: number): void {
+    const lastTouched = this.findChildById(id);
+    if (!lastTouched) return;
+
+    if (!event.ctrlKey && !event.shiftKey) {
+      this.focusIndex = this.getChildIndex(lastTouched);
+      this.selectOneElementById(lastTouched.id);
+    } else if (event.ctrlKey && !event.shiftKey) {
+      this.focusIndex = this.getChildIndex(lastTouched);
+      lastTouched.isSelected = !lastTouched.isSelected;
+    } else {
+      const fso = this.findChildById(id);
+      if (!fso) return;
+      this.selectRange(this.focusIndex, this.getChildIndex(fso));
+    }
+  }
+
+  private selectOneElementById(id: number) {
     this.currentFolder.children.forEach((elem) => {
-      if (elem.id != id) elem.isSelected = false;
-      else elem.isSelected = true;
+      elem.isSelected = elem.id == id;
     });
   }
 
-  addFolder(name: string) {
-    this.driveService.addFolder({ name: name, isFolder: true, parentId: this.currentFolder.id }).subscribe(result => {
-      this.currentFolder.children.push(new FsoModel(result));
-      this.sorter.next(this.sortedBy);
-      this.newFolderName = '';
+  private selectRange(start: number, end: number): void {
+    this.currentFolder.children.forEach((elem, index) => {
+      elem.isSelected = this.between(index, start, end);
     });
   }
 
-  deleteSelected() {
-    /*     let delArr: string[] = [];
-        this.content.forEach((elem) => {
-          if (elem.isSelected) {
-            delArr.push(String(elem.id!));
-          }
-        });
-        this.removeFsoFromUI(delArr);
-        this.driveService
-          .delete(delArr)
-          .pipe(
-            catchError((error) => {
-              return throwError(error);
-            }),
-            switchMap(() => {
-              return this.driveService.getUserDiskInfo();
-            }),
-            tap((disk) => (this.disk = disk))
-          )
-          .subscribe(); */
+  private between(x: number, val1: number, val2: number): boolean {
+    const minVal = Math.min(val1, val2);
+    const maxVal = Math.max(val1, val2);
+    return x >= minVal && x <= maxVal;
   }
 
-  /*   openModal(options: string) {
-      switch (options) {
-        case 'new': {
-          let modalRef = this._dialog.open(this.newFolderModal);
-          break;
+  private addFolder() {
+    this._dialog.open(this.newFolderDialog, {
+      disableClose: false,
+      hasBackdrop: true,
+      width: '400px'
+    }).afterClosed().pipe(
+      switchMap(dialogResult => {
+        if (dialogResult) {
+          return this.driveService.addFolder({
+            name: this.newFolderControl.value,
+            isFolder: true,
+            parentId: this.currentFolder.id
+          })
         }
-        case 'delete': {
-          let modalRef = this._dialog.open(this.deleteConfirmModal);
-          break;
-        }
-        case 'rename': {
-          let modalRef = this._dialog.open(this.renameConfirmModal);
-          break;
-        }
-        case 'share': {
-          let modalRef = this._dialog.open(this.shareConfirmModal);
-          break;
-        }
-        default: {
-          break;
-        }
+        return EMPTY;
+      }),
+    ).subscribe({
+      next: result => {
+        this.currentFolder.children.push(new FsoModel(result));
+        this.sortItems();
+      },
+      error: () => {
+        this.newFolderControl.reset('');
+        this._snackBar.open(`An Error occurred.`, 'Ok', SNACKBAR_OPTIONS);
+      },
+      complete: () => {
+        this.newFolderControl.reset('');
       }
-    } */
-
-  rename(input: HTMLInputElement) {
-    let newFso = this.currentFolder.children.find((elem) => elem.isSelected);
-    if (newFso) {
-      newFso.name = input.value;
-      this.driveService.rename(newFso).subscribe();
-    }
+    });
   }
 
-  async uploadFile(files: FileList | null) {
-    if (files) {
-      let fileAlreadyExists = false;
-      let totalSize = 0;
-      const formData = new FormData();
-      //let disk = await this.driveService.getUserDiskInfo().toPromise();
-      let diskUsedBeforeUpload = this.disk.usedBytes;
-      Array.from(files).map((file, index) => {
-        if (this.currentFolder.children.find((elem) => elem.name === file.name))
-          fileAlreadyExists = true;
-        totalSize += file.size;
-        return formData.append('file' + index, file, file.name);
-      });
-      if (fileAlreadyExists) {
-        // this.toastService.show('Error', 'File already exists', 'bg-danger');
-      } else if (totalSize + +this.disk.usedBytes > +this.disk.totalBytes) {
-        // this.toastService.show('Error', 'Not enough space', 'bg-danger');
-      } else if (totalSize > environment.maxUploadSize) {
-        // this.toastService.show('Error', 'Max file(s) size 250MB', 'bg-danger');
-      } else {
-        formData.append('rootId', String(this.currentFolder.id));
-        let uploadSubscription = this.driveService.upload(formData).subscribe(
-          (event) => {
-            if (event.type === HttpEventType.Response) {
-              (<FsoModel[]>event.body).forEach((e) => {
-                this.currentFolder.children.push(e);
-              });
-
-              this.progressBar.text = 'Completed';
-              setTimeout(() => {
-                this.progressBar.inProgress = false;
-              }, 2000);
-            } else if (
-              event.type === HttpEventType.UploadProgress &&
-              event.total
-            ) {
-              this.disk.usedBytes = +diskUsedBeforeUpload + +event.loaded;
-              this.disk.diskUsed = Math.round(
-                (this.disk.usedBytes * 100) / this.disk.totalBytes
-              );
-              this.progressBar.progress = Math.round(
-                (100 * +event.loaded) / +event.total
-              );
-              this.progressBar.text = String(this.progressBar.progress) + '%';
-              this.progressBar.loaded = event.loaded;
-              this.progressBar.total = event.total;
-              this.progressBar.background = 'success';
-              this.progressBar.inProgress = true;
-            }
-            this.currentFolder.children.sort(this.sortedBy);
-          },
-          () => {
-            this.progressBar.text = 'Error';
-            this.progressBar.background = 'danger';
-            setTimeout(() => {
-              this.progressBar.inProgress = false;
-            }, 2000);
-          },
-          () => {
-            this.driveService
-              .getUserDiskInfo()
-              .pipe(
-                tap((res) => {
-                  this.disk = res;
-                })
-              )
-              .subscribe();
-            uploadSubscription.unsubscribe();
-          }
-        );
-      }
-    }
-  }
-
-  download() {
-    let fsoIdArr: string[] = [];
-    let fsoArr: FsoModel[] = [];
-    this.currentFolder.children.forEach((elem) => {
+  private selectedIds() {
+    return this.currentFolder.children.reduce<number[]>((acc, elem) => {
       if (elem.isSelected) {
-        fsoIdArr.push(String(elem.id!));
-        fsoArr.push(elem);
+        acc.push(elem.id);
+      }
+      return acc;
+    }, []);
+  }
+
+  private deleteSelected() {
+    const selectedIds = this.selectedIds();
+    this._dialog.open(this.deleteConfirmDialog, {
+      disableClose: false,
+      hasBackdrop: true,
+      width: '400px'
+    }).afterClosed().pipe(
+      switchMap(dialogResult => {
+        if (dialogResult) {
+          return this.driveService.delete(selectedIds);
+        }
+        return EMPTY;
+      })
+    ).subscribe({
+      next: () => {
+        this.currentFolder.children = this.currentFolder.children.filter(elem => !selectedIds.includes(elem.id));
+      },
+      error: () => {
+        this._snackBar.open(`An Error occurred.`, 'Ok', SNACKBAR_OPTIONS);
       }
     });
-    let downloadFileName = '';
-    if (fsoArr.length == 1 && !fsoArr[0].isFolder)
-      downloadFileName = fsoArr[0].name;
-    else downloadFileName = `files-${Date.now()}`;
+  }
 
-    this.driveService.download(fsoIdArr).subscribe(
-      (event) => {
-        if (event.type === HttpEventType.Response) {
-          var FileSaver = require('file-saver');
-          FileSaver.saveAs(<Blob>event.body, downloadFileName);
-          this.progressBar.text = 'Completed';
-          setTimeout(() => {
-            this.progressBar.inProgress = false;
-          }, 2000);
-        } else if (
-          event.type === HttpEventType.DownloadProgress &&
-          event.total
-        ) {
-          this.progressBar.progress = Math.round(
-            (100 * event.loaded) / event.total
-          );
-          this.progressBar.text = String(this.progressBar.progress) + '%';
-          this.progressBar.loaded = event.loaded;
-          this.progressBar.total = event.total;
-          this.progressBar.background = 'info';
-          this.progressBar.inProgress = true;
+  private rename() {
+    const selected = this.currentFolder.children.find((elem) => elem.isSelected);
+    if (!selected) return;
+    this.renameControl.setValue(selected.name);
+    this._dialog.open(this.renameDialog, {
+      disableClose: false,
+      hasBackdrop: true,
+      width: '400px'
+    }).afterClosed().pipe(
+      switchMap(dialogResult => {
+        if (dialogResult) {
+          return this.driveService.rename({id: selected.id, name: this.renameControl.value});
+        }
+        return EMPTY;
+      }),
+    ).subscribe({
+      next: () => {
+        selected.name = this.renameControl.value;
+      },
+      error: (error: HttpErrorResponse) => {
+        this._snackBar.open(`Error. ${error.error}`, 'Ok', SNACKBAR_OPTIONS);
+      }
+    })
+  }
+
+  uploadFile(files: FileList | null) {
+    if (!files) return;
+    const formData = new FormData();
+    Array.from(files).forEach((file, index) => {
+      formData.append('files', file, file.name);
+    });
+    formData.append('parentId', this.currentFolder.id.toString());
+    this.driveService.upload(formData).subscribe({
+      next: event => {
+        if (event.type === HttpEventType.Response && Array.isArray(event.body)) {
+          const result = event.body.map(x => new FsoModel(x));
+          result.forEach(x => x.isSelected = true);
+          this.currentFolder.children.forEach(x => x.isSelected = false);
+          this.currentFolder.children.push(...result);
+          this.progressBar = 0;
+          if (this.inputFiles) this.inputFiles.nativeElement.value = '';
+          this.currentFolder.children.sort(this.sortedBy);
+        } else if (event.type === HttpEventType.UploadProgress && event.total) {
+          this.progressBar = Math.round((100 * event.loaded) / event.total);
         }
       },
-      () => {
-        this.progressBar.text = 'Error';
-        this.progressBar.background = 'danger';
-        setTimeout(() => {
-          this.progressBar.inProgress = false;
-        }, 2000);
-      }
-    );
-  }
-
-  shareSelected() {
-    let fsoIdArr: string[] = [];
-    this.currentFolder.children.forEach((elem) => {
-      if (elem.isSelected) {
-        fsoIdArr.push(String(elem.id!));
+      error: () => {
+        this.progressBar = 0;
       }
     });
-    this.driveService.share(fsoIdArr).subscribe(shareId => {
-      this.shareId = shareId;
+  }
+
+  private download() {
+    const elements = this.currentFolder.children.filter(x => x.isSelected);
+    let downloadFileName = '';
+    if (elements.length == 1 && !elements[0].isFolder)
+      downloadFileName = elements[0].name;
+    else downloadFileName = `files-${Date.now()}`;
+
+    this.driveService.download(elements.map(x => x.id)).subscribe({
+      next: (event: HttpEvent<any>) => {
+        if (event.type === HttpEventType.Response) {
+          const FileSaver = require('file-saver');
+          FileSaver.saveAs(event.body as Blob, downloadFileName);
+          this.progressBar = 0;
+        } else if (event.type === HttpEventType.DownloadProgress && event.total) {
+          this.progressBar = Math.round((100 * event.loaded) / event.total);
+        }
+      },
+      error: () => {
+        this.progressBar = 0;
+      }
     });
   }
-  getShareUrl(shareId: string) {
-    return this.driveService.getShareUrl(shareId);
-  }
-  copyUrl(input: HTMLInputElement) {
-    input.focus();
-    input.select();
-    document.execCommand('copy');
-    /* this.toastService.show(
-      'Success',
-      `Copied to clipboard`,
-      'bg-success'
-    ); */
-  }
 
-  deleteShare() {
-    if (this.shareId)
-      this.driveService.deleteShare(this.shareId).subscribe(res => {
-        /* this.toastService.show(
-          'Success',
-          `Successfully deleted share: ${(<any>res).shareId}`,
-          'bg-success'
-        ); */
-      })
-  }
 
-  sendShareEmail(input: HTMLInputElement, shareId: string) {
-    this.driveService.sendShareEmail(shareId, input.value, this.getShareUrl(shareId)).subscribe(() => {
-      /* this.toastService.show(
-        'Success',
-        `An email has been sent to ${input.value}`,
-        'bg-success'
-      ); */
-    },
-      () => {
-        /* this.toastService.show(
-          'Error',
-          `Server error, unabel to send email`,
-          'bg-danger'
-        ); */
-      }
-    );
-  }
-
-  validateEmail(input: HTMLInputElement) {
-    const regularExpression = /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
-    this.validEmail = regularExpression.test(String(input.value).toLowerCase());
-  }
-
-  doAction(event: string) {
+  onToolbarEvent(event: string) {
     switch (event) {
       case 'new': {
-        this._dialog.open(this.newFolderDialog, {
-          disableClose: false,
-          hasBackdrop: true,
-          maxHeight: '80vh',
-          width: this.scrWidth > 768 ? '500px' : '80vw'
-        }).afterClosed().subscribe((dialogResult: boolean) => {
-          if (dialogResult) {
-            this.addFolder(this.newFolderName);
-          } else {
-            this.newFolderName = '';
-          }
-        });
+        this.addFolder();
         break;
       }
       case 'upload': {
-        console.log(this.scrWidth);
-
         this.inputFiles?.nativeElement.click();
         break;
       }
@@ -485,63 +349,34 @@ export class DriveComponent implements OnInit, OnDestroy {
         break;
       }
       case 'delete': {
-        //this.openModal('delete');
+        this.deleteSelected();
         break;
       }
       case 'rename': {
-        //this.openModal('rename');
+        this.rename();
         break;
       }
       case 'sortName': {
-        if (this.sortedBy === this.fsoSortService.sortByNameAscFn) {
-          this.sorter.next(this.fsoSortService.sortByNameDescFn);
-          this.sortedBy = this.fsoSortService.sortByNameDescFn;
-        } else {
-          this.sorter.next(this.fsoSortService.sortByNameAscFn);
-          this.sortedBy = this.fsoSortService.sortByNameAscFn;
-        }
+        this.sortItems('name');
         break;
       }
       case 'sortSize': {
-        if (this.sortedBy === this.fsoSortService.sortBySizeAscFn) {
-          this.sorter.next(this.fsoSortService.sortBySizeDescFn);
-          this.sortedBy = this.fsoSortService.sortBySizeDescFn;
-        } else {
-          this.sorter.next(this.fsoSortService.sortBySizeAscFn);
-          this.sortedBy = this.fsoSortService.sortBySizeAscFn;
-        }
+        this.sortItems('size');
         break;
       }
       case 'sortDate': {
-        if (this.sortedBy === this.fsoSortService.sortByDateAscFn) {
-          this.sorter.next(this.fsoSortService.sortByDateDescFn);
-          this.sortedBy = this.fsoSortService.sortByDateDescFn;
-        } else {
-          this.sorter.next(this.fsoSortService.sortByDateAscFn);
-          this.sortedBy = this.fsoSortService.sortByDateAscFn;
-        }
+        this.sortItems('date');
         break;
       }
       case 'changeView': {
-        if (this.view === 'listView') {
-          this.view = 'iconView';
-          localStorage.setItem(`view`, 'iconView');
-        } else {
-          this.view = 'listView';
-          localStorage.setItem(`view`, 'listView');
-        }
-        break;
-      }
-      case 'share': {
-        // this.openModal('share');
         break;
       }
       case 'cut': {
-        this.cutSelected();
+        this.cutItems();
         break;
       }
       case 'paste': {
-        this.moveFromClipboard();
+        this.moveItems();
         break;
       }
       default: {
@@ -550,127 +385,85 @@ export class DriveComponent implements OnInit, OnDestroy {
     }
   }
 
-  cutSelected() {
-    let fsoIdArr: string[] = [];
-    this.currentFolder.children.forEach((elem) => {
+  private sortItems(sortBy?: 'name' | 'date' | 'size') {
+    switch (sortBy) {
+      case 'name': {
+        const sortByNameFn = this.sortedBy === this.fsoSortService.sortByNameAscFn ? this.fsoSortService.sortByNameDescFn : this.fsoSortService.sortByNameAscFn;
+        this.sorter.next(sortByNameFn);
+        break;
+      }
+      case "size": {
+        const sortBySizeFn = this.sortedBy === this.fsoSortService.sortBySizeAscFn ? this.fsoSortService.sortBySizeDescFn : this.fsoSortService.sortBySizeAscFn;
+        this.sorter.next(sortBySizeFn);
+        break;
+      }
+      case "date": {
+        const sortByDateFn = this.sortedBy === this.fsoSortService.sortByDateAscFn ? this.fsoSortService.sortByDateDescFn : this.fsoSortService.sortByDateAscFn;
+        this.sorter.next(sortByDateFn);
+        break;
+      }
+      default: {
+        this.sorter.next(this.sortedBy);
+        break;
+      }
+    }
+  }
+
+  private cutItems() {
+    const clipboard = this.currentFolder.children.reduce<number[]>((acc, elem) => {
       if (elem.isSelected) {
-        fsoIdArr.push(String(elem.id!));
+        elem.isCut = true;
+        acc.push(elem.id);
+      } else {
+        elem.isCut = false;
       }
-    });
-    this.removeFsoFromUI(fsoIdArr);
-    sessionStorage.setItem('clipboard', fsoIdArr.join(","));
-    this._snackBar.open(`Moved to clipboard ${fsoIdArr.length} item(s)`, 'Ok', SNACKBAR_OPTIONS)
-    /*     this.toastService.show(
-          'Success',
-          `Moved to clipboard ${fsoIdArr.length} item(s)`,
-          'bg-success'
-        ); */
+      return acc;
+    }, []);
+    if (clipboard.length === 0) return;
+    this._snackBar.open(`Moved to clipboard ${clipboard.length} item(s)`, 'Ok', SNACKBAR_OPTIONS);
+    this.driveService.clipboard$.next(clipboard);
   }
 
-  moveFromClipboard() {
-    let clipboard = sessionStorage.getItem('clipboard');
-    if (clipboard) {
-      let fsoIdArr: string[] = clipboard.split(",");
-      this.driveService.move(fsoIdArr, this.currentFolder.id)
-        .subscribe(data => {
-          let successList: FsoModel[] = (<any>data).success;
-          successList.forEach((elem) => {
-            elem.isSelected = true;
-          });
-          let failList: FsoModel[] = (<any>data).fail;
-          this.currentFolder.children = this.currentFolder.children.concat(successList);
-          // this.sorter.next(this.sortedBy);
+  private moveItems() {
+    const clipboard = this.driveService.clipboard$.getValue();
+    if (clipboard.length === 0) return;
+    this.driveService.move(clipboard, this.currentFolder.id)
+      .pipe(
+        catchError(() => {
+          this._snackBar.open(`An Error occurred.`, 'Ok', SNACKBAR_OPTIONS);
+          return EMPTY;
+        })
+      ).subscribe(result => {
+      this.driveService.clipboard$.next([]);
+      result.success?.forEach(item => {
+        item.isSelected = true;
+      });
 
-          if (failList.length > 0) {
-            /*             this.toastService.show(
-                          'Error',
-                          `Unable to move ${failList.length} item(s)`,
-                          'bg-danger'
-                        ); */
-          }
-        });
-      sessionStorage.removeItem('clipboard');
-    }
-  }
+      this.currentFolder.children.push(...result.success);
+      this.sortItems();
 
-  checkFsoName(input: HTMLInputElement, keyEvent: KeyboardEvent) {
-    if (this.validKeyCode(keyEvent.code)) {
-      this.isFsoNameValid = true;
-      let name = input.value.trim();
-      if (name.length == 0) {
-        this.isFsoNameValid = false;
+      if (result.fail?.length > 0) {
+        this._snackBar.open(`Error. Unable to move ${result.fail?.length} item(s)`, 'Ok', SNACKBAR_OPTIONS);
       }
-      if (name.slice(-1) == '.') {
-        this.isFsoNameValid = false;
-        /* this.toastService.show(
-          'Error',
-          'Name can\'t end in period',
-          'bg-warning'
-        ); */
-      }
-      if (this.forbiddenChar.some((c) => name.includes(c))) {
-        this.isFsoNameValid = false;
-        /* this.toastService.show(
-          'Error',
-          'Name contains invalid characters',
-          'bg-warning'
-        ); */
-      }
-      let fso = this.currentFolder.children.find(
-        (elem) => elem.name.toLowerCase() === name.toLowerCase()
-      );
-      if (fso) {
-        this.isFsoNameValid = false;
-        /* this.toastService.show('Error', 'Already exists', 'bg-warning'); */
-      }
-    }
-  }
-
-  private resetFields() {
-    this.isFsoNameValid = false;
-    this.newFolderName = '';
-    this.shareId = '';
-    this.validEmail = false;
-  }
-  private between(x: number, val1: number, val2: number): boolean {
-    if (val1 <= val2) return x >= val1 && x <= val2;
-    else return x >= val2 && x <= val1;
-  }
-
-  private removeFsoFromUI(list: string[]) {
-    list.forEach((id) => {
-      let fso = this.currentFolder.children.find((elem) => elem.id == +id);
-      if (fso) {
-        let index = this.currentFolder.children.indexOf(fso);
-        this.currentFolder.children.splice(index, 1);
-      }
+      this.currentFolder.children.forEach(x => x.isCut = false);
     });
   }
-  private validKeyCode(code: string): boolean {
-    let keyCodeArr = [
-      'ArrowLeft',
-      'ArrowRight',
-      'ArrowUp',
-      'ArrowDown',
-      'PageUp',
-      'PageDown',
-      'Home',
-      'End',
-      'Insert',
-      'AltLeft',
-      'ShiftLeft',
-      'ControlLeft',
-      'AltRight',
-      'ControlRight',
-      'ShiftRight',
-      'PrintScreen',
-      'ScrollLock',
-      'Pause',
-    ];
-    if (keyCodeArr.includes(code)) return false;
-    else return true;
-  }
+
   get selectedCount() {
     return this.currentFolder?.children.filter(x => x.isSelected).length;
+  }
+
+
+  getNewFolderErrorMessage() {
+    if(this.newFolderControl.getError('required')) {
+      return 'Name is Required.';
+    }
+    if (this.newFolderControl.getError('nameNotUnique')) {
+      return 'Name is NOT Unique.'
+    }
+    if (this.newFolderControl.getError('forbiddenCharacters')) {
+      return 'Name has Forbidden Characters.'
+    }
+    return '';
   }
 }

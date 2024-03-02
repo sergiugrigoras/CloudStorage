@@ -1,320 +1,237 @@
 ﻿using CloudStorage.Models;
 using CloudStorage.Services;
+using CloudStorage.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Net.Http.Headers;
 
-namespace CloudStorage.Controllers
+namespace CloudStorage.Controllers;
+
+[Authorize]
+[Route("api/[controller]")]
+[ApiController]
+public class FsoController(IConfiguration configuration, IFsoService fsoService, IUserService userService)
+    : ControllerBase
 {
-    [Authorize]
-    [Route("api/[controller]")]
-    [ApiController]
-    public class FsoController : ControllerBase
+    private readonly IFsoService _fsoService = fsoService ?? throw new ArgumentNullException(nameof(fsoService));
+    private readonly IUserService _userService = userService ?? throw new ArgumentNullException(nameof(userService));
+    private readonly string _storageSize = configuration.GetValue<string>("Storage:size");
+
+    [HttpGet("root")]
+    public async Task<IActionResult> GetUserRootContentAsync()
     {
-        private readonly IFsoService _fsoService;
-        private readonly IUserService _userService;
-        //private readonly IShareService _shareService;
-        private readonly string _storageSize;
+        var user = await _userService.GetUserAsync(User);
+        if (user == null) return Unauthorized();
+        var root = await _fsoService.GetUserRootAsync(user.Id);
+        if (root == null) return NotFound();
+        await _fsoService.LoadFolderContentAsync(root);
+        return new JsonResult(new FileSystemObjectViewModel(root));
+    }
 
-        public FsoController(IConfiguration configuration, IFsoService fsoService, IUserService userService/*, IShareService shareService*/)
+    [HttpGet("folder/{id:int}")]
+    public async Task<IActionResult> GetFolderContentAsync(int id)
+    {
+        var user = await _userService.GetUserAsync(User);
+        var fso = await _fsoService.GetByIdAsync(id);
+        if (user == null) return Unauthorized();
+        if (fso == null) return NotFound();
+        if (fso.OwnerId != user.Id) return Forbid();
+        await _fsoService.LoadFolderContentAsync(fso);
+        return new JsonResult(new FileSystemObjectViewModel(fso));
+    }
+
+    [HttpGet("drive-info")]
+    public async Task<IActionResult> GetUserDiskInfo()
+    {
+        var user = await _userService.GetUserAsync(User);
+        if (user == null) return Unauthorized();
+        var root = await _fsoService.GetUserRootAsync(user.Id);
+        if (root == null) return NotFound();
+            
+        var usedBytes = await _fsoService.GetFsoSizeByIdAsync(root.Id);;
+        var totalBytes = long.Parse(_storageSize);
+        return new JsonResult(new DiskInfo(totalBytes, usedBytes));
+    }
+
+    [HttpGet("full-path/{id:int}")]
+    public async Task<IActionResult> GetFsoFullPathAsync(int id)
+    {
+        var fso = await _fsoService.GetByIdAsync(id);
+        var user = await _userService.GetUserAsync(User);
+        if (fso == null) return NotFound();
+        if (!fso.CheckOwnership(user.Id)) return Forbid();
+
+        var list = await _fsoService.GetFullPathAsync(fso);
+        var result = list.Select(x => new FileSystemObjectViewModel(x));
+        return new JsonResult(result);
+    }
+
+    [HttpGet("{id:int}")]
+    public async Task<IActionResult> GetAsync(int id)
+    {
+        var fso = await _fsoService.GetByIdAsync(id);
+        var user = await _userService.GetUserAsync(User);
+        if (fso == null) return NotFound();
+        if (!fso.CheckOwnership(user.Id)) return Forbid();
+
+        var result = new FileSystemObjectViewModel(fso);
+        return new JsonResult(result);
+    }
+
+    [HttpPost("add-folder")]
+    public async Task<IActionResult> AddAsync([FromBody] FileSystemObjectViewModel viewModel)
+    {
+        if (viewModel is not { IsFolder: true } || !viewModel.ParentId.HasValue) return BadRequest();
+        var exists = await _fsoService.FindAsync(viewModel.Name, viewModel.ParentId.Value);
+        if (exists is { IsFolder: true }) return BadRequest("Name is not unique");
+        var user = await _userService.GetUserAsync(User);
+        if (user == null) return Unauthorized();
+        var parent = await _fsoService.GetByIdAsync(viewModel.ParentId.Value);
+        if (!parent.CheckOwnership(user.Id)) return Forbid();
+        viewModel.OwnerId = user.Id;
+        var folder = await _fsoService.CreateAsync(viewModel);
+        return new JsonResult(new FileSystemObjectViewModel(folder));
+    }
+
+    [HttpPut("rename")]
+    public async Task<IActionResult> RenameAsync([FromBody]FileSystemObjectViewModel viewModel)
+    {
+        if (viewModel == null) return BadRequest();
+        var fso = await _fsoService.GetByIdAsync(viewModel.Id);
+        var user = await _userService.GetUserAsync(User);
+        if (fso == null) return NotFound();
+        if (!fso.CheckOwnership(user.Id)) return Forbid();
+        try
         {
-            _storageSize = configuration.GetValue<string>("Storage:size");
-            _fsoService = fsoService ?? throw new ArgumentNullException(nameof(fsoService));
-            _userService = userService ?? throw new ArgumentNullException(nameof(userService));
-            /*_shareService = shareService ?? throw new ArgumentNullException(nameof(shareService));*/
-        }
-
-        [HttpGet("root")]
-        public async Task<IActionResult> GetUserRootContentAsync()
-        {
-            var user = await _userService.GetUserFromPrincipalAsync(User);
-
-            if (user == null) return Unauthorized();
-
-            var root = await _fsoService.GetUserRoot(user.Id);
-            return new JsonResult(new FileSystemObjectViewModel(root));
-        }
-
-        [HttpGet("folder/{id}")]
-        public async Task<IActionResult> GetFolderContentAsync(int id)
-        {
-            var user = await _userService.GetUserFromPrincipalAsync(User);
-            if (user == null) return Unauthorized();
-
-            try
-            {
-                var result = await _fsoService.GetFolderContent(id, user.Id);
-                return new JsonResult(new FileSystemObjectViewModel(result));
-            }
-            catch (Exception ex)
-            {
-                return ReturnStatusCode(ex);
-            }
-        }
-
-        [HttpGet("getuserdiskinfo")]
-        public async Task<IActionResult> GetUserDiskInfo()
-        {
-            var user = await _userService.GetUserFromPrincipalAsync(User);
-
-            if (user == null)
-            {
-                return Unauthorized();
-            }
-            else
-            {
-                var usedBytes = 0;//await _fsoService.GetFsoSizeByIdAsync((int)user.DriveId);
-                var totalBytes = long.Parse(_storageSize);
-                var diskUsed = Math.Round(usedBytes * 100.0 / totalBytes);
-                return Ok(new { usedBytes = usedBytes.ToString(), totalBytes = totalBytes.ToString(), diskUsed = diskUsed.ToString() });
-            }
-        }
-
-        [HttpGet("fullpath/{id}")]
-        public async Task<IActionResult> GetFsoFullPathAsync(int id)
-        {
-            var fso = await _fsoService.GetFsoByIdAsync(id);
-            var user = await _userService.GetUserFromPrincipalAsync(User);
-            if (fso == null)
-            {
-                return NotFound();
-            }
-            if (!_fsoService.CheckOwner(fso, user))
-            {
-                return Forbid();
-            }
-
-            var list = await _fsoService.GetFsoFullPathAsync(fso);
-            var listDTO = _fsoService.ToDTO(list);
-            return new JsonResult(listDTO);
-        }
-
-        /*        [HttpGet("folder/{id}")]
-                public async Task<IActionResult> GetFolderContentAsync(int id)
-                {
-                    FileSystemObject fso = await _fsoService.GetFsoByIdAsync(id);
-                    User user = await _userService.GetUserFromPrincipalAsync(this.User);
-                    if (fso == null)
-                    {
-                        return NotFound();
-                    }
-
-                    if (!await _fsoService.CheckOwnerAsync(fso, user))
-                    {
-                        return Forbid();
-                    }
-
-                    if (!fso.IsFolder)
-                    {
-                        return BadRequest("Not a folder");
-                    }
-                    else
-                    {
-                        var content = await _fsoService.GetFsoContentAsync(fso);
-                        var listDTO = _fsoService.ToDTO(content);
-                        return new JsonResult(listDTO);
-                    }
-                }*/
-
-        [HttpGet("{id}")]
-        public async Task<IActionResult> GetAsync(int id)
-        {
-            Thread.Sleep(3000);
-            FileSystemObject fso = await _fsoService.GetFsoByIdAsync(id);
-            User user = await _userService.GetUserFromPrincipalAsync(User);
-            if (fso == null)
-            {
-                return NotFound();
-            }
-            if (!_fsoService.CheckOwner(fso, user))
-            {
-                return Forbid();
-            }
-
-            return Ok(_fsoService.ToDTO(fso));
-        }
-
-        [HttpPost("addfolder")]
-        public async Task<IActionResult> AddAsync([FromBody] NewFolderModel model)
-        {
-            if (model == null || !model.IsFolder)
-            {
-                return BadRequest();
-            }
-            User user = await _userService.GetUserFromPrincipalAsync(User);
-            if (user == null) return Unauthorized();
-
-            FileSystemObject parent = await _fsoService.GetFsoByIdAsync(model.ParentId);
-            if (parent.OwnerId != user.Id)
-            {
-                return Forbid();
-            }
-            var folder = new FileSystemObject
-            {
-                Date = DateTime.UtcNow,
-                IsFolder = true,
-                Name = model.Name,
-                ParentId = model.ParentId,
-                OwnerId = user.Id,
-            };
-            await _fsoService.AddFsoAsync(folder);
-            return new JsonResult(new FileSystemObjectViewModel(folder));
-        }
-
-        [HttpPut("rename")]
-        public async Task<IActionResult> RenameAsync([FromBody] FileSystemObject request)
-        {
-            FileSystemObject fso = await _fsoService.GetFsoByIdAsync(request.Id);
-            User user = await _userService.GetUserFromPrincipalAsync(User);
-
-            if (fso == null)
-            {
-                return NotFound();
-            }
-            if (! _fsoService.CheckOwner(fso, user))
-            {
-                return Forbid();
-            }
-            await _fsoService.UpdateFsoAsync(request);
+            await _fsoService.RenameAsync(fso, viewModel.Name);
             return Ok();
         }
-
-
-        [HttpDelete("delete")]
-        public async Task<IActionResult> DeleteAsync(string fsoIdcsv)
+        catch (Exception e)
         {
-            if (string.IsNullOrEmpty(fsoIdcsv))
-            {
-                return BadRequest();
-            }
-            var user = await _userService.GetUserFromPrincipalAsync(User);
-            string[] fsoIdArr = fsoIdcsv.Split(',');
-
-            foreach (var fsoId in fsoIdArr)
-            {
-                var fso = await _fsoService.GetFsoByIdAsync(int.Parse(fsoId));
-                if (_fsoService.CheckOwner(fso, user))
-                {
-                    await _fsoService.DeleteFsoAsync(fso, user);
-                }
-            }
-            return Ok();
-        }
-        [HttpPost("move")]
-        public async Task<IActionResult> MoveAsync(string fsoIdcsv, string destinationDirId)
-        {
-            if (string.IsNullOrWhiteSpace(fsoIdcsv))
-            {
-                return BadRequest();
-            }
-            var user = await _userService.GetUserFromPrincipalAsync(User);
-
-            var destination = await _fsoService.GetFsoByIdAsync(int.Parse(destinationDirId));
-            if (!_fsoService.CheckOwner(destination, user))
-            {
-                return Forbid();
-            }
-            string[] fsoIdArr = fsoIdcsv.Split(',');
-
-            var successList = new List<FileSystemObjectViewModel>();
-            var failList = new List<FileSystemObjectViewModel>();
-            foreach (var fsoId in fsoIdArr)
-            {
-                var fso = await _fsoService.GetFsoByIdAsync(int.Parse(fsoId));
-                if (_fsoService.CheckOwner(fso, user))
-                {
-                    try
-                    {
-                        await _fsoService.MoveFsoAsync(fso, destination);
-                        successList.Add(_fsoService.ToDTO(fso));
-                    }
-                    catch (FsoException)
-                    {
-                        failList.Add(_fsoService.ToDTO(fso));
-                    }
-
-                }
-            }
-            return Ok(new { success = successList, fail = failList });
-        }
-
-        [HttpPost("upload"), DisableRequestSizeLimit]
-        public async Task<IActionResult> UploadAsync()
-        {
-            var parentId = Request.Form["rootId"];
-            var root = await _fsoService.GetFsoByIdAsync(int.Parse(parentId));
-            var user = await _userService.GetUserFromPrincipalAsync(User);
-            if (!_fsoService.CheckOwner(root, user))
-            {
-                return Forbid();
-            }
-            try
-            {
-                var files = Request.Form.Files;
-                var result = new List<FileSystemObjectViewModel>();
-                foreach (var file in files)
-                {
-                    var fileName = await _fsoService.CreateFileAsync(file, user);
-                    var fsoName = ContentDispositionHeaderValue.Parse(file.ContentDisposition).FileName.Trim('"');
-                    var fso = await _fsoService.CreateFsoAsync(fsoName, fileName, file.Length, false, root.Id, user.Id);
-                    result.Add(_fsoService.ToDTO(fso));
-                }
-                return new JsonResult(result);
-
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, $"Internal server error : {ex}");
-            }
-        }
-
-        [HttpPost("download")]
-        public async Task<IActionResult> DownloadAsync()
-        {
-            var fsoIdcsv = Request.Form["fsoIdcsv"].ToString();
-            var user = await _userService.GetUserFromPrincipalAsync(User);
-            if (string.IsNullOrEmpty(fsoIdcsv))
-            {
-                return BadRequest();
-            }
-            int[] fsoIdArray = Array.ConvertAll(fsoIdcsv.Split(','), int.Parse);
-            var fsoList = await _fsoService.GetFsoListByIdAsync(fsoIdArray);
-            var root = await _fsoService.CheckParentFso(fsoList);
-            if (root == null || !_fsoService.CheckOwner(root, user))
-            {
-                return Forbid();
-            }
-
-            string contentType;
-            if (fsoList.Count == 1 && !fsoList[0].IsFolder)
-            {
-                contentType = FsoService.GetMimeType(Path.GetExtension(fsoList[0].Name));
-            }
-            else
-            {
-                contentType = FsoService.GetMimeType(".zip");
-            }
-            var extension = Path.GetExtension(fsoList[0].Name);
-
-            var stream = await _fsoService.GetFileAsync(root, fsoList, user);
-
-            return File(stream, contentType);
-        }
-
-        private ObjectResult ReturnStatusCode(Exception ex)
-        {
-            var keys = ex.Data.Keys;
-            var statusCode = ex.Data.Keys.Cast<string>().Single();
-            var statusMessage = ex.Data[statusCode].ToString();
-            return StatusCode(int.Parse(statusCode), statusMessage);
+            return BadRequest(e.Message);
         }
     }
 
-    public class NewFolderModel
-    {
-        public string Name { get; set; }
-        public int ParentId { get; set; }
 
-        public bool IsFolder { get; set; }
+    [HttpDelete("delete")]
+    public async Task<IActionResult> DeleteAsync([FromBody] IEnumerable<int> list)
+    {
+        var user = await _userService.GetUserAsync(User);
+        foreach (var id in list)
+        {
+            var fso = await _fsoService.GetByIdAsync(id);
+            if (fso.CheckOwnership(user.Id))
+                await _fsoService.DeleteAsync(fso);
+        }
+        return Ok();
+    }
+    [HttpPost("move")]
+    public async Task<IActionResult> MoveAsync([FromBody]IEnumerable<int> ids, int destinationId)
+    {
+        var user = await _userService.GetUserAsync(User);
+
+        var destination = await _fsoService.GetByIdAsync(destinationId);
+        if (destination is not { IsFolder: true }) return BadRequest("Destination is NOT a folder.");
+        if (!destination.CheckOwnership(user.Id)) return Forbid();
+
+        var successList = new List<FileSystemObjectViewModel>();
+        var failList = new List<FileSystemObjectViewModel>();
+        foreach (var id in ids)
+        {
+            var fso = await _fsoService.GetByIdAsync(id);
+            if (!fso.CheckOwnership(user.Id)) continue;
+            try
+            {
+                await _fsoService.MoveFsoAsync(fso, destination);
+                successList.Add(new FileSystemObjectViewModel(fso));
+            }
+            catch (FsoException)
+            {
+                failList.Add(new FileSystemObjectViewModel(fso));
+            }
+        }
+        return Ok(new { success = successList, fail = failList });
+    }
+
+    [HttpPost("upload"), DisableRequestSizeLimit]
+    public async Task<IActionResult> UploadAsync([FromForm] IList<IFormFile> files, [FromForm] string parentId)
+    {
+        var root = await _fsoService.GetByIdAsync(int.Parse(parentId));
+        var user = await _userService.GetUserAsync(User);
+        if (root == null) return BadRequest("Invalid parent Id.");
+        if (!root.CheckOwnership(user.Id)) return Forbid();
+        try
+        {
+            var result = new List<FileSystemObjectViewModel>();
+            foreach (var file in files)
+            {
+                var fileName = await _fsoService.StoreFileAsync(file, user.Id);
+                var name = ContentDispositionHeaderValue.Parse(file.ContentDisposition).FileName;
+                if (name == null) continue;
+                name = await _fsoService.GetDistinctNameAsync(name.Trim('"'), root.Id, false);
+                FileSystemObjectViewModel model = new()
+                {
+                    Name = name,
+                    IsFolder = false,
+                    OwnerId = user.Id,
+                    ParentId = root.Id,
+                    FileName = fileName,
+                    FileSize = file.Length,
+                    Date = DateTime.UtcNow
+                };
+                var fso = await _fsoService.CreateAsync(model);
+                result.Add(new FileSystemObjectViewModel(fso));
+            }
+            return new JsonResult(result);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, $"Internal server error : {ex.Message}");
+        }
+    }
+
+    [HttpPost("download")]
+    public async Task<IActionResult> DownloadAsync([FromBody] ICollection<int> ids)
+    {
+        var user = await _userService.GetUserAsync(User);
+        var list = new List<FileSystemObject>();
+        foreach (var id in ids) 
+        {
+            var fso = await _fsoService.GetByIdAsync(id);
+            if (fso != null) list.Add(fso);
+        }
+        if (list.Count < 1) return NotFound();
+
+        var first = list.First();
+        var root = await _fsoService.GetByIdAsync(first.ParentId.GetValueOrDefault(-1));
+        if (root == null) return BadRequest();
+            
+        var sameParent = list.All(x => x.ParentId == root.Id);
+        if (!sameParent || !root.CheckOwnership(user.Id)) return Forbid();
+
+        string contentType;
+        if (list.Count > 1 || first.IsFolder)
+            contentType = FsoService.GetMimeType(".zip");
+        else
+            contentType = FsoService.GetMimeType(Path.GetExtension(first.Name));
+
+        var stream = await _fsoService.GetFileAsync(root, list);
+        return File(stream, contentType);
+    }
+
+    [HttpGet("unique")]
+    public async Task<IActionResult> CheckNameIsUniqueAsync([FromQuery]FileSystemObjectViewModel viewModel)
+    {
+        if (viewModel == null || !viewModel.ParentId.HasValue) return BadRequest();
+        var result = await _fsoService.UniqueName(viewModel.Name, viewModel.ParentId.Value, viewModel.IsFolder);
+        return new JsonResult(result);
+    }
+
+    private ObjectResult ReturnStatusCode(Exception ex)
+    {
+        var keys = ex.Data.Keys;
+        var statusCode = ex.Data.Keys.Cast<string>().Single();
+        var statusMessage = ex.Data[statusCode]?.ToString();
+        return StatusCode(int.Parse(statusCode), statusMessage);
     }
 }

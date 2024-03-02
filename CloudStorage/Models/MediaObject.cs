@@ -1,14 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace CloudStorage.Models;
 
-public partial class MediaObject
+public class MediaObject
 {
     [NotMapped]
-    private const string snapshotExtension = ".jpg";
+    private const string SnapshotExtension = ".jpg";
     
     [Key]
     public Guid Id { get; set; }
@@ -33,5 +31,5 @@ public partial class MediaObject
     public virtual User Owner { get; set; }
     public virtual ICollection<MediaAlbum> MediaAlbums { get; set; } = new List<MediaAlbum>();
 
-    public string Snapshot { get { return Hash + snapshotExtension; } }
+    public string Snapshot => Hash + SnapshotExtension;
 }

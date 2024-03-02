@@ -72,7 +72,7 @@ export class ResetPasswordComponent implements OnInit {
       )
       .subscribe(res => {
         if (res) {
-          this._snackBar.open(`Password has been changed succesfully.`, 'Ok', { duration: 3000 });
+          this._snackBar.open(`Password has been changed successfully.`, 'Ok', { duration: 3000 });
           setTimeout(() => {
             this.router.navigate(['/']);
           }, 3000);

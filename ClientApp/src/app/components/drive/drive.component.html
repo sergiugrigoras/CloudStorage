@@ -1,169 +1,81 @@
-<!-- <div class="tool-bar">
-  <div class="row">
-    <div class="col-md-7">
-      <toolbar [selectedCount]="selectedCount" (action)="doAction($event)"></toolbar>
-    </div>
-    <div class="col-md-3">
-      <progress-bar [progressBar]="progressBar">
-      </progress-bar>
-    </div>
-    <div class="col-md-2">
-      <diskinfo [disk]="disk"></diskinfo>
-    </div>
-  </div>
-  <pathbar [fullPathArr]="fullPath"></pathbar>
-</div> -->
-
-<div *ngIf="pageIsReady">
-  <toolbar [selectedCount]="selectedCount" (action)="doAction($event)"></toolbar>
-</div>
-
-<div *ngIf="pageIsReady">
+<ng-container *ngIf="pageIsReady; else loading">
+  <toolbar [selectedCount]="selectedCount" (action)="onToolbarEvent($event)"></toolbar>
+  <mat-progress-bar mode="determinate" *ngIf="progressBar" [value]="progressBar"></mat-progress-bar>
   <pathbar [folder]="currentFolder"></pathbar>
-</div>
-
-<div *ngIf="pageIsReady; else loading">
-  <div *ngIf="view === 'listView'">
-    <fso *ngIf="currentFolder.parentId" [text]="'..'" (dblclick)="openFolder(currentFolder.parentId)">
+  <div>
+    <fso *ngIf="currentFolder.parentId" [text]="'..'" (click)="onFsoTouch($event, currentFolder.parentId)"
+         (dblclick)="openFolder(currentFolder.parentId)">
     </fso>
-    <fso *ngFor="let fso of currentFolder.children" [fso]="fso" (click)="fsoTouched($event, fso.id)"
-      (dblclick)="openFolder(fso.id, fso.isFolder)">
+    <fso *ngFor="let fso of currentFolder.children" [fso]="fso" (click)="onFsoTouch($event, fso.id)"
+         (dblclick)="openFolder(fso.id, fso.isFolder)">
     </fso>
     <p *ngIf="currentFolder.children.length === 0">Folder is empty</p>
   </div>
-</div>
+</ng-container>
 
-<input type="file" #inputFiles placeholder="Choose file" (change)="uploadFile(inputFiles.files)" style="display:none;"
+<input type="file" #inputFiles (change)="uploadFile(inputFiles.files)" style="display:none;"
   multiple>
 <ng-template #loading>
   <mat-spinner></mat-spinner>
 </ng-template>
 
 <ng-template #newFolderDialog>
-  <h1 mat-dialog-title>New Folder</h1>
+  <h1
+    mat-dialog-title
+    cdkDrag
+    cdkDragRootElement=".cdk-overlay-pane"
+    cdkDragHandle>New Folder</h1>
   <div mat-dialog-content>
     <p>Input the name</p>
     <div class="dialog-inputs">
       <mat-form-field>
         <mat-label>Name</mat-label>
-        <input matInput type="text" [(ngModel)]="newFolderName" (keyup)="checkFsoName(folderName,$event)" #folderName>
+        <input matInput type="text" [formControl]="newFolderControl">
+        <mat-error>{{getNewFolderErrorMessage()}}</mat-error>
       </mat-form-field>
     </div>
   </div>
   <div mat-dialog-actions>
     <button type="button" mat-raised-button color="primary" [mat-dialog-close]="true"
-      [disabled]="!isFsoNameValid">Ok</button>
+      [disabled]="newFolderControl.invalid || newFolderControl.pending">Ok</button>
     <button type="button" mat-raised-button color="accent" [mat-dialog-close]="false">Cancel</button>
   </div>
 </ng-template>
 
-<!-- <ng-template #newFolderModal let-modal>
-  <div class="modal-header">
-    <h4 class="modal-title" id="modal-basic-title">New Folder</h4>
-    <button type="button" class="btn close" aria-label="Close" (click)="modal.dismiss()">
-      <span aria-hidden="true">×</span>
-    </button>
+<ng-template #deleteConfirmDialog>
+  <h1
+    mat-dialog-title
+    cdkDrag
+    cdkDragRootElement=".cdk-overlay-pane"
+    cdkDragHandle>Delete Confirmation</h1>
+  <div mat-dialog-content>
+    <p>Are you sure want to delete {{ selectedCount }} item(s) ?</p>
   </div>
-  <div class="modal-body">
-    <input type="text" #folderName placeholder="Folder name" class="form-control" id="new-folder-input"
-      [(ngModel)]="newFolderName" (keyup)="checkFsoName(folderName,$event)"
-      (keyup.enter)="confirmNewFolderButton.click()">
-  </div>
-  <div class="modal-footer">
-    <button type="button" class="btn btn-success" (click)="modal.close()">Cancel</button>
-    <button #confirmNewFolderButton type="button" class="btn btn-primary"
-      (click)="addFolder(folderName); modal.dismiss()" [disabled]="!isFsoNameValid">Add
-      Folder</button>
+  <div mat-dialog-actions>
+    <button type="button" mat-raised-button color="primary" [mat-dialog-close]="true">Ok</button>
+    <button type="button" mat-raised-button color="accent" [mat-dialog-close]="false">Cancel</button>
   </div>
 </ng-template>
 
-<ng-template #renameConfirmModal let-modal>
-  <div class="modal-header">
-    <h4 class="modal-title" id="modal-basic-title">Rename</h4>
-    <button type="button" class="btn close" aria-label="Close" (click)="modal.dismiss()">
-      <span aria-hidden="true">×</span>
-    </button>
-  </div>
-  <div class="modal-body">
-    <input type="text" (keyup)="checkFsoName(fsoNewName,$event)" #fsoNewName placeholder="New name" class="form-control"
-      id="rename-input" (keyup.enter)="confirmRenameButton.click()">
-  </div>
-  <div class="modal-footer">
-    <button type="button" class="btn btn-success" (click)="modal.close()">Cancel</button>
-    <button #confirmRenameButton type="button" class="btn btn-danger" (click)="rename(fsoNewName); modal.dismiss()"
-      [disabled]="!isFsoNameValid">Rename</button>
-  </div>
-</ng-template>
-
-<ng-template #deleteConfirmModal let-modal>
-  <div class="modal-header">
-    <h4 class="modal-title" id="modal-basic-title">Confirm delete</h4>
-    <button type="button" class="btn close" aria-label="Close" (click)="modal.dismiss()">
-      <span aria-hidden="true">×</span>
-    </button>
-  </div>
-  <div class="modal-body">
-    <label class="control-label">Are you sure want to delete {{ selectedCount }} object(s)?</label>
-  </div>
-  <div class="modal-footer">
-    <button type="button" class="btn btn-success" (click)="modal.close()">Cancel</button>
-    <button type="button" class="btn btn-danger" (click)="deleteSelected(); modal.dismiss()"
-      id="confirm-delete-button">Delete</button>
-  </div>
-</ng-template>
-
-<ng-template #shareConfirmModal let-modal>
-  <div class="modal-header">
-    <h4 class="modal-title" id="modal-basic-title">Confirm share</h4>
-    <button type="button" class="btn close" aria-label="Close" (click)="modal.dismiss()">
-      <span aria-hidden="true">×</span>
-    </button>
-  </div>
-  <div class="modal-body">
-
-    <label class="control-label" [hidden]="shareId">Are you sure want to share {{ selectedCount }} object(s)?</label>
-
-    <div class=" form-group" [hidden]="!shareId">
-      <div class="form-row">
-        <div class="col-auto">
-          <label for="share-url" class="control-label">Share Url</label>
-        </div>
-      </div>
-      <div class="form-row">
-        <div class="col">
-          <input #url type="text" class="form-control" id="share-url" readonly [value]="getShareUrl(shareId)">
-        </div>
-        <div class="col-auto">
-          <button type="button" class="btn btn-primary" (click)="copyUrl(url); modal.dismiss()" [hidden]="!shareId">Copy
-            URL</button>
-        </div>
-      </div>
+<ng-template #renameDialog>
+  <h1
+    mat-dialog-title
+    cdkDrag
+    cdkDragRootElement=".cdk-overlay-pane"
+    cdkDragHandle>Rename</h1>
+  <div mat-dialog-content>
+    <p>Input new name</p>
+    <div class="dialog-inputs">
+      <mat-form-field>
+        <mat-label>Name</mat-label>
+        <input matInput type="text" [formControl]="renameControl">
+        <mat-error>Name is required.</mat-error>
+      </mat-form-field>
     </div>
-
-    <div class=" form-group" [hidden]="!shareId">
-      <div class="form-row">
-        <div class="col">
-          <label for="share-email" class="control-label">Email</label>
-        </div>
-      </div>
-      <div class="form-row">
-        <div class="col">
-          <input #email type="email" (keyup)="validateEmail(email)" class="form-control" id="share-email"
-            placeholder="Email address">
-        </div>
-        <div class="col-auto">
-          <button type="button" class="btn btn-primary" (click)="sendShareEmail(email,shareId); modal.dismiss()"
-            [hidden]="!shareId" [disabled]="!validEmail">Send
-            Email</button>
-        </div>
-      </div>
-    </div>
-
   </div>
-  <div class="modal-footer">
-    <button type="button" class="btn btn-success" (click)="modal.close()">Cancel</button>
-    <button type="button" class="btn btn-danger" (click)="deleteShare(); modal.dismiss()"
-      [hidden]="!shareId">Delete</button>
-    <button type="button" class="btn btn-danger" (click)="shareSelected()" [hidden]="shareId">Share</button>
+  <div mat-dialog-actions>
+    <button type="button" mat-raised-button color="primary" [mat-dialog-close]="true"
+            [disabled]="renameControl.invalid || renameControl.pending">Ok</button>
+    <button type="button" mat-raised-button color="accent" [mat-dialog-close]="false">Cancel</button>
   </div>
-</ng-template> -->
+</ng-template>

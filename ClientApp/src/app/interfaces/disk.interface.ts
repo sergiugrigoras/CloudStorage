@@ -1,5 +1,5 @@
-export interface DiskModel {
-    usedBytes: number,
-    totalBytes: number,
-    diskUsed: number
+export interface DiskInfoModel {
+    used: number,
+    total: number,
+    usedPercentage: string;
 }

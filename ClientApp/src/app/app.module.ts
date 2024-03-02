@@ -21,14 +21,10 @@ import { DiskinfoComponent } from './components/diskinfo/diskinfo.component';
 import { NotesComponent } from './components/notes/notes.component';
 import { NoteComponent } from './components/note/note.component';
 import { NoteEditorComponent } from './components/note-editor/note-editor.component';
-import { FsoAltComponent } from './components/fso-alt/fso-alt.component';
 import { UploadProgressComponent } from './components/progress-bar/progress-bar.component';
 import { ProfileComponent } from './components/profile/profile.component';
 import { ResetPasswordComponent } from './components/reset-password/reset-password.component';
 import { ViewNoteComponent } from './components/view-note/view-note.component';
-import { SharedFilesComponent } from './components/shared-files/shared-files.component';
-import { SharedFsoComponent } from './components/shared-fso/shared-fso.component';
-import { SharesComponent } from './components/shares/shares.component';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { MatIconModule } from '@angular/material/icon';
 import { MatDialogModule } from '@angular/material/dialog';
@@ -42,7 +38,7 @@ import { MatFormFieldModule, MAT_FORM_FIELD_DEFAULT_OPTIONS } from '@angular/mat
 import { MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatCardModule } from '@angular/material/card';
 import { MatDatepickerModule } from '@angular/material/datepicker';
-import { MatNativeDateModule } from '@angular/material/core';
+import {ErrorStateMatcher, MatNativeDateModule, ShowOnDirtyErrorStateMatcher} from '@angular/material/core';
 import { MatSelectModule } from '@angular/material/select';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
@@ -54,6 +50,8 @@ import { MediaItemComponent } from './components/media-item/media-item.component
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { NgxMatSelectSearchModule } from 'ngx-mat-select-search';
+import {DragDropModule} from '@angular/cdk/drag-drop';
+import {MatBadgeModule} from "@angular/material/badge";
 function tokenGetter() {
   return localStorage.getItem("jwt");
 }
@@ -73,53 +71,51 @@ function tokenGetter() {
     NotesComponent,
     NoteComponent,
     NoteEditorComponent,
-    FsoAltComponent,
     UploadProgressComponent,
     ProfileComponent,
     ResetPasswordComponent,
     ViewNoteComponent,
-    SharedFilesComponent,
-    SharedFsoComponent,
-    SharesComponent,
     SpinnerComponent,
     MediaComponent,
     MediaItemComponent,
   ],
-  imports: [
-    BrowserModule,
-    CommonModule,
-    AppRoutingModule,
-    FormsModule,
-    ReactiveFormsModule,
-    HttpClientModule,
-    JwtModule.forRoot({
-      config: {
-        tokenGetter: tokenGetter
-      }
-    }),
-    BrowserAnimationsModule,
-    MatIconModule,
-    MatDialogModule,
-    MatToolbarModule,
-    MatSidenavModule,
-    MatListModule,
-    MatButtonModule,
-    MatMenuModule,
-    MatInputModule,
-    MatSnackBarModule,
-    MatCardModule,
-    MatDatepickerModule,
-    MatNativeDateModule,
-    MatFormFieldModule,
-    MatSelectModule,
-    MatTooltipModule,
-    MatProgressSpinnerModule,
-    MatButtonToggleModule,
-    MatProgressBarModule,
-    MatSlideToggleModule,
-    MatCheckboxModule,
-    NgxMatSelectSearchModule
-  ],
+    imports: [
+        BrowserModule,
+        CommonModule,
+        AppRoutingModule,
+        FormsModule,
+        ReactiveFormsModule,
+        HttpClientModule,
+        JwtModule.forRoot({
+            config: {
+                tokenGetter: tokenGetter
+            }
+        }),
+        BrowserAnimationsModule,
+        MatIconModule,
+        MatDialogModule,
+        MatToolbarModule,
+        MatSidenavModule,
+        MatListModule,
+        MatButtonModule,
+        MatMenuModule,
+        MatInputModule,
+        MatSnackBarModule,
+        MatCardModule,
+        MatDatepickerModule,
+        MatNativeDateModule,
+        MatFormFieldModule,
+        MatSelectModule,
+        MatTooltipModule,
+        MatProgressSpinnerModule,
+        MatButtonToggleModule,
+        MatProgressBarModule,
+        MatSlideToggleModule,
+        MatCheckboxModule,
+        NgxMatSelectSearchModule,
+        DragDropModule,
+        MatBadgeModule
+    ],
   providers: [
     AuthGuard,
     {
@@ -131,7 +127,8 @@ function tokenGetter() {
       provide: ErrorHandler,
       useClass: AppErrorHandler
     },
-    { provide: MAT_FORM_FIELD_DEFAULT_OPTIONS, useValue: { appearance: 'outline' } }
+    { provide: MAT_FORM_FIELD_DEFAULT_OPTIONS, useValue: { appearance: 'outline' } },
+    {provide: ErrorStateMatcher, useClass: ShowOnDirtyErrorStateMatcher}
   ],
   bootstrap: [AppComponent]
 })

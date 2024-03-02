@@ -1,62 +1,57 @@
-﻿using Azure.Core;
-using CloudStorage.Services;
-using Microsoft.EntityFrameworkCore;
-using System.Security.Claims;
-using BC = BCrypt.Net.BCrypt;
+﻿using BC = BCrypt.Net.BCrypt;
 
-namespace CloudStorage.Models
+namespace CloudStorage.Models;
+
+internal static class DbInitializer
 {
-    internal class DbInitializer
+    internal static void Initialize(AppDbContext dbContext)
     {
-        internal static void Initialize(AppDbContext dbContext)
+        ArgumentNullException.ThrowIfNull(dbContext, nameof(dbContext));
+        dbContext.Database.EnsureCreated();
+        if (dbContext.Users.Any()) return;
+
+        var user = new User
         {
-            ArgumentNullException.ThrowIfNull(dbContext, nameof(dbContext));
-            dbContext.Database.EnsureCreated();
-            if (dbContext.Users.Any()) return;
+            Id = Guid.NewGuid(),
+            Username = "TestUser",
+            Email = "testuser@mail.com",
+            Password = BC.HashPassword("P@ssword1")
+        };
 
-            var user = new User
-            {
-                Id = Guid.NewGuid(),
-                Username = "TestUser",
-                Email = "testuser@mail.com",
-                Password = BC.HashPassword("P@ssword1")
-            };
+        var root = new FileSystemObject()
+        {
+            Name = "root",
+            IsFolder = true,
+            ParentId = null,
+            Date = DateTime.Now,
+            OwnerId = user.Id
+        };
 
-            var root = new FileSystemObject()
-            {
-                Name = "root",
-                IsFolder = true,
-                ParentId = null,
-                Date = DateTime.Now,
-                OwnerId = user.Id
-            };
+        dbContext.Users.Add(user);
+        dbContext.FileSystemObjects.Add(root);
 
-            dbContext.Users.Add(user);
-            dbContext.FileSystemObjects.Add(root);
-
-            dbContext.SaveChanges();
-        }
+        dbContext.SaveChanges();
     }
+}
 
-    internal static class DbInitializerExtension
+internal static class DbInitializerExtension
+{
+    public static IApplicationBuilder SeedInMemoryDb(this IApplicationBuilder app)
     {
-        public static IApplicationBuilder SeedInMemoryDb(this IApplicationBuilder app)
+        ArgumentNullException.ThrowIfNull(app, nameof(app));
+
+        using var scope = app.ApplicationServices.CreateScope();
+        var services = scope.ServiceProvider;
+        try
         {
-            ArgumentNullException.ThrowIfNull(app, nameof(app));
-
-            using var scope = app.ApplicationServices.CreateScope();
-            var services = scope.ServiceProvider;
-            try
-            {
-                var context = services.GetRequiredService<AppDbContext>();
-                DbInitializer.Initialize(context);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine(ex.ToString());
-            }
-
-            return app;
+            var context = services.GetRequiredService<AppDbContext>();
+            DbInitializer.Initialize(context);
         }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.ToString());
+        }
+
+        return app;
     }
 }

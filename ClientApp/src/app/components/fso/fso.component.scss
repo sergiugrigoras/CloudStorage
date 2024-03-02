@@ -2,6 +2,10 @@
     background-color: rgba(0, 123, 255, 0.25);
 }
 
+.fso-cut {
+  opacity: 0.5;
+}
+
 .fso {
     border-bottom: 1px solid #ced4da87;
     display: flex;
@@ -35,46 +39,44 @@
 
 .folder-name,
 .file-name {
-    white-space: nowrap;
-    text-overflow: ellipsis;
-    overflow-x: hidden;
-    max-width: 60vw;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow-x: hidden;
+  max-width: 60vw;
 }
 
 .folder-name a {
-    text-decoration: none;
-    color: currentcolor;
+  text-decoration: none;
+  color: currentcolor;
 }
 
 .fso-info-2 {
-    font-size: .7rem;
+  font-size: .7rem;
 }
 
 .folder-icon-box {
-    color: #ffd242;
+  color: #ffd242;
 }
 
 .file-icon-box {
-    color: #7291ff;
-    z-index: 1;
+  color: #7291ff;
+  z-index: 1;
 }
 
 .file-ext-box {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    z-index: 2;
-    /* font-size: .8rem; */
-    color: white;
-    text-shadow: 2px 2px 2px #00000078;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 2;
+  text-shadow: 1px 1px 1px rgb(0 0 0 / 50%);
 }
 
 .file-size {
-    white-space: nowrap;
+  white-space: nowrap;
 }
 
 .single-text {
-    display: flex;
-    align-items: center;
+  display: flex;
+  align-items: center;
 }
