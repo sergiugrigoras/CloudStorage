@@ -1,39 +1,109 @@
-<div class="note-box">
-    <app-note-editor [note]="activeNoteUpdate" [state]="noteEditorState" (noteEditorEvent)="doAction($event)"
-        (changeState)="changeNoteEditorState($event)">
-    </app-note-editor>
-    <app-note *ngFor="let note of notes" [note]="note" (noteEvent)="doAction($event)"></app-note>
-</div>
-
-<ng-template #deleteConfirmModall>
-    <div class="modal-header">
-        <h4 class="modal-title" id="modal-basic-title">Confirm delete</h4>
-        <button type="button" class="btn close" aria-label="Close">
-            <span aria-hidden="true">×</span>
-        </button>
-    </div>
-    <div class="modal-body">
-        <label class="control-label">Are you sure want to delete <strong>{{ activeNoteDel.title }}</strong> ?</label>
-    </div>
-    <div class="modal-footer">
-        <button type="button" class="btn btn-success">Cancel</button>
-        <button type="button" class="btn btn-danger" (click)="deleteNote()" id="confirm-delete-button">Delete</button>
-    </div>
+<ng-container *ngIf="notes; else loading">
+  <div class="notes__controls">
+    <button mat-stroked-button color="primary" (click)="createNote(createBtn)" #createBtn>Add note</button>
+  </div>
+  <div class="notes__container">
+    <h3 *ngIf="notes.length === 0">No notes</h3>
+    <mat-card appearance="raised" class="note__card" *ngFor="let note of notes">
+      <mat-card-header>
+        <mat-card-title>{{ note.title }}</mat-card-title>
+        <mat-card-subtitle>{{ note.creationDate | date: 'medium' }}</mat-card-subtitle>
+      </mat-card-header>
+      <mat-card-content class="note__card-body">
+        <p>{{ note.body }}</p>
+        <mat-divider></mat-divider>
+      </mat-card-content>
+      <mat-card-actions class="notes__actions">
+        <button mat-stroked-button color="primary" (click)="editNote(note)">Edit</button>
+        <button mat-stroked-button color="accent" (click)="deleteNote(note)">Delete</button>
+      </mat-card-actions>
+      <mat-card-footer>
+        <mat-progress-bar mode="indeterminate" *ngIf="false"></mat-progress-bar>
+      </mat-card-footer>
+    </mat-card>
+  </div>
+</ng-container>
+<ng-template #loading>
+  <mat-spinner></mat-spinner>
 </ng-template>
 
-<ng-template #shareConfirmModal>
-    <div class="modal-header">
-        <h4 class="modal-title" id="modal-basic-title">Share note</h4>
-        <button type="button" class="btn close" aria-label="Close">
-            <span aria-hidden="true">×</span>
-        </button>
+<ng-template #newNoteDialog>
+  <h1
+    mat-dialog-title
+    cdkDrag
+    cdkDragRootElement=".cdk-overlay-pane"
+    cdkDragHandle>New Note</h1>
+  <div mat-dialog-content [formGroup]="newNoteControl">
+    <div class="dialog-inputs">
+      <mat-form-field>
+        <mat-label>Title</mat-label>
+        <input matInput type="text" formControlName="title">
+        <mat-error>Title is Required.</mat-error>
+      </mat-form-field>
+      <mat-form-field>
+        <mat-label>Content</mat-label>
+        <textarea
+          matInput
+          type="text"
+          formControlName="body"
+          cdkTextareaAutosize
+          cdkAutosizeMinRows="1"
+          cdkAutosizeMaxRows="15"
+        ></textarea>
+      </mat-form-field>
     </div>
-    <div class="modal-body">
-        <input #url type="text" id="share-url" class="form-control" readonly>
+  </div>
+  <div mat-dialog-actions>
+    <button type="button" mat-raised-button color="primary" [mat-dialog-close]="true"
+            [disabled]="newNoteControl.invalid">Save</button>
+    <button type="button" mat-raised-button color="accent" [mat-dialog-close]="false">Cancel</button>
+  </div>
+</ng-template>
+
+<ng-template #editNoteDialog>
+  <h1
+    mat-dialog-title
+    cdkDrag
+    cdkDragRootElement=".cdk-overlay-pane"
+    cdkDragHandle>New Note</h1>
+  <div mat-dialog-content [formGroup]="editNoteControl">
+    <div class="dialog-inputs">
+      <mat-form-field>
+        <mat-label>Title</mat-label>
+        <input matInput type="text" formControlName="title">
+        <mat-error>Title is Required.</mat-error>
+      </mat-form-field>
+      <mat-form-field>
+        <mat-label>Content</mat-label>
+        <textarea
+          matInput
+          type="text"
+          formControlName="body"
+          cdkTextareaAutosize
+          cdkAutosizeMinRows="1"
+          cdkAutosizeMaxRows="15"
+        ></textarea>
+      </mat-form-field>
     </div>
-    <div class="modal-footer">
-        <button type="button" class="btn btn-success" (>Close</button>
-        <button type="button" class="btn btn-primary" (click)="copyUrl(url)" id="share-copy-button">Copy
-            URL</button>
-    </div>
+  </div>
+  <div mat-dialog-actions>
+    <button type="button" mat-raised-button color="primary" [mat-dialog-close]="true"
+            [disabled]="editNoteControl.invalid">Save</button>
+    <button type="button" mat-raised-button color="accent" [mat-dialog-close]="false">Cancel</button>
+  </div>
+</ng-template>
+
+<ng-template #deleteConfirmDialog let-data>
+  <h1
+    mat-dialog-title
+    cdkDrag
+    cdkDragRootElement=".cdk-overlay-pane"
+    cdkDragHandle>Delete Confirmation</h1>
+  <div mat-dialog-content>
+    Are you sure want to delete <strong>{{ data }}</strong> ?
+  </div>
+  <div mat-dialog-actions>
+    <button type="button" mat-raised-button color="primary" [mat-dialog-close]="true">Delete</button>
+    <button type="button" mat-raised-button color="accent" [mat-dialog-close]="false">Cancel</button>
+  </div>
 </ng-template>

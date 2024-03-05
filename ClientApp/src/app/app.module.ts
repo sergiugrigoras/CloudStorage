@@ -19,12 +19,9 @@ import { AppErrorHandler } from './model/app-error-handler';
 import { PathbarComponent } from './components/pathbar/pathbar.component';
 import { DiskinfoComponent } from './components/diskinfo/diskinfo.component';
 import { NotesComponent } from './components/notes/notes.component';
-import { NoteComponent } from './components/note/note.component';
-import { NoteEditorComponent } from './components/note-editor/note-editor.component';
 import { UploadProgressComponent } from './components/progress-bar/progress-bar.component';
 import { ProfileComponent } from './components/profile/profile.component';
 import { ResetPasswordComponent } from './components/reset-password/reset-password.component';
-import { ViewNoteComponent } from './components/view-note/view-note.component';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { MatIconModule } from '@angular/material/icon';
 import { MatDialogModule } from '@angular/material/dialog';
@@ -69,12 +66,9 @@ function tokenGetter() {
     PathbarComponent,
     DiskinfoComponent,
     NotesComponent,
-    NoteComponent,
-    NoteEditorComponent,
     UploadProgressComponent,
     ProfileComponent,
     ResetPasswordComponent,
-    ViewNoteComponent,
     SpinnerComponent,
     MediaComponent,
     MediaItemComponent,

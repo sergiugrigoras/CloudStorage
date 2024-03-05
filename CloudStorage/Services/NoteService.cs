@@ -1,92 +1,57 @@
 using System.Security.Cryptography;
 using CloudStorage.Models;
+using CloudStorage.ViewModels;
 using Microsoft.EntityFrameworkCore;
 
 namespace CloudStorage.Services;
 
 public interface INoteService
 {
-    Task<List<Note>> GetAllNotesByUserAsync(User user);
-    Task<Note> GetNoteByIdAsync(int id);
-    NoteDTO ToDTO(Note note);
-    List<NoteDTO> ToDTO(List<Note> notes);
-    Task CreateNoteAsync(Note note, User user);
-    Task UpdateNoteAsync(Note note, string title, string body);
-    Task DeleteNoteAsync(Note note);
-    Task<Guid> AddShareKeyAsync(Note note);
-
+    Task<ICollection<Note>> GetUserNotesAsync(Guid userId);
+    Task<Note> GetByIdAsync(int id);
+    Task<Note> CreateAsync(NoteViewModel note, Guid userId);
+    Task<Note> UpdateAsync(NoteViewModel note);
+    Task DeleteAsync(Note note);
+    
 }
-public class NoteService : INoteService
+public class NoteService(AppDbContext context) : INoteService
 {
-    private readonly AppDbContext _context;
-    public NoteService(AppDbContext context)
+    public async Task<ICollection<Note>> GetUserNotesAsync(Guid userId) => await context.Notes
+        .Where(x => x.UserId == userId)
+        .ToArrayAsync();
+    
+    public async Task<Note> GetByIdAsync(int id) => await context.Notes.FindAsync(id);
+    
+    public async Task<Note> CreateAsync(NoteViewModel note, Guid userId)
     {
-        _context = context;
-    }
-
-    public async Task<Guid> AddShareKeyAsync(Note note)
-    {
-        var randomNumber = new byte[8];
-        using (var rng = RandomNumberGenerator.Create())
+        var model = new Note
         {
-            rng.GetBytes(randomNumber);
-        }
-        var shareKey = Guid.NewGuid();
-        note.ShareKey = shareKey;
-        _context.Notes.Update(note);
-        await _context.SaveChangesAsync();
-
-        return shareKey;
+            Title = note.Title,
+            Body = note.Body,
+            UserId = userId,
+            CreationDate = DateTime.UtcNow,
+            Type = note.Type
+        };
+        await context.Notes.AddAsync(model);
+        await context.SaveChangesAsync();
+        return model;
+    }
+    
+    public async Task<Note> UpdateAsync(NoteViewModel note)
+    {
+        var model = await GetByIdAsync(note.Id);
+        if (model == null) return null;
+        model.Title = note.Title;
+        model.Body = note.Body;
+        model.Color = note.Color;
+        model.ModificationDate = DateTime.UtcNow;
+        await context.SaveChangesAsync();
+        return model;
     }
 
-    public async Task CreateNoteAsync(Note note, User user)
+    public async Task DeleteAsync(Note note)
     {
-        note.CreationDate = DateTime.Now;
-        note.ModificationDate = DateTime.Now;
-        note.UserId = user.Id;
-        await _context.Notes.AddAsync(note);
-        await _context.SaveChangesAsync();
-    }
-
-    public async Task DeleteNoteAsync(Note note)
-    {
-        _context.Notes.Remove(note);
-        await _context.SaveChangesAsync();
-    }
-
-    public async Task<List<Note>> GetAllNotesByUserAsync(User user)
-    {
-        var notes = await _context.Notes.Where(n => n.UserId == user.Id).OrderByDescending(c => c.ModificationDate).ToListAsync();
-        return notes;
-    }
-
-    public async Task<Note> GetNoteByIdAsync(int id)
-    {
-        var note = await _context.Notes.FindAsync(id);
-        return note;
-    }
-
-    public NoteDTO ToDTO(Note note)
-    {
-        return new NoteDTO(note);
-    }
-
-    public List<NoteDTO> ToDTO(List<Note> notes)
-    {
-        var result = new List<NoteDTO>();
-        foreach (var n in notes)
-        {
-            result.Add(new NoteDTO(n));
-        }
-        return result;
-    }
-
-    public async Task UpdateNoteAsync(Note note, string title, string body)
-    {
-        note.Title = title;
-        note.Body = body;
-        note.ModificationDate = DateTime.Now;
-        _context.Notes.Update(note);
-        await _context.SaveChangesAsync();
+        context.Notes.Remove(note);
+        await context.SaveChangesAsync();
     }
 }

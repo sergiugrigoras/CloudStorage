@@ -1,5 +1,6 @@
 ﻿using CloudStorage.Models;
 using CloudStorage.Services;
+using CloudStorage.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -14,96 +15,49 @@ public class NoteController(IUserService userService, INoteService noteService) 
     private readonly IUserService _userService = userService ?? throw new ArgumentNullException(nameof(userService));
     private readonly INoteService _noteService = noteService ?? throw new ArgumentNullException(nameof(noteService));
 
-    [HttpPost("{id:int}")]
-    [AllowAnonymous]
-    public async Task<IActionResult> GetNoteAsync(int id, [FromBody] NoteShareKey shareKey)
-    {
-        var note = await _noteService.GetNoteByIdAsync(id);
-        var user = await _userService.GetUserAsync(User);
-        if (note == null)
-        {
-            return NotFound();
-        }
-
-        if (user == null && note.ShareKey == shareKey.Key || user != null && user.Id == note.UserId)
-        {
-            return new JsonResult(_noteService.ToDTO(note));
-        }
-        else
-        {
-            return Forbid();
-        }
-    }
-
-    [HttpGet("getall")]
+    
+    [HttpGet("all")]
     public async Task<IActionResult> GetNotesAsync()
     {
         var user = await _userService.GetUserAsync(User);
-        var notes = await _noteService.GetAllNotesByUserAsync(user);
+        if (user == null) return Unauthorized();
+        var notes = await _noteService.GetUserNotesAsync(user.Id);
 
-        return new JsonResult(_noteService.ToDTO(notes));
+        return new JsonResult(notes.Select(x => new NoteViewModel(x)));
     }
 
-    [HttpPost("add")]
-    public async Task<IActionResult> AddNote([FromBody] Note note)
+    [HttpPost]
+    public async Task<IActionResult> CreateNoteAsync([FromBody] NoteViewModel note)
     {
         var user = await _userService.GetUserAsync(User);
-        await _noteService.CreateNoteAsync(note, user);
-        return Ok(_noteService.ToDTO(note));
+        if (user == null) return Unauthorized();
+        var model = await _noteService.CreateAsync(note, user.Id);
+        return new JsonResult(new NoteViewModel(model));
     }
 
-    [HttpPut("update")]
-    public async Task<IActionResult> UpdateNote([FromBody] Note request)
+    [HttpPut]
+    public async Task<IActionResult> UpdateNoteAsync([FromBody] NoteViewModel note)
     {
-        var note = await _noteService.GetNoteByIdAsync(request.Id);
+        var model = await _noteService.GetByIdAsync(note.Id);
         var user = await _userService.GetUserAsync(User);
-        if (note == null)
-        {
-            return NotFound();
-        }
-        if (note.UserId != user.Id)
-        {
-            return Forbid();
-        }
-        await _noteService.UpdateNoteAsync(note, request.Title, request.Body);
+        if (user == null) return Unauthorized();
+        if (model == null) return NotFound();
+        if (model.UserId != user.Id) return Forbid();
+        var result = await _noteService.UpdateAsync(note);
 
-        return Ok(_noteService.ToDTO(note));
+        return new JsonResult(new NoteViewModel(result));
     }
 
-    [HttpDelete("delete/{id}")]
+    [HttpDelete("{id:int}")]
     public async Task<IActionResult> DeleteNote(int id)
     {
-        var note = await _noteService.GetNoteByIdAsync(id);
+        var model = await _noteService.GetByIdAsync(id);
         var user = await _userService.GetUserAsync(User);
-        if (note == null)
-        {
-            return NotFound();
-        }
-        if (note.UserId != user.Id)
-        {
-            return Forbid();
-        }
-        await _noteService.DeleteNoteAsync(note);
+        if (model == null) return NotFound();
+        if (user == null) return Unauthorized();
+        if (model.UserId != user.Id) return Forbid();
+        
+        await _noteService.DeleteAsync(model);
         return Ok();
-    }
-
-    [HttpPost("share")]
-    public async Task<IActionResult> ShareNoteAsync([FromBody] Note sharedNote)
-    {
-        var note = await _noteService.GetNoteByIdAsync(sharedNote.Id);
-        var user = await _userService.GetUserAsync(User);
-        if (note == null)
-        {
-            return NotFound();
-        }
-        if (note.UserId != user.Id)
-        {
-            return Forbid();
-        }
-        if (note.ShareKey == null)
-        {
-            await _noteService.AddShareKeyAsync(note);
-        }
-        return Ok(new { note.ShareKey });
     }
 }

@@ -9,7 +9,6 @@ import { RegisterComponent } from './components/register/register.component';
 import { AuthGuard } from './services/auth-guard.service';
 import { HomeComponent } from './components/home/home.component';
 import { ResetPasswordComponent } from './components/reset-password/reset-password.component';
-import { ViewNoteComponent } from './components/view-note/view-note.component';
 import { MediaComponent } from './components/media/media.component';
 
 const routes: Routes = [
@@ -23,8 +22,6 @@ const routes: Routes = [
   { path: 'media/:page', component: MediaComponent, canActivate: [AuthGuard] },
   { path: 'media/:page/:id', component: MediaComponent, canActivate: [AuthGuard] },
   { path: 'notes', component: NotesComponent, canActivate: [AuthGuard] },
-  { path: 'note', component: ViewNoteComponent },
-  { path: 'note/:id', component: ViewNoteComponent },
 ];
 
 @NgModule({
