@@ -1,6 +1,10 @@
 <ng-container *ngIf="notes; else loading">
   <div class="notes__controls">
-    <button mat-stroked-button color="primary" (click)="createNote(createBtn)" #createBtn>Add note</button>
+    <button mat-stroked-button color="primary" [matMenuTriggerFor]="noteMenu" #createBtn>Add note</button>
+    <mat-menu #noteMenu="matMenu">
+      <button mat-menu-item (click)="createNote(createBtn, 'text')">Text</button>
+      <button mat-menu-item (click)="createNote(createBtn, 'list')">List</button>
+    </mat-menu>
   </div>
   <div class="notes__container">
     <h3 *ngIf="notes.length === 0">No notes</h3>
@@ -10,7 +14,13 @@
         <mat-card-subtitle>{{ note.creationDate | date: 'medium' }}</mat-card-subtitle>
       </mat-card-header>
       <mat-card-content class="note__card-body">
-        <p>{{ note.body }}</p>
+        <p *ngIf="note.type === 'text'">{{ note.body }}</p>
+        <div *ngIf="note.type === 'list'" class="note__card-body-list">
+          <div *ngFor="let item of getNoteListItems(note.body)">
+            <span class="material-icons-outlined">{{item.checked ? 'check_box' : 'check_box_outline_blank' }}</span>
+            <span>{{ item.label }}</span>
+          </div>
+        </div>
         <mat-divider></mat-divider>
       </mat-card-content>
       <mat-card-actions class="notes__actions">
@@ -27,19 +37,20 @@
   <mat-spinner></mat-spinner>
 </ng-template>
 
-<ng-template #newNoteDialog>
+<ng-template let-data #noteDialog>
   <h1
     mat-dialog-title
     cdkDrag
     cdkDragRootElement=".cdk-overlay-pane"
-    cdkDragHandle>New Note</h1>
-  <div mat-dialog-content [formGroup]="newNoteControl">
-    <div class="dialog-inputs">
-      <mat-form-field>
-        <mat-label>Title</mat-label>
-        <input matInput type="text" formControlName="title">
-        <mat-error>Title is Required.</mat-error>
-      </mat-form-field>
+    cdkDragHandle>{{data | titlecase }} Note</h1>
+  <div mat-dialog-content [formGroup]="noteControl" class="note-dialog__content">
+    <mat-form-field>
+      <mat-label>Title</mat-label>
+      <input matInput type="text" formControlName="title">
+      <mat-error>Title is Required.</mat-error>
+    </mat-form-field>
+
+    <ng-container *ngIf="data === 'text'">
       <mat-form-field>
         <mat-label>Content</mat-label>
         <textarea
@@ -51,47 +62,35 @@
           cdkAutosizeMaxRows="15"
         ></textarea>
       </mat-form-field>
-    </div>
+    </ng-container>
+
+    <ng-container *ngIf="data === 'list'">
+      <mat-form-field subscriptSizing="dynamic">
+        <mat-label>List item</mat-label>
+        <input matInput type="text" #newListItem (keyup.enter)="addListItem(newListItem)">
+        <button *ngIf="newListItem.value" matSuffix color="primary" mat-icon-button (click)="addListItem(newListItem)">
+          <mat-icon>add</mat-icon>
+        </button>
+      </mat-form-field>
+      <div class="list-dialog__list-items">
+        <mat-checkbox
+          *ngFor="let item of getListItems()"
+          [(ngModel)]="item.checked"
+          [ngModelOptions]="{standalone: true}"
+          labelPosition="after">
+          {{ item.label }}
+        </mat-checkbox>
+      </div>
+    </ng-container>
   </div>
   <div mat-dialog-actions>
     <button type="button" mat-raised-button color="primary" [mat-dialog-close]="true"
-            [disabled]="newNoteControl.invalid">Save</button>
+            [disabled]="noteControl.invalid">Save</button>
     <button type="button" mat-raised-button color="accent" [mat-dialog-close]="false">Cancel</button>
   </div>
 </ng-template>
 
-<ng-template #editNoteDialog>
-  <h1
-    mat-dialog-title
-    cdkDrag
-    cdkDragRootElement=".cdk-overlay-pane"
-    cdkDragHandle>New Note</h1>
-  <div mat-dialog-content [formGroup]="editNoteControl">
-    <div class="dialog-inputs">
-      <mat-form-field>
-        <mat-label>Title</mat-label>
-        <input matInput type="text" formControlName="title">
-        <mat-error>Title is Required.</mat-error>
-      </mat-form-field>
-      <mat-form-field>
-        <mat-label>Content</mat-label>
-        <textarea
-          matInput
-          type="text"
-          formControlName="body"
-          cdkTextareaAutosize
-          cdkAutosizeMinRows="1"
-          cdkAutosizeMaxRows="15"
-        ></textarea>
-      </mat-form-field>
-    </div>
-  </div>
-  <div mat-dialog-actions>
-    <button type="button" mat-raised-button color="primary" [mat-dialog-close]="true"
-            [disabled]="editNoteControl.invalid">Save</button>
-    <button type="button" mat-raised-button color="accent" [mat-dialog-close]="false">Cancel</button>
-  </div>
-</ng-template>
+
 
 <ng-template #deleteConfirmDialog let-data>
   <h1

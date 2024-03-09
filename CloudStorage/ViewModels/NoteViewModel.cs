@@ -27,6 +27,7 @@ public class NoteViewModel
     public NoteViewModel(Note note)
     {
         Id = note.Id;
+        UserId = note.UserId;
         Title = note.Title;
         Body = note.Body;
         CreationDate = DateTime.SpecifyKind(note.CreationDate, DateTimeKind.Utc);
