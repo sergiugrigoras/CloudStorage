@@ -1,12 +1,12 @@
 import { NoteService } from '../../services/note.service';
-import { NoteModel } from '../../interfaces/note.interface';
-import { Component,  OnInit, TemplateRef, ViewChild } from '@angular/core';
-import {switchMap, tap} from 'rxjs/operators';
+import {NoteListItem, NoteModel} from '../../model/note.model';
+import {Component, OnInit, TemplateRef, ViewChild} from '@angular/core';
+import {delay, switchMap, take, tap} from 'rxjs/operators';
 import { MatDialog } from '@angular/material/dialog';
 import {MatSnackBar} from "@angular/material/snack-bar";
-import {FormControl, FormGroup, Validators} from "@angular/forms";
+import {FormArray, FormBuilder, FormGroup, Validators} from "@angular/forms";
 import {MatButton} from "@angular/material/button";
-import {EMPTY} from "rxjs";
+import {EMPTY, of} from "rxjs";
 
 const SNACKBAR_OPTIONS = { duration: 3000 };
 @Component({
@@ -16,17 +16,15 @@ const SNACKBAR_OPTIONS = { duration: 3000 };
 })
 export class NotesComponent implements OnInit {
   notes: NoteModel[];
-  noteControl = new FormGroup({
-    title: new FormControl(null, Validators.required),
-    body: new FormControl(null),
-  });
+  noteForm: FormGroup;
 
   @ViewChild('noteDialog', { static: true }) noteDialog: TemplateRef<any>;
   @ViewChild('deleteConfirmDialog', { static: true }) deleteConfirmDialog: TemplateRef<any>;
   constructor(
     private noteService: NoteService,
     private _dialog: MatDialog,
-    private _snackBar: MatSnackBar,) { }
+    private _snackBar: MatSnackBar,
+    private fb:FormBuilder) { }
 
   ngOnInit(): void {
     this.noteService.getAll().pipe(
@@ -36,45 +34,64 @@ export class NotesComponent implements OnInit {
     ).subscribe();
   }
 
-  private resetNoteControl() {
-    this.noteControl.reset({
-      title: null,
-      body: null
+  private createNoteForm(note: NoteModel) {
+    this.noteForm = this.fb.group({
+      type: [note.type, Validators.required],
+      title: [note.title, Validators.required],
+      text: note.type === 'text' ? note.body : null,
+      list: note.type === 'list' ? this.fb.array(note.getListItems().map(this.listItemToGroup.bind(this))) : null
     });
   }
 
-  private get noteControlBody(): string | ListItem[] {
-    return this.noteControl.get('body')?.value;
+  private listItemToGroup(item: NoteListItem) {
+    return this.fb.group({
+      label: item.label,
+      checked: item.checked
+    });
   }
 
-  private set noteControlBody(value: string | ListItem[]) {
-    const control = this.noteControl.get('body');
-    if (control) {
-      control.setValue(value);
-    }
+  private createEmptyNoteForm(type: string) {
+    this.noteForm = this.fb.group({
+      type: [type, Validators.required],
+      title: [null, Validators.required],
+      text: null,
+      list: this.fb.array([])
+    });
   }
 
-  private parseNoteControlBody() {
-    if (typeof this.noteControlBody === 'string') {
-      return this.noteControlBody;
-    } else if (Array.isArray(this.noteControlBody)) {
-      return JSON.stringify(this.noteControlBody);
-    } else {
-      return null;
-    }
+  get noteList() {
+    return this.noteForm.get('list') as FormArray<FormGroup>;
   }
 
-  getListItems() {
-    if (Array.isArray(this.noteControlBody)) {
-      return this.noteControlBody;
-    }
-    return undefined;
+  addListItem() {
+    const itemFormGroup= this.fb.group({
+      label: [''],
+      checked: [false],
+    })
+    this.noteList.push(itemFormGroup);
+    this.noteForm.patchValue({
+      list: this.noteList.value
+    });
+    // focus new input element
+    of(this.noteList.length).pipe(
+      take(1),
+      delay(50)
+    ).subscribe(x => {
+      const input = document.querySelector(`#list-item-${(x - 1)}`);
+      if (input instanceof HTMLInputElement) {
+        input.focus();
+      }
+    });
+  }
+
+  deleteListItem(itemIndex: number) {
+    this.noteList.removeAt(itemIndex);
   }
 
   createNote(button: MatButton, type: 'text' | 'list') {
-    this.resetNoteControl();
+    this.createEmptyNoteForm(type);
     const element = button._elementRef.nativeElement;
-    if (element instanceof HTMLButtonElement) {
+    if (element instanceof HTMLElement) {
       const rectangle = element.getBoundingClientRect();
       const top = rectangle.bottom + 5;
       const left = rectangle.left;
@@ -90,12 +107,7 @@ export class NotesComponent implements OnInit {
       }).afterClosed().pipe(
         switchMap(dialogResult => {
           if (dialogResult) {
-
-            return this.noteService.add({
-              title: this.noteControl.get('title')?.value,
-              body: this.parseNoteControlBody(),
-              type: type
-            });
+            return this.noteService.add(this.convertFormToNote());
           }
           return EMPTY;
         })
@@ -139,9 +151,7 @@ export class NotesComponent implements OnInit {
   }
 
   editNote(note: NoteModel) {
-    this.noteControl.get('title')?.setValue(note.title);
-    this.noteControlBody = note.type === 'text' ? note.body : this.getNoteListItems(note.body);
-
+    this.createNoteForm(note);
     this._dialog.open(this.noteDialog, {
       disableClose: true,
       hasBackdrop: true,
@@ -150,12 +160,10 @@ export class NotesComponent implements OnInit {
     }).afterClosed().pipe(
       switchMap(dialogResult => {
         if (dialogResult) {
-          return this.noteService.update({
-            title: this.noteControl.get('title')?.value,
-            body: this.parseNoteControlBody(),
-            type: note.type,
-            id: note.id
-          });
+          note.updating = true;
+          const noteUpdate = this.convertFormToNote();
+          noteUpdate.id = note.id;
+          return this.noteService.update(noteUpdate);
         }
         return EMPTY;
       })
@@ -172,30 +180,16 @@ export class NotesComponent implements OnInit {
     });
   }
 
-  addListItem(input: HTMLInputElement) {
-    if (input.value == null || input.value.trim() === '') return;
-    const item: ListItem = {label: input.value, checked: false};
-    if (Array.isArray(this.noteControlBody)) {
-      const newList = this.noteControlBody.slice();
-      newList.unshift(item);
-      this.noteControlBody = newList;
-    } else {
-      this.noteControlBody = [item];
-    }
-    input.value = '';
-  }
+  private convertFormToNote(): NoteModel {
+    const type = this.noteForm.get('type')?.value;
+    const title = this.noteForm.get('title')?.value;
+    const text = this.noteForm.get('text')?.value;
+    const list = this.noteList.value;
 
-  getNoteListItems(body: string): ListItem[] {
-    try {
-      return JSON.parse(body);
-    }
-    catch (e) {
-      return null;
-    }
+    return  new NoteModel({
+      type,
+      title,
+      body: type === 'text' ? text : JSON.stringify(list),
+    });
   }
-}
-
-export interface ListItem {
-  label: string;
-  checked: boolean;
 }

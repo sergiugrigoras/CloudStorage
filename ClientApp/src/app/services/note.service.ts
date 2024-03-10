@@ -1,4 +1,4 @@
-import { NoteModel } from '../interfaces/note.interface';
+import { NoteModel } from '../model/note.model';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { environment } from '../../environments/environment';
@@ -24,15 +24,26 @@ export class NoteService {
   constructor(private http: HttpClient) { }
 
   getAll() {
-    return this.http.get<NoteModel[]>(apiUrl + '/api/note/all').pipe(map(notes => notes.sort(NOTES_SORT)));
+    return this.http.get<NoteModel[]>(apiUrl + '/api/note/all')
+      .pipe(
+        map(notes => notes
+          .map(x => new NoteModel(x))
+          .sort(NOTES_SORT)
+        )
+      );
   }
 
   add(note: NoteModel) {
-    return this.http.post<NoteModel>(apiUrl + '/api/note', note, httpOptions);
+    return this.http.post<NoteModel>(apiUrl + '/api/note', note, httpOptions)
+      .pipe(
+        map(x => new NoteModel(x))
+      );
   }
 
   update(note: NoteModel) {
-    return this.http.put<NoteModel>(apiUrl + '/api/note', note, httpOptions);
+    return this.http.put<NoteModel>(apiUrl + '/api/note', note, httpOptions).pipe(
+      map(x => new NoteModel(x))
+    );
   }
 
   delete(id: number) {

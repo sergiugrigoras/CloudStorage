@@ -23,7 +23,7 @@
     &-list {
       > div {
         display: flex;
-        align-items: center;
+        align-items: flex-start;
         margin: 6px 0;
         > span:first-of-type {
           margin-right: 5px;
@@ -57,7 +57,17 @@ mat-spinner {
   }
 }
 
-.list-dialog__list-items {
+.list-item {
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  margin-bottom: 4px;
+}
+.list-item-input {
+  outline: none;
+  background: transparent;
+  border: none;
+  color: inherit;
+  flex: 1;
+  font-weight: 600;
+  font-size: inherit;
 }
