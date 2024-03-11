@@ -73,7 +73,14 @@
       <ng-container *ngFor="let listItem of noteList.controls; let i = index;" [formGroup]="listItem">
         <div class="list-item">
           <mat-checkbox formControlName="checked" color="primary"></mat-checkbox>
-          <input matInput type="text" formControlName="label" class="list-item-input" [id]="'list-item-'+i">
+          <input
+            matInput
+            type="text"
+            formControlName="label"
+            class="list-item-input"
+            [id]="'list-item-'+i"
+            (keyup.enter)="addListItem(i + 1)"
+          >
           <button mat-icon-button color="primary" (click)="deleteListItem(i)">
             <mat-icon>clear</mat-icon>
           </button>

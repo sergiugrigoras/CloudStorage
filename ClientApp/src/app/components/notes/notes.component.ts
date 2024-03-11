@@ -63,21 +63,22 @@ export class NotesComponent implements OnInit {
     return this.noteForm.get('list') as FormArray<FormGroup>;
   }
 
-  addListItem() {
+  addListItem(itemIndex?: number) {
     const itemFormGroup= this.fb.group({
       label: [''],
       checked: [false],
-    })
-    this.noteList.push(itemFormGroup);
+    });
+    itemIndex = itemIndex ?? this.noteList.length;
+    this.noteList.insert(itemIndex, itemFormGroup);
     this.noteForm.patchValue({
       list: this.noteList.value
     });
     // focus new input element
-    of(this.noteList.length).pipe(
+    of(null).pipe(
       take(1),
       delay(50)
-    ).subscribe(x => {
-      const input = document.querySelector(`#list-item-${(x - 1)}`);
+    ).subscribe(() => {
+      const input = document.querySelector(`#list-item-${itemIndex}`);
       if (input instanceof HTMLInputElement) {
         input.focus();
       }
