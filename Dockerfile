@@ -13,13 +13,19 @@ COPY CloudStorage/CloudStorage.csproj .
 RUN dotnet restore
 COPY CloudStorage.sln .
 COPY ./CloudStorage ./CloudStorage
-COPY *.json ./CloudStorage
 RUN dotnet publish -c Release -o /app/publish
 
 # serve stage
 FROM mcr.microsoft.com/dotnet/aspnet:8.0
 RUN apt-get update -qq && apt-get install ffmpeg -y
+ARG JWTKEY
 ENV ASPNETCORE_URLS=http://+:5000
+ENV CloudStorage_Jwt__key=$JWTKEY
+ENV CloudStorage_Jwt__lifetime=5
+ENV CloudStorage_Jwt__issuer="http://localhost"
+ENV CloudStorage_Storage__Url="/app/storage"
+ENV CloudStorage_Storage__Size=5368709120
+ENV CloudStorage_Database__Sqlite="/app/database/cloud-storage.db"
 WORKDIR /app
 COPY --from=base /app/publish .
 COPY --from=node /app/dist ./wwwroot
