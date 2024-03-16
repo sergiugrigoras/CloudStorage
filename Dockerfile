@@ -17,6 +17,8 @@ RUN dotnet publish -c Release -o /app/publish
 
 # serve stage
 FROM mcr.microsoft.com/dotnet/aspnet:8.0
+VOLUME /app/database
+VOLUME /app/storage
 RUN apt-get update -qq && apt-get install ffmpeg -y
 ARG JWTKEY
 ENV ASPNETCORE_URLS=http://+:5000
@@ -29,4 +31,5 @@ ENV CloudStorage_Database__Sqlite="/app/database/cloud-storage.db"
 WORKDIR /app
 COPY --from=base /app/publish .
 COPY --from=node /app/dist ./wwwroot
+EXPOSE 5000
 ENTRYPOINT [ "dotnet", "CloudStorage.dll" ]
