@@ -99,8 +99,9 @@ public class MediaController(
     public async Task<IActionResult> UploadAsync([FromForm] IList<IFormFile> files)
     {
         var user = await userService.GetUserAsync(User);
+        if (user == null) return Unauthorized();
         foreach (var file in files)
-            await mediaService.UploadMediaFileAsync(file, user);
+            await mediaService.UploadMediaFileAsync(file, user.Id);
 
         return Ok();
     }

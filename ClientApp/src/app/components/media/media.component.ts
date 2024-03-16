@@ -17,7 +17,7 @@ import {
   ReplaySubject,
   throttleTime,
   Subject,
-  takeUntil
+  takeUntil, of, finalize
 } from 'rxjs';
 import { MediaAlbum } from 'src/app/model/media-album.model';
 import { MediaObject } from 'src/app/model/media-object.model';
@@ -287,26 +287,37 @@ export class MediaComponent implements OnInit, OnDestroy {
       for (var i = 0; i != input.files.length; i++) {
         formData.append("files", input.files[i]);
       }
-      const uploadObserver = {
-        next: (event: HttpEvent<Object>) => {
-          if (event.type === HttpEventType.Response) {
-            this.snackBar.open(`Upload complete.`, 'Ok', SNACKBAR_OPTIONS);
+      this.mediaService.upload(formData)
+        .pipe(
+          tap(event => {
+            if (event.type === HttpEventType.UploadProgress && event.total) {
+              this.uploadProgress = Math.floor((event.loaded / event.total) * 100);
+            }
+          }),
+          switchMap(event => {
+            if (event.type === HttpEventType.Response) {
+              return this.snackBar.open(`Upload complete.`, 'Ok', SNACKBAR_OPTIONS)
+                .afterDismissed()
+                .pipe(map(() => true));
+            } else {
+              return of(false)
+            }
+          }),
+          finalize(() => {
+            this.uploading = false;
+            this.uploadProgress = 0;
+          })
+        )
+        .subscribe({
+          next: result => {
+            if (result) {
+              window.location.reload();
+            }
+          },
+          error: (error: HttpErrorResponse) => {
+            console.error(error.error);
           }
-          if (event.type === HttpEventType.UploadProgress && event.total) {
-            this.uploadProgress = Math.floor((event.loaded / event.total) * 100);
-          }
-        },
-        error: (error: any) => {
-          console.error(error);
-          this.uploading = false;
-          this.uploadProgress = 0;
-        },
-        complete: () => {
-          this.uploading = false;
-          this.uploadProgress = 0;
-        }
-      }
-      this.mediaService.upload(formData).subscribe(uploadObserver);
+        });
     }
   }
 
@@ -397,7 +408,7 @@ export class MediaComponent implements OnInit, OnDestroy {
   }
 
   private selectedItemsIds() {
-    return this.displayedMediaObjects.filter(x => x.isSelected).map(x => x.id);
+    return this.allMediaObjects.filter(x => x.isSelected).map(x => x.id);
   }
 
   scrollBack($event: MouseEvent) {

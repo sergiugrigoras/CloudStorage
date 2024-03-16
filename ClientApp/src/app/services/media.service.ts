@@ -90,7 +90,7 @@ export class MediaService {
   }
 
   restoreMediaObjects(id: string[]) {
-    return this.http.post<string[]>(API_URL + `/api/media/restore`, {body: {ids: id}});
+    return this.http.post<string[]>(API_URL + `/api/media/restore`, {ids: id});
   }
 
 }
