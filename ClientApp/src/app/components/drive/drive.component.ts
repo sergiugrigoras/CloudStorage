@@ -2,7 +2,7 @@ import { FsoSortService } from '../../services/fso-sort.service';
 import { DiskInfoModel } from '../../interfaces/disk.interface';
 import {catchError, switchMap, distinctUntilChanged, first} from 'rxjs/operators';
 import {Subscription, EMPTY, Subject, forkJoin, Observable, map, debounceTime, of} from 'rxjs';
-import {HttpErrorResponse, HttpEvent, HttpEventType} from '@angular/common/http';
+import { HttpErrorResponse, HttpEvent, HttpEventType } from '@angular/common/http';
 import {FsoModel, FsoTouchHelper} from '../../model/fso.model';
 import { DriveService } from '../../services/drive.service';
 import { Component, ElementRef, OnInit, TemplateRef, ViewChild, OnDestroy, HostListener } from '@angular/core';

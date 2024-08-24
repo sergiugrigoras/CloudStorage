@@ -5,7 +5,7 @@ import { AppComponent } from './app.component';
 import { RegisterComponent } from './components/register/register.component';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
-import { HttpClientModule, HTTP_INTERCEPTORS } from '@angular/common/http';
+import { HTTP_INTERCEPTORS, provideHttpClient, withInterceptorsFromDi } from '@angular/common/http';
 import { LoginComponent } from './components/login/login.component';
 import { AuthInterceptor } from './services/auth.interceptor';
 import { DriveComponent } from './components/drive/drive.component';
@@ -53,33 +53,30 @@ function tokenGetter() {
   return localStorage.getItem("jwt");
 }
 
-@NgModule({
-  declarations: [
-    AppComponent,
-    RegisterComponent,
-    LoginComponent,
-    DriveComponent,
-    HomeComponent,
-    FsoComponent,
-    ReadableBytesPipe,
-    ToolbarComponent,
-    PathbarComponent,
-    DiskinfoComponent,
-    NotesComponent,
-    UploadProgressComponent,
-    ProfileComponent,
-    ResetPasswordComponent,
-    SpinnerComponent,
-    MediaComponent,
-    MediaItemComponent,
-  ],
-    imports: [
-        BrowserModule,
+@NgModule({ declarations: [
+        AppComponent,
+        RegisterComponent,
+        LoginComponent,
+        DriveComponent,
+        HomeComponent,
+        FsoComponent,
+        ReadableBytesPipe,
+        ToolbarComponent,
+        PathbarComponent,
+        DiskinfoComponent,
+        NotesComponent,
+        UploadProgressComponent,
+        ProfileComponent,
+        ResetPasswordComponent,
+        SpinnerComponent,
+        MediaComponent,
+        MediaItemComponent,
+    ],
+    bootstrap: [AppComponent], imports: [BrowserModule,
         CommonModule,
         AppRoutingModule,
         FormsModule,
         ReactiveFormsModule,
-        HttpClientModule,
         JwtModule.forRoot({
             config: {
                 tokenGetter: tokenGetter
@@ -108,22 +105,19 @@ function tokenGetter() {
         MatCheckboxModule,
         NgxMatSelectSearchModule,
         DragDropModule,
-        MatBadgeModule
-    ],
-  providers: [
-    AuthGuard,
-    {
-      provide: HTTP_INTERCEPTORS,
-      useClass: AuthInterceptor,
-      multi: true,
-    },
-    {
-      provide: ErrorHandler,
-      useClass: AppErrorHandler
-    },
-    { provide: MAT_FORM_FIELD_DEFAULT_OPTIONS, useValue: { appearance: 'outline' } },
-    {provide: ErrorStateMatcher, useClass: ShowOnDirtyErrorStateMatcher}
-  ],
-  bootstrap: [AppComponent]
-})
+        MatBadgeModule], providers: [
+        AuthGuard,
+        {
+            provide: HTTP_INTERCEPTORS,
+            useClass: AuthInterceptor,
+            multi: true,
+        },
+        {
+            provide: ErrorHandler,
+            useClass: AppErrorHandler
+        },
+        { provide: MAT_FORM_FIELD_DEFAULT_OPTIONS, useValue: { appearance: 'outline' } },
+        { provide: ErrorStateMatcher, useClass: ShowOnDirtyErrorStateMatcher },
+        provideHttpClient(withInterceptorsFromDi())
+    ] })
 export class AppModule { }

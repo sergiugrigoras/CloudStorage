@@ -1,4 +1,4 @@
-import {HttpClient, HttpEvent, HttpHeaders, HttpParams} from '@angular/common/http';
+import { HttpClient, HttpEvent, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Router } from '@angular/router';
 import { environment } from 'src/environments/environment';
