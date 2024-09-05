@@ -20,6 +20,10 @@ public partial class AppDbContext : DbContext
     public virtual DbSet<MediaObject> MediaObjects { get; set; }
     public virtual DbSet<MediaAlbum> MediaAlbums { get; set; }
 
+    public virtual DbSet<Expense> Expenses { get; set; }
+    public virtual DbSet<Category> Categories { get; set; }
+    public virtual DbSet<PaymentMethod> PaymentMethods { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<MediaAlbum>(entity =>
@@ -146,7 +150,7 @@ public partial class AppDbContext : DbContext
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_ResetToken_User");
         });
-            
+
         modelBuilder.Entity<User>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("PK__User__3214EC070FAA7A84");

@@ -14,14 +14,16 @@ public class User
 
     public DateTime? RefreshTokenExpiryTime { get; set; }
 
-    public virtual ICollection<FileSystemObject> FileSystemObjects { get; } = new List<FileSystemObject>();
+    public virtual ICollection<FileSystemObject> FileSystemObjects { get; } = [];
 
-    public virtual ICollection<Note> Notes { get; } = new List<Note>();
+    public virtual ICollection<Note> Notes { get; } = [];
 
-    public virtual ICollection<ResetToken> ResetTokens { get; } = new List<ResetToken>();
-        
-    public virtual ICollection<MediaObject> MediaObjects { get; set; } = new List<MediaObject>();
-    public virtual ICollection<MediaAlbum> MediaAlbums { get; set; } = new List<MediaAlbum>();
+    public virtual ICollection<ResetToken> ResetTokens { get; } = [];
+
+    public virtual ICollection<MediaObject> MediaObjects { get; set; } = [];
+    public virtual ICollection<MediaAlbum> MediaAlbums { get; set; } = [];
+    public ICollection<Expense> Expenses { get; set; } = [];
+    public ICollection<PaymentMethod> PaymentMethods { get; set; } = [];
 }
 
 public class TokenApiModel
