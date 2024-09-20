@@ -46,7 +46,6 @@ export class ResetPasswordComponent implements OnInit {
     this.passwordService.sendResetToken(this.userIdentifierForm.get('userIdentifier')?.value)
       .subscribe({
         next: (response) => {
-          debugger;
           this.userIdentifierForm.reset();
           this._snackBar.open(`Instruction sent to ${response}`, 'Ok', { duration: 5000 });
         },

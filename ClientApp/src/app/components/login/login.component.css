@@ -1,3 +1,7 @@
+form {
+  width: 500px;
+  max-width: 85vw;
+}
 form>div {
     display: flex;
 }

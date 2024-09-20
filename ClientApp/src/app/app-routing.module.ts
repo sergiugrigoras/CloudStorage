@@ -10,6 +10,7 @@ import { AuthGuard } from './services/auth-guard.service';
 import { HomeComponent } from './components/home/home.component';
 import { ResetPasswordComponent } from './components/reset-password/reset-password.component';
 import { MediaComponent } from './components/media/media.component';
+import {ExpenseComponent} from "./components/expense/expense.component";
 
 const routes: Routes = [
   { path: '', component: HomeComponent },
@@ -22,6 +23,7 @@ const routes: Routes = [
   { path: 'media/:page', component: MediaComponent, canActivate: [AuthGuard] },
   { path: 'media/:page/:id', component: MediaComponent, canActivate: [AuthGuard] },
   { path: 'notes', component: NotesComponent, canActivate: [AuthGuard] },
+  { path: 'expenses', component: ExpenseComponent, canActivate: [AuthGuard] },
 ];
 
 @NgModule({

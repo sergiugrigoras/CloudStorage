@@ -14,7 +14,7 @@ export class HomeComponent implements OnInit, OnDestroy {
     { label: 'Drive', icon: 'backup', link: '/drive' },
     { label: 'Media', icon: 'image', link: '/media' },
     { label: 'Notes', icon: 'edit_note', link: '/notes' },
-    // { label: 'Shares', icon: 'share', link: '/shares' },
+    { label: 'Expenses', icon: 'paid', link: '/expenses' }
   ]
   ngOnDestroy(): void {
     this.destroy$.next();

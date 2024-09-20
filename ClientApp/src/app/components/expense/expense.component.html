@@ -1,0 +1,208 @@
+<h3>Expense Tracker</h3>
+
+<div [formGroup]="expenseFilterForm" class="expense__filter">
+  <mat-form-field appearance="outline" subscriptSizing="dynamic" class="expense__filter-control">
+    <mat-label>Enter a date range</mat-label>
+    <mat-date-range-input [rangePicker]="rangePicker">
+      <input matStartDate formControlName="startDate" placeholder="Start date">
+      <input matEndDate formControlName="endDate" placeholder="End date">
+    </mat-date-range-input>
+    <mat-datepicker-toggle matIconSuffix [for]="rangePicker"></mat-datepicker-toggle>
+    <mat-date-range-picker #rangePicker></mat-date-range-picker>
+  </mat-form-field>
+  <mat-form-field appearance="outline" subscriptSizing="dynamic" class="expense__filter-control">
+    <mat-label>Categories</mat-label>
+    <mat-select [multiple]="true" formControlName="categories">
+      <mat-option *ngFor="let category of availableCategories" [value]="category.id">{{category.emoji}} {{category.name}}</mat-option>
+    </mat-select>
+  </mat-form-field>
+  <div>
+    <button mat-icon-button color="primary" (click)="getExpenses()" matTooltip="Refresh">
+      <mat-icon>refresh</mat-icon>
+    </button>
+    <button mat-icon-button color="primary" (click)="openExpenseForm()" matTooltip="Add Expense">
+      <mat-icon>add</mat-icon>
+    </button>
+    <button mat-icon-button color="primary" [matMenuTriggerFor]="settingsMenu" matTooltip="Settings">
+      <mat-icon>settings</mat-icon>
+    </button>
+    <mat-menu #settingsMenu="matMenu">
+      <button mat-menu-item (click)="managePaymentMethods()">Payment Methods</button>
+      <button mat-menu-item (click)="manageCategories()">Categories</button>
+    </mat-menu>
+  </div>
+</div>
+
+<div *ngIf="expenseDataSource; else loading" class="expense__table-container">
+  <table mat-table [dataSource]="expenseDataSource" class="mat-elevation-z8">
+
+    <ng-container matColumnDef="description">
+      <th mat-header-cell *matHeaderCellDef> Description </th>
+      <td mat-cell *matCellDef="let element"> {{element.description}} </td>
+    </ng-container>
+
+    <ng-container matColumnDef="amount">
+      <th mat-header-cell *matHeaderCellDef> Amount </th>
+      <td mat-cell *matCellDef="let element"> {{element.amount | currency : 'USD'}} </td>
+    </ng-container>
+
+    <ng-container matColumnDef="category">
+      <th mat-header-cell *matHeaderCellDef> Category </th>
+      <td mat-cell *matCellDef="let element"> {{element.category?.name}} </td>
+    </ng-container>
+
+    <ng-container matColumnDef="paymentMethod">
+      <th mat-header-cell *matHeaderCellDef> Payment Method </th>
+      <td mat-cell *matCellDef="let element"> {{element.paymentMethod?.name}} </td>
+    </ng-container>
+
+    <ng-container matColumnDef="date">
+      <th mat-header-cell *matHeaderCellDef> Date </th>
+      <td mat-cell *matCellDef="let element"> {{element.date | date: 'mediumDate' }} </td>
+    </ng-container>
+
+    <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+    <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+  </table>
+</div>
+
+<ng-template #loading>Loading data...</ng-template>
+
+<ng-template #paymentMethods>
+  <div mat-dialog-title>Payment Method</div>
+  <div mat-dialog-content>
+    @for (paymentMethod of availablePaymentMethods; track paymentMethod) {
+      <div class="list-item">
+        <input
+          matInput
+          type="text"
+          class="list-item-input"
+          [value]="paymentMethod.name"
+          #paymentName
+        >
+        <mat-checkbox color="primary" [checked]="paymentMethod.isActive" matTooltip="Is active" #paymentActive></mat-checkbox>
+        <button
+          mat-icon-button
+          color="primary"
+          matTooltip="Update"
+          type="button"
+          (click)="updatePaymentMethod(paymentMethod.id, paymentName.value, paymentActive.checked)"
+          [disabled]="paymentName.value === paymentMethod.name && paymentActive.checked === paymentMethod.isActive"
+        >
+          <mat-icon>check</mat-icon>
+        </button>
+      </div>
+      <mat-divider></mat-divider>
+    }
+    <p></p>
+
+    <div class="entity__add">
+      <mat-form-field appearance="outline" subscriptSizing="dynamic" class="entity__add-input">
+        <mat-label>Add Payment Method</mat-label>
+        <input matInput [(ngModel)]="newPaymentMethodValue" (keyup.enter)="addPaymentMethod()">
+      </mat-form-field>
+      <button mat-icon-button type="button" color="primary" matTooltip="Add" (click)="addPaymentMethod()" [disabled]="!newPaymentMethodValue">
+        <mat-icon>add</mat-icon>
+      </button>
+    </div>
+  </div>
+  <div mat-dialog-actions align="end">
+    <button mat-raised-button type="button" color="primary" mat-dialog-close>Close</button>
+  </div>
+</ng-template>
+
+<ng-template #categories>
+  <div mat-dialog-title>Categories</div>
+  <div mat-dialog-content>
+    @for (category of availableCategories; track category) {
+      <div class="list-item">
+        <input
+          matInput
+          type="text"
+          class="list-item-input"
+          [value]="category.name"
+          [readonly]="category.userId == null"
+          #categoryName
+        >
+        @if (category.userId) {
+          <button
+            mat-icon-button
+            color="primary"
+            matTooltip="Update"
+            type="button"
+            (click)="updateCategory(category.id, categoryName.value)"
+            [disabled]="categoryName.value === category.name"
+          >
+            <mat-icon>check</mat-icon>
+          </button>
+        }
+      </div>
+      <mat-divider></mat-divider>
+    }
+    <p></p>
+
+    <div class="entity__add">
+      <mat-form-field appearance="outline" subscriptSizing="dynamic" class="entity__add-input">
+        <mat-label>Add Custom Category</mat-label>
+        <input matInput [(ngModel)]="newCategoryValue" (keyup.enter)="addCustomCategory()">
+      </mat-form-field>
+      <button mat-icon-button type="button" color="primary" matTooltip="Add" (click)="addCustomCategory()" [disabled]="!newCategoryValue">
+        <mat-icon>add</mat-icon>
+      </button>
+    </div>
+  </div>
+  <div mat-dialog-actions align="end">
+    <button mat-raised-button type="button" color="primary" mat-dialog-close>Close</button>
+  </div>
+</ng-template>
+
+<ng-template #addExpense>
+  <div mat-dialog-title>Add Expense</div>
+  <div mat-dialog-content>
+    <p></p>
+    <form [formGroup]="newExpenseForm" class="expense__add-form">
+      <div>
+        <mat-form-field appearance="outline">
+          <mat-label>Description</mat-label>
+          <input matInput type="text" formControlName="description">
+          <mat-error>Description is Required.</mat-error>
+        </mat-form-field>
+      </div>
+      <div>
+        <mat-form-field appearance="outline" floatLabel="always">
+          <mat-label>Amount</mat-label>
+          <input matInput type="number" formControlName="amount" class="expense-amount" placeholder="0">
+          <span matTextPrefix>$&nbsp;</span>
+          <mat-error>Amount is Required.</mat-error>
+        </mat-form-field>
+
+        <mat-form-field>
+          <mat-label>Date</mat-label>
+          <input matInput [matDatepicker]="picker" formControlName="date" readonly>
+          <mat-datepicker-toggle matIconSuffix [for]="picker"></mat-datepicker-toggle>
+          <mat-datepicker #picker></mat-datepicker>
+        </mat-form-field>
+      </div>
+      <div>
+        <mat-form-field>
+          <mat-label>Category</mat-label>
+          <mat-select formControlName="categoryId">
+            <mat-option *ngFor="let category of availableCategories" [value]="category.id">{{category.emoji}} {{category.name}}</mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field>
+          <mat-label>Payment Method</mat-label>
+          <mat-select formControlName="paymentMethodId">
+            <mat-option *ngFor="let paymentMethod of availablePaymentMethods" [value]="paymentMethod.id">{{paymentMethod.name}}</mat-option>
+          </mat-select>
+        </mat-form-field>
+      </div>
+    </form>
+  </div>
+  <div mat-dialog-actions>
+    <button mat-raised-button type="button" color="primary" (click)="addNewExpense()" [disabled]="newExpenseForm.invalid">Add</button>
+    <span class="spacer"></span>
+    <button mat-raised-button type="button" color="primary" mat-dialog-close>Close</button>
+  </div>
+</ng-template>

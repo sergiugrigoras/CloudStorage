@@ -5,9 +5,7 @@
             <div class="container">
                 <a class="logo" routerLink="/">SCS</a>
                 <div *ngIf="isLargeDevice()">
-                    <button mat-button routerLink="/drive" routerLinkActive="selected">Drive</button>
-                    <button mat-button routerLink="/media" routerLinkActive="selected">Media</button>
-                    <button mat-button routerLink="/notes" routerLinkActive="selected">Notes</button>
+                    <button *ngFor="let route of routes" mat-button [routerLink]="route.route" routerLinkActive="selected">{{route.displayName}}</button>
                 </div>
                 <span class="spacer"></span>
                 <button mat-button (click)="toggleTheme()" matTooltip="Theme">
@@ -25,9 +23,7 @@
         </mat-toolbar-row>
         <mat-toolbar-row *ngIf="!isLargeDevice()" class="toolbar-small">
             <div class="container">
-                <button mat-button routerLink="/drive" routerLinkActive="selected">Drive</button>
-                <button mat-button routerLink="/media" routerLinkActive="selected">Media</button>
-                <button mat-button routerLink="/notes" routerLinkActive="selected">Notes</button>
+                <button *ngFor="let route of routes" mat-button [routerLink]="route.route" routerLinkActive="selected">{{route.displayName}}</button>
             </div>
         </mat-toolbar-row>
     </mat-toolbar>

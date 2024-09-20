@@ -1,8 +1,8 @@
 ﻿using System.Linq.Expressions;
 
-namespace CloudStorage.Models;
+namespace CloudStorage.Extensions;
 
-public static class Extenders
+public static class Extension
 {
     // https://stackoverflow.com/a/457328
     public static Expression<Func<T, bool>> AndAlso<T>(

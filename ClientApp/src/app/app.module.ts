@@ -49,6 +49,16 @@ import { MatCheckboxModule } from '@angular/material/checkbox';
 import { NgxMatSelectSearchModule } from 'ngx-mat-select-search';
 import {DragDropModule} from '@angular/cdk/drag-drop';
 import {MatBadgeModule} from "@angular/material/badge";
+import { ExpenseComponent } from './components/expense/expense.component';
+import {
+  MatCell,
+  MatCellDef,
+  MatColumnDef,
+  MatHeaderCell, MatHeaderCellDef,
+  MatHeaderRow, MatHeaderRowDef,
+  MatRow, MatRowDef,
+  MatTable
+} from "@angular/material/table";
 function tokenGetter() {
   return localStorage.getItem("jwt");
 }
@@ -71,41 +81,42 @@ function tokenGetter() {
         SpinnerComponent,
         MediaComponent,
         MediaItemComponent,
+        ExpenseComponent,
     ],
     bootstrap: [AppComponent], imports: [BrowserModule,
-        CommonModule,
-        AppRoutingModule,
-        FormsModule,
-        ReactiveFormsModule,
-        JwtModule.forRoot({
-            config: {
-                tokenGetter: tokenGetter
-            }
-        }),
-        BrowserAnimationsModule,
-        MatIconModule,
-        MatDialogModule,
-        MatToolbarModule,
-        MatSidenavModule,
-        MatListModule,
-        MatButtonModule,
-        MatMenuModule,
-        MatInputModule,
-        MatSnackBarModule,
-        MatCardModule,
-        MatDatepickerModule,
-        MatNativeDateModule,
-        MatFormFieldModule,
-        MatSelectModule,
-        MatTooltipModule,
-        MatProgressSpinnerModule,
-        MatButtonToggleModule,
-        MatProgressBarModule,
-        MatSlideToggleModule,
-        MatCheckboxModule,
-        NgxMatSelectSearchModule,
-        DragDropModule,
-        MatBadgeModule], providers: [
+    CommonModule,
+    AppRoutingModule,
+    FormsModule,
+    ReactiveFormsModule,
+    JwtModule.forRoot({
+      config: {
+        tokenGetter: tokenGetter
+      }
+    }),
+    BrowserAnimationsModule,
+    MatIconModule,
+    MatDialogModule,
+    MatToolbarModule,
+    MatSidenavModule,
+    MatListModule,
+    MatButtonModule,
+    MatMenuModule,
+    MatInputModule,
+    MatSnackBarModule,
+    MatCardModule,
+    MatDatepickerModule,
+    MatNativeDateModule,
+    MatFormFieldModule,
+    MatSelectModule,
+    MatTooltipModule,
+    MatProgressSpinnerModule,
+    MatButtonToggleModule,
+    MatProgressBarModule,
+    MatSlideToggleModule,
+    MatCheckboxModule,
+    NgxMatSelectSearchModule,
+    DragDropModule,
+    MatBadgeModule, MatTable, MatColumnDef, MatHeaderCell, MatCell, MatCellDef, MatHeaderRow, MatRow, MatRowDef, MatHeaderCellDef, MatHeaderRowDef], providers: [
         AuthGuard,
         {
             provide: HTTP_INTERCEPTORS,

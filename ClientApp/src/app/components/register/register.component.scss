@@ -1,15 +1,17 @@
 form button {
-    margin-right: .5rem;
-    margin-top: .5rem;
+  margin-right: .5rem;
+  margin-top: .5rem;
 }
 
 form {
+  width: 500px;
+  max-width: 85vw;
     >div {
-        margin-bottom: 1rem;
-        display: flex;
+      margin-bottom: 1rem;
+      display: flex;
 
-        mat-form-field {
-            flex: 1;
-        }
+      mat-form-field {
+          flex: 1;
+      }
     }
 }

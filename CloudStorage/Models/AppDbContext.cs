@@ -169,6 +169,23 @@ public partial class AppDbContext : DbContext
                 .HasMaxLength(255);
         });
 
+        modelBuilder.Entity<Category>().HasData(
+            new Category { Id = Guid.NewGuid(), Name = "Housing", Emoji = "🏠", UserId = null },
+            new Category { Id = Guid.NewGuid(), Name = "Utilities", Emoji = "💡", UserId = null },
+            new Category { Id = Guid.NewGuid(), Name = "Food & Dining", Emoji = "🍽️", UserId = null },
+            new Category { Id = Guid.NewGuid(), Name = "Transportation", Emoji = "🚗", UserId = null },
+            new Category { Id = Guid.NewGuid(), Name = "Health & Fitness", Emoji = "🏋️‍♂️", UserId = null },
+            new Category { Id = Guid.NewGuid(), Name = "Entertainment & Recreation", Emoji = "🎮", UserId = null },
+            new Category { Id = Guid.NewGuid(), Name = "Personal Care", Emoji = "💇‍♂️", UserId = null },
+            new Category { Id = Guid.NewGuid(), Name = "Education", Emoji = "🎓", UserId = null },
+            new Category { Id = Guid.NewGuid(), Name = "Insurance", Emoji = "🛡️", UserId = null },
+            new Category { Id = Guid.NewGuid(), Name = "Debt Payments", Emoji = "💳", UserId = null },
+            new Category { Id = Guid.NewGuid(), Name = "Savings & Investments", Emoji = "💰", UserId = null },
+            new Category { Id = Guid.NewGuid(), Name = "Gifts & Donations", Emoji = "🎁", UserId = null },
+            new Category { Id = Guid.NewGuid(), Name = "Travel", Emoji = "✈️", UserId = null },
+            new Category { Id = Guid.NewGuid(), Name = "Miscellaneous", Emoji = "📦", UserId = null }
+        );
+
         OnModelCreatingPartial(modelBuilder);
     }
 

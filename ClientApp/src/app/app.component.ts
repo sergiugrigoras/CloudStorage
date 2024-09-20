@@ -4,6 +4,7 @@ import { Router } from '@angular/router';
 import { tap } from 'rxjs/operators';
 import { AuthService } from './services/auth.service';
 import { OverlayContainer } from '@angular/cdk/overlay';
+import {AppRoute} from "./interfaces/app-route.interface";
 
 @Component({
   selector: 'app-root',
@@ -20,7 +21,12 @@ export class AppComponent implements OnInit, AfterViewInit {
   @HostBinding('class') hostClassName = '';
   @ViewChild('emptyDiv', { static: true }) emptyDiv: ElementRef<HTMLDivElement>;
   year = new Date().getFullYear();
-
+  routes: AppRoute[] = [
+    {route: '/drive', displayName: 'Drive'},
+    {route: '/media', displayName: 'Media'},
+    {route: '/notes', displayName: 'Notes'},
+    {route: '/expenses', displayName: 'Expenses'},
+  ];
   constructor(private authService: AuthService, private router: Router, private overlay: OverlayContainer, private elem: ElementRef) { }
   ngAfterViewInit(): void {
     const backTopButton = this.elem.nativeElement.querySelector('.back-top') as HTMLElement;

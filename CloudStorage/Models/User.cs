@@ -24,6 +24,7 @@ public class User
     public virtual ICollection<MediaAlbum> MediaAlbums { get; set; } = [];
     public ICollection<Expense> Expenses { get; set; } = [];
     public ICollection<PaymentMethod> PaymentMethods { get; set; } = [];
+    public ICollection<Category> CustomCategories { get; set; } = [];
 }
 
 public class TokenApiModel

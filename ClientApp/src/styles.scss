@@ -16,12 +16,6 @@ body {
     font-family: Roboto, "Helvetica Neue", sans-serif;
 }
 
-@media (min-width: 768px) {
-    mat-form-field {
-        max-width: 500px;
-    }
-}
-
 .container {
     padding-right: 15px;
     padding-left: 15px;

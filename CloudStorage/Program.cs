@@ -1,6 +1,5 @@
 using CloudStorage.Middleware;
 using CloudStorage.Models;
-using CloudStorage.Services;
 using FFMpegCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Http.Features;
@@ -8,6 +7,7 @@ using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using CloudStorage.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Configuration.AddEnvironmentVariables(prefix: "CloudStorage_");
@@ -63,16 +63,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJw
     };
 });
 
-builder.Services.AddSingleton<ContentAuthorization>();
-builder.Services.AddTransient<ITokenService, TokenService>();
-builder.Services.AddTransient<IFsoService, FsoService>();
-builder.Services.AddTransient<IMediaService, MediaService>();
-builder.Services.AddTransient<IUserService, UserService>();
-builder.Services.AddTransient<INoteService, NoteService>();
-if (builder.Environment.IsProduction())
-    builder.Services.AddSingleton<IMailService, MailService>();
-else
-    builder.Services.AddSingleton<IMailService>(s => new DevMailService(builder.Environment.ContentRootPath));
+builder.Services.RegisterServices(builder.Environment);
 
 builder.Services.AddControllers();
 builder.Services.AddSpaYarp();
