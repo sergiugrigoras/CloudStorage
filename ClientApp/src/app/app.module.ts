@@ -59,6 +59,9 @@ import {
   MatRow, MatRowDef,
   MatTable
 } from "@angular/material/table";
+import {BaseChartDirective, provideCharts, withDefaultRegisterables} from "ng2-charts";
+import { ExpenseChartComponent } from './components/expense-chart/expense-chart.component';
+import {MatPaginator} from "@angular/material/paginator";
 function tokenGetter() {
   return localStorage.getItem("jwt");
 }
@@ -82,6 +85,7 @@ function tokenGetter() {
         MediaComponent,
         MediaItemComponent,
         ExpenseComponent,
+        ExpenseChartComponent,
     ],
     bootstrap: [AppComponent], imports: [BrowserModule,
     CommonModule,
@@ -116,7 +120,7 @@ function tokenGetter() {
     MatCheckboxModule,
     NgxMatSelectSearchModule,
     DragDropModule,
-    MatBadgeModule, MatTable, MatColumnDef, MatHeaderCell, MatCell, MatCellDef, MatHeaderRow, MatRow, MatRowDef, MatHeaderCellDef, MatHeaderRowDef], providers: [
+    MatBadgeModule, MatTable, MatColumnDef, MatHeaderCell, MatCell, MatCellDef, MatHeaderRow, MatRow, MatRowDef, MatHeaderCellDef, MatHeaderRowDef, BaseChartDirective, MatPaginator], providers: [
         AuthGuard,
         {
             provide: HTTP_INTERCEPTORS,
@@ -129,6 +133,7 @@ function tokenGetter() {
         },
         { provide: MAT_FORM_FIELD_DEFAULT_OPTIONS, useValue: { appearance: 'outline' } },
         { provide: ErrorStateMatcher, useClass: ShowOnDirtyErrorStateMatcher },
-        provideHttpClient(withInterceptorsFromDi())
+        provideHttpClient(withInterceptorsFromDi()),
+        provideCharts(withDefaultRegisterables())
     ] })
 export class AppModule { }

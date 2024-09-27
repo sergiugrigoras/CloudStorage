@@ -28,3 +28,5 @@ export interface ExpenseFilter {
   endDate: Date | string,
   categories: string[],
 }
+
+export type ExpenseChartType = 'category' | 'day' | 'month';

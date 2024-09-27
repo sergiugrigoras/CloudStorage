@@ -5,7 +5,29 @@ import { tap } from 'rxjs/operators';
 import { AuthService } from './services/auth.service';
 import { OverlayContainer } from '@angular/cdk/overlay';
 import {AppRoute} from "./interfaces/app-route.interface";
+import {ThemeService} from "ng2-charts";
+import {ChartOptions} from "chart.js";
 
+const DARK_THEME_CHART_OVER: ChartOptions = {
+  plugins: {
+    legend: {
+      labels: {
+        color: 'white'
+      }
+    },
+  },
+  scales: {
+    x: {
+      ticks: { color: 'white' },
+      grid: { color: 'rgba(255,255,255,0.1)' }
+    },
+    y: {
+      ticks: { color: 'white' },
+      grid: { color: 'rgba(255,255,255,0.1)' }
+    }
+  }
+};
+const WHITE_THEME_CHART_OPTIONS: ChartOptions = {};
 @Component({
   selector: 'app-root',
   templateUrl: './app.component.html',
@@ -27,7 +49,7 @@ export class AppComponent implements OnInit, AfterViewInit {
     {route: '/notes', displayName: 'Notes'},
     {route: '/expenses', displayName: 'Expenses'},
   ];
-  constructor(private authService: AuthService, private router: Router, private overlay: OverlayContainer, private elem: ElementRef) { }
+  constructor(private authService: AuthService, private router: Router, private overlay: OverlayContainer, private elem: ElementRef, private themeService: ThemeService) { }
   ngAfterViewInit(): void {
     const backTopButton = this.elem.nativeElement.querySelector('.back-top') as HTMLElement;
     const intersectionCallback = (entries: IntersectionObserverEntry[]) => {
@@ -101,10 +123,11 @@ export class AppComponent implements OnInit, AfterViewInit {
     if (theme === 'light') {
       this.hostClassName = '';
       this.overlay.getContainerElement().classList.remove(this.darkClassName);
-
+      this.themeService.setColorschemesOptions(WHITE_THEME_CHART_OPTIONS);
     } else if (theme === 'dark') {
       this.hostClassName = this.darkClassName;
       this.overlay.getContainerElement().classList.add(this.darkClassName);
+      this.themeService.setColorschemesOptions(DARK_THEME_CHART_OVER);
     }
     if (save) {
       localStorage.setItem('theme', theme);

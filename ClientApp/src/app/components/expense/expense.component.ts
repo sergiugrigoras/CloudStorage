@@ -1,11 +1,13 @@
 import {Component, OnInit, TemplateRef, ViewChild} from '@angular/core';
 import {ExpenseService} from "../../services/expense.service";
 import {MatDialog} from "@angular/material/dialog";
-import {Category, Expense, ExpenseFilter, PaymentMethod} from "../../interfaces/expenses.interface";
+import {Category, Expense, ExpenseChartType, ExpenseFilter, PaymentMethod} from "../../interfaces/expenses.interface";
 import {forkJoin} from "rxjs";
 import {FormControl, FormGroup, Validators} from "@angular/forms";
 import {MatTableDataSource} from "@angular/material/table";
 import dayjs from "dayjs";
+import {ExpenseChartComponent} from "../expense-chart/expense-chart.component";
+import {MatPaginator} from "@angular/material/paginator";
 
 const EXPENSE_SORT_DATE = (expenseA: Expense, expenseB: Expense) => {
   const dateA = new Date(expenseA.date);
@@ -21,6 +23,9 @@ export class ExpenseComponent implements OnInit{
   @ViewChild('paymentMethods', { static: true }) paymentMethodsDialog: TemplateRef<never>;
   @ViewChild('categories', { static: true }) categoriesDialog: TemplateRef<never>;
   @ViewChild('addExpense', { static: true }) addExpenseDialog: TemplateRef<never>;
+  @ViewChild(MatPaginator) paginator: MatPaginator;
+
+  private _expenses: Expense[] = [];
   availablePaymentMethods: PaymentMethod[];
   availableCategories: Category[];
   newPaymentMethodValue = '';
@@ -28,7 +33,7 @@ export class ExpenseComponent implements OnInit{
   newExpenseForm: FormGroup;
   expenseFilterForm: FormGroup;
 
-  expenseDataSource: MatTableDataSource<Expense>;
+  expenseDataSource: MatTableDataSource<Expense> = null;
   displayedColumns = ['description', 'amount', 'category', 'paymentMethod', 'date'];
   constructor(
     private readonly expenseService: ExpenseService,
@@ -143,9 +148,14 @@ export class ExpenseComponent implements OnInit{
       categories: this.expenseFilterForm.get('categories')?.value,
     }
     this.expenseService.getExpenses(payload).subscribe(result => {
-      this.expenseDataSource = new MatTableDataSource(result.sort(EXPENSE_SORT_DATE));
-    })
+      const expenseData = result.sort(EXPENSE_SORT_DATE);
+      this._expenses = expenseData;
+      this.expenseDataSource = new MatTableDataSource(expenseData);
+      this.expenseDataSource.paginator = this.paginator;
+    });
   }
+
+
 
   private initForms() {
     this.newExpenseForm = new FormGroup({
@@ -181,4 +191,9 @@ export class ExpenseComponent implements OnInit{
     return dayjs(date).format('YYYY-MM-DD');
   }
 
+  viewChart(type: ExpenseChartType) {
+    const ref = this.dialog.open(ExpenseChartComponent, { hasBackdrop: false, disableClose: true, width: '1000px'});
+    ref.componentInstance.expenses = this._expenses;
+    ref.componentInstance.chartType = type;
+  }
 }

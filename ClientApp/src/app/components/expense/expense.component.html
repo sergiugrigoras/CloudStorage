@@ -23,6 +23,14 @@
     <button mat-icon-button color="primary" (click)="openExpenseForm()" matTooltip="Add Expense">
       <mat-icon>add</mat-icon>
     </button>
+    <button mat-icon-button color="primary" [matMenuTriggerFor]="chartMenu" matTooltip="Chart">
+      <mat-icon>bar_chart</mat-icon>
+    </button>
+    <mat-menu #chartMenu="matMenu">
+      <button mat-menu-item (click)="viewChart('category')">Total by Category</button>
+      <button mat-menu-item (click)="viewChart('day')">Total by Day</button>
+      <button mat-menu-item (click)="viewChart('month')">Total by Month</button>
+    </mat-menu>
     <button mat-icon-button color="primary" [matMenuTriggerFor]="settingsMenu" matTooltip="Settings">
       <mat-icon>settings</mat-icon>
     </button>
@@ -33,6 +41,8 @@
   </div>
 </div>
 
+<mat-paginator [pageSizeOptions]="[10, 50, 100]" showFirstLastButtons [style.display]="expenseDataSource === null ? 'none' : 'block'">
+</mat-paginator>
 <div *ngIf="expenseDataSource; else loading" class="expense__table-container">
   <table mat-table [dataSource]="expenseDataSource" class="mat-elevation-z8">
 

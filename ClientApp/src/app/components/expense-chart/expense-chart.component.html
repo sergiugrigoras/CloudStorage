@@ -1,0 +1,63 @@
+<ng-container
+  [ngTemplateOutlet]="template"
+>
+</ng-container>
+
+<ng-template #byCategoryChart>
+  <h3 mat-dialog-title cdkDrag cdkDragRootElement=".cdk-overlay-pane" cdkDragHandle>Total by Category</h3>
+  <div mat-dialog-content class="expense__chart-container">
+    <canvas
+      baseChart
+      [type]="'pie'"
+      [datasets]="byCategoryChartDatasets"
+      [legend]="true"
+      [labels]="byCategoryChartLabels"
+      [options]="pieChartOptions"
+    > </canvas>
+  </div>
+  <div mat-dialog-actions align="end">
+    <button mat-raised-button type="button" color="primary" mat-dialog-close>Close</button>
+  </div>
+</ng-template>
+
+<ng-template #byDayChart>
+  <h3 mat-dialog-title cdkDrag cdkDragRootElement=".cdk-overlay-pane" cdkDragHandle>Total for each day</h3>
+  <div mat-dialog-content>
+    <div class="expense__chart-container">
+      <canvas baseChart
+              [datasets]="byDayChartDatasets"
+              [labels]="byDayChartLabels"
+              [options]="lineChartOptions"
+              [legend]="true"
+              [type]="'line'">
+      </canvas>
+    </div>
+    <div>
+      <mat-slide-toggle color="primary" (change)="splitByCategory($event.checked, 'day')">Split by Category</mat-slide-toggle>
+    </div>
+  </div>
+  <div mat-dialog-actions align="end">
+    <button mat-raised-button type="button" color="primary" mat-dialog-close>Close</button>
+  </div>
+</ng-template>
+
+<ng-template #byMonthChart>
+  <h3 mat-dialog-title cdkDrag cdkDragRootElement=".cdk-overlay-pane" cdkDragHandle>Total for each month</h3>
+  <div mat-dialog-content>
+    <div class="expense__chart-container">
+      <canvas baseChart
+              [datasets]="byMonthChartDatasets"
+              [labels]="byMonthChartLabels"
+              [options]="barChartOptions"
+              [legend]="true"
+              [type]="'bar'">
+      </canvas>
+    </div>
+    <div>
+      <mat-slide-toggle color="primary" (change)="splitByCategory($event.checked, 'month')">Split by Category</mat-slide-toggle>
+    </div>
+  </div>
+  <div mat-dialog-actions align="end">
+    <button mat-raised-button type="button" color="primary" mat-dialog-close>Close</button>
+  </div>
+</ng-template>
