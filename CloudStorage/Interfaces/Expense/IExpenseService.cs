@@ -25,4 +25,6 @@ public interface IExpenseService
     Task<PaymentMethod> UpdatePaymentMethodAsync(PaymentMethod paymentMethod);
     Task<PaymentMethod> GetPaymentMethodAsync(Guid id);
     Task<IEnumerable<PaymentMethod>> GetPaymentMethodsAsync(PaymentMethodFilter filter);
+
+    Task<Guid?> SuggestCategoryIdAsync(string text);
 }

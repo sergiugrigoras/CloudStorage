@@ -22,6 +22,9 @@ public static class ServiceExtension
         services.AddScoped<IExpenseUnitOfWork, ExpenseUnitOfWork>();
         services.AddScoped<IExpenseService, ExpenseService>();
 
+        services.AddHttpClient<GeminiService>();
+        services.AddScoped<IGeminiService, GeminiService>();
+        
         if (environment.IsProduction())
             services.AddSingleton<IMailService, MailService>();
         else

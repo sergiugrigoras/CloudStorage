@@ -63,4 +63,8 @@ export class ExpenseService {
     return this.http.post<PaymentMethod>(`${API_URL}/api/payment-method`, data, HTTP_OPTIONS);
   }
 
+  suggestCategoryForExpense(text: string) {
+    return this.http.get<string>(`${API_URL}/api/expense/suggest-category?text=${text}`);
+  }
+
 }

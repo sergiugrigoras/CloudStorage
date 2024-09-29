@@ -1,12 +1,16 @@
-using CloudStorage.Extensions;
+using System.Text.Json;
+using System.Text.RegularExpressions;
+using CloudStorage.Interfaces;
 using CloudStorage.Interfaces.Expense;
 using CloudStorage.Models;
 using CloudStorage.ViewModels.Expense;
 
 namespace CloudStorage.Services;
 
-public class ExpenseService(IExpenseUnitOfWork unitOfWork) : IExpenseService
+public partial class ExpenseService(IExpenseUnitOfWork unitOfWork, IGeminiService geminiService) : IExpenseService
 {
+    private readonly IGeminiService _geminiService = geminiService ?? throw new ArgumentNullException(nameof(geminiService));
+
     public Expense CreateExpense(decimal amount, string description, DateTime date, Guid userId, Guid categoryId,
         Guid paymentMethodId)
     {
@@ -125,4 +129,28 @@ public class ExpenseService(IExpenseUnitOfWork unitOfWork) : IExpenseService
     {
         return unitOfWork.PaymentMethods.GetAsync(filter.ToExpression());
     }
+
+    public async Task<Guid?> SuggestCategoryIdAsync(string text)
+    {
+        var categories = await GetCategoriesAsync();
+        var categoriesList = categories.Select(x => new {Name = x.Name.Replace("&", "and"), x.Id}).ToArray();
+        var serializedCategories = JsonSerializer.Serialize(categoriesList);
+        var prompt = $"Here is a list or categories with Name and Id: {serializedCategories}. What is the best category for the following expense: {text}? Reply only with the category Id";
+        try
+        {
+            var geminiResponse = await _geminiService.SendRequestAsync(prompt);
+            var part = geminiResponse.Candidates.FirstOrDefault()?.Content.Parts.FirstOrDefault();
+            var id = NewLineRegex().Replace(part?.Text ?? string.Empty, "");
+            
+            return Guid.TryParse(id, out var categoryId) ? categoryId : null;
+        }
+        catch
+        {
+            return null;
+        }
+        
+    }
+
+    [GeneratedRegex(@"\t|\n|\r")]
+    private static partial Regex NewLineRegex();
 }

@@ -1,13 +1,14 @@
-import {Component, OnInit, TemplateRef, ViewChild} from '@angular/core';
+import {Component, OnDestroy, OnInit, TemplateRef, ViewChild} from '@angular/core';
 import {ExpenseService} from "../../services/expense.service";
 import {MatDialog} from "@angular/material/dialog";
 import {Category, Expense, ExpenseChartType, ExpenseFilter, PaymentMethod} from "../../interfaces/expenses.interface";
-import {forkJoin} from "rxjs";
+import {EMPTY, forkJoin, Subject, takeUntil} from "rxjs";
 import {FormControl, FormGroup, Validators} from "@angular/forms";
 import {MatTableDataSource} from "@angular/material/table";
 import dayjs from "dayjs";
 import {ExpenseChartComponent} from "../expense-chart/expense-chart.component";
 import {MatPaginator} from "@angular/material/paginator";
+import {debounceTime, switchMap, tap} from "rxjs/operators";
 
 const EXPENSE_SORT_DATE = (expenseA: Expense, expenseB: Expense) => {
   const dateA = new Date(expenseA.date);
@@ -19,7 +20,7 @@ const EXPENSE_SORT_DATE = (expenseA: Expense, expenseB: Expense) => {
   templateUrl: './expense.component.html',
   styleUrl: './expense.component.scss'
 })
-export class ExpenseComponent implements OnInit{
+export class ExpenseComponent implements OnInit, OnDestroy {
   @ViewChild('paymentMethods', { static: true }) paymentMethodsDialog: TemplateRef<never>;
   @ViewChild('categories', { static: true }) categoriesDialog: TemplateRef<never>;
   @ViewChild('addExpense', { static: true }) addExpenseDialog: TemplateRef<never>;
@@ -35,10 +36,16 @@ export class ExpenseComponent implements OnInit{
 
   expenseDataSource: MatTableDataSource<Expense> = null;
   displayedColumns = ['description', 'amount', 'category', 'paymentMethod', 'date'];
+  private readonly destroy$ = new Subject<void>();
+
   constructor(
     private readonly expenseService: ExpenseService,
     private dialog: MatDialog,
   ) {}
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
 
   ngOnInit(): void {
     this.initForms();
@@ -58,7 +65,12 @@ export class ExpenseComponent implements OnInit{
   }
 
   openExpenseForm() {
-    this.dialog.open(this.addExpenseDialog, { hasBackdrop: true, disableClose: false, width: '600px'});
+    this.dialog.open(this.addExpenseDialog, { hasBackdrop: true, disableClose: false, width: '600px'})
+      .afterClosed()
+      .subscribe(() => {
+        const dateValue = this.todayDate()
+        this.newExpenseForm.reset({date: dateValue});
+      });
   }
 
   updatePaymentMethod(id: string, value: string, checked: boolean) {
@@ -155,16 +167,32 @@ export class ExpenseComponent implements OnInit{
     });
   }
 
-
-
   private initForms() {
+    const categoryControl = new FormControl<string>(null, Validators.required);
+    const descriptionControl = new FormControl<string>('', Validators.required);
+    descriptionControl.valueChanges.pipe(
+      takeUntil(this.destroy$),
+      debounceTime(250),
+      switchMap(value => {
+        if (value) {
+          return this.expenseService.suggestCategoryForExpense(value)
+        }
+        return EMPTY;
+      }),
+      tap(categoryId => {
+        const category = this.availableCategories.find(x => x.id === categoryId?.trim());
+        categoryControl.setValue(category?.id);
+      })
+    ).subscribe();
+
     this.newExpenseForm = new FormGroup({
-      description: new FormControl<string>('', Validators.required),
+      description: descriptionControl,
       amount: new FormControl<number>(null, Validators.required),
       date: new FormControl<Date>(this.todayDate(), Validators.required),
-      categoryId: new FormControl<string>(null, Validators.required),
+      categoryId: categoryControl,
       paymentMethodId: new FormControl<string>(null, Validators.required),
     });
+
     const today = this.todayDate();
     const lastMonth = dayjs(today).add(-1, 'month').toDate();
     this.expenseFilterForm = new FormGroup({

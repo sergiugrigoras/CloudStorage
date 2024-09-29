@@ -1,3 +1,4 @@
+using CloudStorage.Interfaces;
 using CloudStorage.Interfaces.Expense;
 using CloudStorage.Models;
 using CloudStorage.Services;
@@ -40,5 +41,12 @@ public class ExpenseController(IUserService userService, IExpenseService expense
         {
             return StatusCode(500);
         }
+    }
+
+    [HttpGet("suggest-category")]
+    public async Task<IActionResult> GenerateCategoryAsync(string text)
+    {
+        var category = await _expenseService.SuggestCategoryIdAsync(text);
+        return new JsonResult(category);
     }
 }
