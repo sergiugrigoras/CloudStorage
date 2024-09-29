@@ -9,6 +9,7 @@ import dayjs from "dayjs";
 import {ExpenseChartComponent} from "../expense-chart/expense-chart.component";
 import {MatPaginator} from "@angular/material/paginator";
 import {debounceTime, switchMap, tap} from "rxjs/operators";
+import {MatSnackBar} from "@angular/material/snack-bar";
 
 const EXPENSE_SORT_DATE = (expenseA: Expense, expenseB: Expense) => {
   const dateA = new Date(expenseA.date);
@@ -21,9 +22,10 @@ const EXPENSE_SORT_DATE = (expenseA: Expense, expenseB: Expense) => {
   styleUrl: './expense.component.scss'
 })
 export class ExpenseComponent implements OnInit, OnDestroy {
-  @ViewChild('paymentMethods', { static: true }) paymentMethodsDialog: TemplateRef<never>;
-  @ViewChild('categories', { static: true }) categoriesDialog: TemplateRef<never>;
-  @ViewChild('addExpense', { static: true }) addExpenseDialog: TemplateRef<never>;
+  @ViewChild('paymentMethods', { static: true }) paymentMethodsTemplateRef: TemplateRef<never>;
+  @ViewChild('categories', { static: true }) categoriesTemplateRef: TemplateRef<never>;
+  @ViewChild('manageExpense', { static: true }) manageExpenseTemplateRef: TemplateRef<never>;
+  @ViewChild('confirmExpenseDelete', { static: true }) expenseDeleteTemplateRef: TemplateRef<never>;
   @ViewChild(MatPaginator) paginator: MatPaginator;
 
   private _expenses: Expense[] = [];
@@ -31,7 +33,9 @@ export class ExpenseComponent implements OnInit, OnDestroy {
   availableCategories: Category[];
   newPaymentMethodValue = '';
   newCategoryValue = '';
-  newExpenseForm: FormGroup;
+
+  addExpenseForm: FormGroup;
+  updateExpenseForm: FormGroup;
   expenseFilterForm: FormGroup;
 
   expenseDataSource: MatTableDataSource<Expense> = null;
@@ -41,6 +45,7 @@ export class ExpenseComponent implements OnInit, OnDestroy {
   constructor(
     private readonly expenseService: ExpenseService,
     private dialog: MatDialog,
+    private _snackBar: MatSnackBar,
   ) {}
   ngOnDestroy(): void {
     this.destroy$.next();
@@ -57,19 +62,24 @@ export class ExpenseComponent implements OnInit, OnDestroy {
   }
 
   managePaymentMethods() {
-    this.dialog.open(this.paymentMethodsDialog, { hasBackdrop: true, disableClose: false, width: '500px'});
+    this.dialog.open(this.paymentMethodsTemplateRef, { hasBackdrop: true, disableClose: false, width: '500px'});
   }
 
   manageCategories() {
-    this.dialog.open(this.categoriesDialog, { hasBackdrop: true, disableClose: false, width: '500px'});
+    this.dialog.open(this.categoriesTemplateRef, { hasBackdrop: true, disableClose: false, width: '500px'});
   }
 
-  openExpenseForm() {
-    this.dialog.open(this.addExpenseDialog, { hasBackdrop: true, disableClose: false, width: '600px'})
+  openExpenseForm(mode: 'add' | 'update') {
+    this.dialog.open(this.manageExpenseTemplateRef, {
+      hasBackdrop: true,
+      disableClose: true,
+      width: '600px',
+      data: {mode}
+    })
       .afterClosed()
       .subscribe(() => {
         const dateValue = this.todayDate()
-        this.newExpenseForm.reset({date: dateValue});
+        this.addExpenseForm.reset({date: dateValue});
       });
   }
 
@@ -138,20 +148,6 @@ export class ExpenseComponent implements OnInit, OnDestroy {
     })
   }
 
-  addNewExpense() {
-    const dateValue = this.newExpenseForm.get('date')?.value;
-    const payload: Expense = {
-      id: null,
-      date: this.formatDate(dateValue),
-      amount: this.newExpenseForm.get('amount')?.value,
-      categoryId: this.newExpenseForm.get('categoryId')?.value,
-      description: this.newExpenseForm.get('description')?.value,
-      paymentMethodId: this.newExpenseForm.get('paymentMethodId')?.value,
-    }
-    this.expenseService.addExpense(payload).subscribe(() => {
-      this.newExpenseForm.reset({date: dateValue});
-    });
-  }
 
   getExpenses() {
     const payload: ExpenseFilter = {
@@ -185,7 +181,9 @@ export class ExpenseComponent implements OnInit, OnDestroy {
       })
     ).subscribe();
 
-    this.newExpenseForm = new FormGroup({
+    // New Expense Form
+    this.addExpenseForm = new FormGroup({
+      id: new FormControl<string>(null),
       description: descriptionControl,
       amount: new FormControl<number>(null, Validators.required),
       date: new FormControl<Date>(this.todayDate(), Validators.required),
@@ -193,6 +191,17 @@ export class ExpenseComponent implements OnInit, OnDestroy {
       paymentMethodId: new FormControl<string>(null, Validators.required),
     });
 
+    // Update Expense Form
+    this.updateExpenseForm = new FormGroup({
+      id: new FormControl<string>(null, Validators.required),
+      description: new FormControl<string>(null, Validators.required),
+      amount: new FormControl<number>(null, Validators.required),
+      date: new FormControl<Date>(this.todayDate(), Validators.required),
+      categoryId: new FormControl<string>(null, Validators.required),
+      paymentMethodId: new FormControl<string>(null, Validators.required),
+    });
+
+    // Expense Filter Form
     const today = this.todayDate();
     const lastMonth = dayjs(today).add(-1, 'month').toDate();
     this.expenseFilterForm = new FormGroup({
@@ -223,5 +232,89 @@ export class ExpenseComponent implements OnInit, OnDestroy {
     const ref = this.dialog.open(ExpenseChartComponent, { hasBackdrop: false, disableClose: true, width: '1000px'});
     ref.componentInstance.expenses = this._expenses;
     ref.componentInstance.chartType = type;
+  }
+
+  editExpense(id: any) {
+    if(typeof id !== 'string') return;
+    const expense = this._expenses.find(x => x.id === id);
+    if (expense === undefined) return;
+    this.updateExpenseForm.setValue({
+      id: expense.id,
+      description: expense.description,
+      amount: expense.amount,
+      date: expense.date,
+      paymentMethodId: expense.paymentMethodId,
+      categoryId: expense.categoryId,
+    });
+    this.openExpenseForm('update');
+  }
+
+
+  deleteExpense(id: any) {
+    if(typeof id !== 'string') return;
+    const expense = this._expenses.find(x => x.id === id);
+    if (expense === undefined) return;
+    this.dialog.open(this.expenseDeleteTemplateRef, {
+      hasBackdrop: true,
+      disableClose: false,
+      width: '500px',
+      data: expense.description
+    }).afterClosed()
+      .pipe(
+        switchMap(dialogResult => {
+          if (dialogResult) {
+            return this.expenseService.deleteExpense(id);
+          }
+          return EMPTY;
+        }),
+      )
+      .subscribe(() => {
+        this.getExpenses();
+      });
+  }
+
+  getExpenseForm(mode: 'add' | 'update') {
+    switch (mode) {
+      case 'update': {
+        return this.updateExpenseForm;
+      }
+      case 'add': {
+        return this.addExpenseForm;
+      }
+      default: {
+        return null;
+      }
+    }
+  }
+
+  submitExpenseForm(mode: 'add' | 'update') {
+    const form = this.getExpenseForm(mode);
+    if (form === null) return;
+
+    const dateValue = form.get('date')?.value;
+    const payload: Expense = {
+      id: form.get('id')?.value,
+      date: this.formatDate(dateValue),
+      amount: form.get('amount')?.value,
+      categoryId: form.get('categoryId')?.value,
+      description: form.get('description')?.value,
+      paymentMethodId: form.get('paymentMethodId')?.value,
+    }
+    if (mode === 'add') {
+      this.expenseService.addExpense(payload).subscribe(() => {
+        this.addExpenseForm.reset({date: dateValue});
+        this._snackBar.open('Success', 'Ok', { duration: 2000 });
+        this.getExpenses();
+      });
+      return;
+    }
+    if (mode === 'update') {
+      this.expenseService.updateExpense(payload).subscribe(() => {
+        this.addExpenseForm.reset({date: dateValue});
+        this._snackBar.open('Success', 'Ok', { duration: 2000 });
+        this.getExpenses();
+      });
+      return;
+    }
   }
 }

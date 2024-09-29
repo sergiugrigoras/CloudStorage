@@ -58,6 +58,11 @@ public partial class ExpenseService(IExpenseUnitOfWork unitOfWork, IGeminiServic
         await unitOfWork.SaveAsync();
     }
 
+    public async Task<Expense> GetExpenseAsync(Guid id)
+    {
+        return await unitOfWork.Expenses.GetAsync(id);
+    }
+
     public Task<IEnumerable<Expense>> GetExpensesAsync(ExpenseFilter filter)
     {
         return unitOfWork.Expenses.GetAsync(filter.ToExpression(),"Category,PaymentMethod");

@@ -12,4 +12,13 @@ public class Expense
     public User User { get; set; }
     public Guid PaymentMethodId { get; set; }
     public PaymentMethod PaymentMethod { get; set; }
+
+    public void UpdateValues(string description, decimal amount, DateTime date, Guid categoryId, Guid paymentMethodId)
+    {
+        Description = description;
+        Amount = amount;
+        Date = date;
+        CategoryId = categoryId;
+        PaymentMethodId = paymentMethodId;
+    }
 }

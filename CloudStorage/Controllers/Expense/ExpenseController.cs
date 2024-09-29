@@ -43,6 +43,43 @@ public class ExpenseController(IUserService userService, IExpenseService expense
         }
     }
 
+    [HttpPut]
+    public async Task<IActionResult> UpdateExpenseAsync([FromBody] ExpenseViewModel viewModel)
+    {
+        var user = await _userService.GetUserAsync(User);
+        if (user == null) return Unauthorized();
+        try
+        {
+            var expense = await _expenseService.GetExpenseAsync(viewModel.Id.GetValueOrDefault());
+            if (expense == null || expense.UserId != user.Id) return BadRequest();
+            expense.UpdateValues(viewModel.Description, viewModel.Amount, viewModel.Date, viewModel.CategoryId, viewModel.PaymentMethodId);
+            await _expenseService.UpdateExpenseAsync(expense);
+            return new JsonResult(new ExpenseViewModel(expense));
+        }
+        catch
+        {
+            return StatusCode(500);
+        }
+    }
+
+    [HttpDelete]
+    public async Task<IActionResult> DeleteExpenseAsync([FromQuery] Guid id)
+    {
+        var user = await _userService.GetUserAsync(User);
+        if (user == null) return Unauthorized();
+        try
+        {
+            var expense = await _expenseService.GetExpenseAsync(id);
+            if (expense == null || expense.UserId != user.Id) return BadRequest();
+            await _expenseService.DeleteExpenseAsync(expense);
+            return Ok();
+        }
+        catch
+        {
+            return StatusCode(500);
+        }
+    }
+
     [HttpGet("suggest-category")]
     public async Task<IActionResult> GenerateCategoryAsync(string text)
     {

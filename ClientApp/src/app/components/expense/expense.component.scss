@@ -53,13 +53,23 @@ input.expense-amount {
     max-width: 90vw;
   }
 }
-.expense__table-container {
-  overflow-y: auto;
-  table {
-    width: 100%;
+.expense__table {
+  &-container {
+    overflow-y: auto;
+    table {
+      width: 100%;
+    }
+    th, td {
+      white-space: nowrap;
+    }
   }
-  th, td {
-    white-space: nowrap;
+  &-description-cell {
+    > span {
+      cursor: pointer;
+    }
+    > span:hover {
+      text-decoration: underline;
+    }
   }
 }
 
@@ -80,3 +90,12 @@ input.expense-amount {
   }
 }
 
+.text-highlight {
+  text-decoration: underline;
+  font-style: italic;
+  font-weight: bolder;
+}
+
+.text-center {
+  text-align: center;
+}

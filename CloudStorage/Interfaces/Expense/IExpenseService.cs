@@ -11,7 +11,9 @@ public interface IExpenseService
     Task<Models.Expense> UpdateExpenseAsync(Models.Expense expense);
     Task DeleteExpenseAsync(Models.Expense expense);
     Task DeleteExpenseAsync(Guid id);
+    Task<Models.Expense> GetExpenseAsync(Guid id);
     Task<IEnumerable<Models.Expense>> GetExpensesAsync(ExpenseFilter filter);
+    
     
     Task<Category> AddUserCategoryAsync(Category category);
     Task<Category> UpdateUserCategoryAsync(Category category);

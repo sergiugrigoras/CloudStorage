@@ -34,7 +34,7 @@ export class ExpenseService {
   updateExpense(payload: Expense) {
     return this.http.put<Expense>(`${API_URL}/api/expense`, payload);
   }
-  deleteExpense(id: number) {
+  deleteExpense(id: string) {
     return this.http.delete<Expense>(`${API_URL}/api/expense?id=${id}`);
   }
 
