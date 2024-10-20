@@ -2,8 +2,8 @@
 {
     public class MediaToAlbumViewModel
     {
-        public ICollection<Guid> AlbumsIds { get; set; }
-        public ICollection<Guid> MediaObjectsIds { get; set; }
+        public IEnumerable<Guid> AlbumsIds { get; set; }
+        public IEnumerable<Guid> MediaObjectsIds { get; set; }
         public MediaToAlbumViewModel()
         {
 

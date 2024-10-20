@@ -144,13 +144,13 @@ export class MediaComponent implements OnInit, OnDestroy {
             return this.mediaService.getAlbumContent(id);
           } else if (page === 'favorites') {
             this.page = page;
-            return this.mediaService.getAllMediaFiles({favorite: true, deleted: false});
+            return this.mediaService.getMediaFiles({favorite: true, deleted: false});
           } else if (page === 'trash') {
             this.page = page;
-            return this.mediaService.getAllMediaFiles({deleted: true});
+            return this.mediaService.getMediaFiles({deleted: true});
           } else {
             this.page = 'home';
-            return this.mediaService.getAllMediaFiles({deleted: false})
+            return this.mediaService.getMediaFiles({deleted: false})
           }
         }),
         catchError(error => {

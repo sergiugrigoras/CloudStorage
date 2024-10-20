@@ -4,6 +4,7 @@ using CloudStorage.Interfaces;
 using CloudStorage.Interfaces.Expense;
 using CloudStorage.Models;
 using CloudStorage.ViewModels.Expense;
+using Microsoft.EntityFrameworkCore;
 
 namespace CloudStorage.Services;
 
@@ -63,19 +64,19 @@ public partial class ExpenseService(IExpenseUnitOfWork unitOfWork, IGeminiServic
         return await unitOfWork.Expenses.GetAsync(id);
     }
 
-    public Task<IEnumerable<Expense>> GetExpensesAsync(ExpenseFilter filter)
+    public async Task<IEnumerable<Expense>> GetExpensesAsync(ExpenseFilter filter)
     {
-        return unitOfWork.Expenses.GetAsync(filter.ToExpression(),"Category,PaymentMethod");
+        return await unitOfWork.Expenses.Query(filter.ToExpression(),"Category,PaymentMethod").ToArrayAsync();
     }
 
     public async Task<IEnumerable<Category>> GetCategoriesAsync()
     {
-        return await unitOfWork.Categories.GetAsync(x => x.UserId == null);
+        return await unitOfWork.Categories.Query(x => x.UserId == null).ToArrayAsync();
     }
 
     public async Task<IEnumerable<Category>> GetUserCategoriesAsync(CategoryFilter filter)
     {
-        return await unitOfWork.Categories.GetAsync(filter.ToExpression());
+        return await unitOfWork.Categories.Query(filter.ToExpression()).ToArrayAsync();
     }
 
     public async Task<Category> GetCategoryAsync(Guid id)
@@ -130,9 +131,9 @@ public partial class ExpenseService(IExpenseUnitOfWork unitOfWork, IGeminiServic
         return await unitOfWork.PaymentMethods.GetAsync(paymentMethod.Id);
     }
     
-    public Task<IEnumerable<PaymentMethod>> GetPaymentMethodsAsync(PaymentMethodFilter filter)
+    public async Task<IEnumerable<PaymentMethod>> GetPaymentMethodsAsync(PaymentMethodFilter filter)
     {
-        return unitOfWork.PaymentMethods.GetAsync(filter.ToExpression());
+        return await unitOfWork.PaymentMethods.Query(filter.ToExpression()).ToArrayAsync();
     }
 
     public async Task<Guid?> SuggestCategoryIdAsync(string text)

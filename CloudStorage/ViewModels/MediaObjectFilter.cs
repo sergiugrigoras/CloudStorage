@@ -8,7 +8,8 @@ public class MediaObjectFilter
 {
     public bool? Favorite { get; set; }
     public bool? Deleted { get; set; }
-    public ICollection<Guid> Ids { get; set; }
+    public IEnumerable<Guid> Ids { get; set; } = [];
+    public Guid UserId { get; set; } = Guid.Empty;
 
     public MediaObjectFilter()
     {
@@ -16,7 +17,7 @@ public class MediaObjectFilter
 
     public Expression<Func<MediaObject, bool>> ToExpression()
     {
-        Expression<Func<MediaObject, bool>> expression = x => true;
+        Expression<Func<MediaObject, bool>> expression = x => x.OwnerId == UserId;;
 
         if (Favorite.HasValue)
             expression = expression.AndAlso(x => x.Favorite == Favorite.Value);

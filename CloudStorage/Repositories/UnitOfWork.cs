@@ -3,8 +3,10 @@ using CloudStorage.Models;
 
 namespace CloudStorage.Repositories;
 
-public class UnitOfWork(AppDbContext context) : IUnitOfWork
+public abstract class UnitOfWork(AppDbContext context) : IUnitOfWork
 {
+    private AppDbContext Context { get; }= context;
+
     private bool _disposed = false;
 
     protected virtual void Dispose(bool disposing)
@@ -13,7 +15,7 @@ public class UnitOfWork(AppDbContext context) : IUnitOfWork
         {
             if (disposing)
             {
-                context.Dispose();
+                Context.Dispose();
             }
         }
         _disposed = true;
@@ -26,6 +28,6 @@ public class UnitOfWork(AppDbContext context) : IUnitOfWork
 
     public async Task<int> SaveAsync()
     {
-        return await context.SaveChangesAsync();
+        return await Context.SaveChangesAsync();
     }
 }

@@ -1,4 +1,4 @@
-using CloudStorage.Interfaces;
+using CloudStorage.Interfaces.Expense;
 using CloudStorage.Models;
 
 namespace CloudStorage.Repositories.Expense;

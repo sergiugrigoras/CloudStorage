@@ -1,6 +1,7 @@
-﻿using CloudStorage.Services;
+﻿using CloudStorage.Interfaces.Media;
+using CloudStorage.Services;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.FileProviders;
 
 namespace CloudStorage.Controllers;
 
@@ -15,8 +16,8 @@ public class ContentController(IMediaService mediaService, ContentAuthorization 
         if (mediaObject == null) return NotFound();
         var accessKey = Request.Cookies["ContentKey"];
         if (!contentAuthorization.ValidKey(mediaObject.OwnerId, accessKey)) return Forbid();
-        var stream = await mediaService.GetMediaAsync(id);
-        if (stream == null) return StatusCode(500, "Unable to retrieve the stream.");
+        var stream = await mediaService.GetMediaStreamAsync(id);
+        if (stream == null) return NotFound();
         return File(stream, mediaObject.ContentType, enableRangeProcessing: true);
     }
 }

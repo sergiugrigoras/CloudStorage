@@ -1,4 +1,5 @@
-﻿using CloudStorage.Services;
+﻿using CloudStorage.Interfaces.Media;
+using CloudStorage.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using CloudStorage.ViewModels;
@@ -14,14 +15,17 @@ public class MediaController(
     ContentAuthorization contentAuthorization)
     : ControllerBase
 {
-    private const string SnapshotContentType = "image/png";
+    private const string SnapshotContentType = "image/jpg";
     private const string ContentKey = "ContentKey";
 
-    [HttpPost("all")]
-    public async Task<IActionResult> GetMediaFolderAsync([FromBody]MediaObjectFilter filter)
+    [HttpPost("search")]
+    public async Task<IActionResult> SearchMediaObjectsAsync([FromBody]MediaObjectFilter filter)
     {
         var user = await userService.GetUserAsync(User);
-        var result = await mediaService.GetAllMediaFilesAsync(user, filter);
+        if (user == null) return Unauthorized();
+        filter.UserId = user.Id;
+        var mediaObjects = await mediaService.GetMediaObjectsAsync(filter);
+        var result = mediaObjects.Select(x => new MediaObjectViewModel(x));
         return new JsonResult(result);
     }
 
@@ -29,9 +33,14 @@ public class MediaController(
     public async Task<IActionResult> GetSnapshotAsync(Guid id)
     {
         var user = await userService.GetUserAsync(User);
-        var stream = await mediaService.GetSnapshotAsync(user, id);
-        string contentType = SnapshotContentType;
-        return File(stream, contentType);
+        if (user == null) return Unauthorized();
+        var mediaObject = await mediaService.GetMediaObjectByIdAsync(id);
+        if (mediaObject == null) return NotFound();
+        if (mediaObject.OwnerId != user.Id) return Forbid();
+        
+        var stream = await mediaService.GetSnapshotStreamAsync(id);
+        if (stream == null) return NotFound();
+        return File(stream, SnapshotContentType);
     }
 
     [HttpGet("{id:guid}")]
@@ -42,9 +51,10 @@ public class MediaController(
         var mediaObject = await mediaService.GetMediaObjectByIdAsync(id);
         if (mediaObject == null) return NotFound();
         if (mediaObject.OwnerId != user.Id) return Forbid();
-        var stream = await mediaService.GetMediaAsync(id);
-        if (stream == null) return StatusCode(500, "Unable to retrieve the stream.");
-
+        
+        var stream = await mediaService.GetMediaStreamAsync(id);
+        if (stream == null) return NotFound();
+        
         return File(stream, mediaObject.ContentType);
     }
 
@@ -72,21 +82,21 @@ public class MediaController(
 
         return Ok();
     }
-
-    [HttpPost("parse")]
-    public async Task<IActionResult> ParseMediaFolderAsync()
-    {
-        var user = await userService.GetUserAsync(User);
-        await mediaService.ParseMediaFolderAsync(user);
-        return Ok();
-    }
+    
 
     [HttpPost("favorite")]
-    public async Task<IActionResult> ToggleFavoriteAsync([FromBody] Identifiable mediaObject)
+    public async Task<IActionResult> ToggleFavoriteAsync([FromBody] Identifiable body)
     {
+        var user = await userService.GetUserAsync(User);
+        if (user == null) return Unauthorized();
+        if (body == null) return BadRequest();
+        var mediaObject = await mediaService.GetMediaObjectByIdAsync(body.Id);
+        if (mediaObject == null) return NotFound();
+        if (mediaObject.OwnerId != user.Id) return Forbid();
         try
         {
             var result = await mediaService.ToggleFavorite(mediaObject.Id);
+            if (result == null) return NotFound();
             return Ok(result);
         }
         catch (Exception e)
@@ -96,30 +106,30 @@ public class MediaController(
     }
 
     [HttpPost("upload"), DisableRequestSizeLimit]
-    public async Task<IActionResult> UploadAsync([FromForm] IList<IFormFile> files)
+    public async Task<IActionResult> UploadAsync([FromForm] IEnumerable<IFormFile> files)
     {
         var user = await userService.GetUserAsync(User);
         if (user == null) return Unauthorized();
-        foreach (var file in files)
-            await mediaService.UploadMediaFileAsync(file, user.Id);
-
+        await mediaService.UploadMediaFilesAsync(files, user.Id);
         return Ok();
     }
 
     [HttpPost("new-album")]
     public async Task<IActionResult> CreateAlbumAsync([FromBody] MediaAlbumViewModel album)
     {
-        if (album == null || string.IsNullOrWhiteSpace(album.Name)) return BadRequest();
+        if (string.IsNullOrWhiteSpace(album?.Name)) return BadRequest();
         var user = await userService.GetUserAsync(User);
-        await mediaService.CreateAlbumAsync(user, album.Name);
-        return new JsonResult(album?.Name);
+        if (user == null) return Unauthorized();
+        await mediaService.CreateAlbumAsync(user.Id, album.Name);
+        return new JsonResult(album.Name);
     }
 
     [HttpGet("all-albums")]
     public async Task<IActionResult> GetUserAlbumsAsync()
     {
         var user = await userService.GetUserAsync(User);
-        var albums = await mediaService.GetAllAlbumsAsync(user);
+        if (user == null) return Unauthorized();
+        var albums = await mediaService.GetAllUserAlbumsAsync(user.Id);
         var result = albums.Select(album => new MediaAlbumViewModel(album));
         return new JsonResult(result);
     }
@@ -128,15 +138,18 @@ public class MediaController(
     public async Task<IActionResult> AddMediaToAlbumAsync([FromBody] MediaToAlbumViewModel viewModel)
     {
         var user = await userService.GetUserAsync(User);
-        await mediaService.AddMediaToAlbumAsync(user, viewModel.MediaObjectsIds, viewModel.AlbumsIds);
+        if (user == null) return Unauthorized();
+        await mediaService.AddMediaToAlbumAsync(user.Id, viewModel.MediaObjectsIds, viewModel.AlbumsIds);
         return Ok();
     }
 
     [HttpGet("unique-album-name")]
     public async Task<IActionResult> CheckAlbumUniqueName(string name)
     {
+        if (string.IsNullOrWhiteSpace(name)) return BadRequest();
         var user = await userService.GetUserAsync(User);
-        var isUnique = await mediaService.UniqueAlbumNameAsync(user, name);
+        if (user == null) return Unauthorized();
+        var isUnique = await mediaService.UniqueAlbumNameAsync(user.Id, name);
         return new JsonResult(isUnique);
     }
 
@@ -144,7 +157,9 @@ public class MediaController(
     public async Task<IActionResult> GetAlbumContentAsync(string name)
     {
         var user = await userService.GetUserAsync(User);
-        var result = await mediaService.GetAlbumContentAsync(user, name);
+        if (user == null) return Unauthorized();
+        var mediaObjects = await mediaService.GetAlbumContentAsync(user.Id, name);
+        var result = mediaObjects.Select(x => new MediaObjectViewModel(x));
         return new JsonResult(result);
     }
 
@@ -152,7 +167,9 @@ public class MediaController(
     public async Task<IActionResult> DeleteMediaAsync([FromBody] MediaObjectFilter filter, bool permanent = false)
     {
         var user = await userService.GetUserAsync(User);
-        await mediaService.DeleteMediaObjectsAsync(user, filter, permanent);
+        if (user == null) return Unauthorized();
+        filter.UserId = user.Id;
+        await mediaService.DeleteMediaObjectsAsync(user.Id, filter, permanent);
         return Ok();
     }
 
@@ -160,7 +177,9 @@ public class MediaController(
     public async Task<IActionResult> RestoreMediaAsync([FromBody] MediaObjectFilter filter)
     {
         var user = await userService.GetUserAsync(User);
-        await mediaService.RestoreMediaObjectsAsync(user, filter);
+        if (user == null) return Unauthorized();
+        filter.UserId = user.Id;
+        await mediaService.RestoreMediaObjectsAsync(filter);
         return Ok();
     }
 }

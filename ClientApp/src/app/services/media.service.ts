@@ -38,8 +38,8 @@ export class MediaService {
     return this.http.post(API_URL + `/api/media/parse`, null);
   }
 
-  getAllMediaFiles(filter: MediaObjectFilter) {
-    return this.http.post<MediaObject[]>(API_URL + `/api/media/all`, filter);
+  getMediaFiles(filter: MediaObjectFilter) {
+    return this.http.post<MediaObject[]>(API_URL + `/api/media/search`, filter);
   }
 
   addContentAccessKeyCookie() {
