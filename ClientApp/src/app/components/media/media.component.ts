@@ -29,9 +29,10 @@ const KEY_UPDATE_INTERVAL = 60000; // 1 minute
 const SNACKBAR_OPTIONS = { duration: 3000 };
 const LOAD_BY_DEFAULT_COUNT = 1;
 @Component({
-  selector: 'app-media',
-  templateUrl: './media.component.html',
-  styleUrls: ['./media.component.scss']
+    selector: 'app-media',
+    templateUrl: './media.component.html',
+    styleUrls: ['./media.component.scss'],
+    standalone: false
 })
 export class MediaComponent implements OnInit, OnDestroy {
   private allMediaObjects: MediaObject[] = [];
@@ -515,7 +516,7 @@ export class MultipleColumnsCollection {
 
   constructor(numberOfColumns: number) {
     this.numberOfColumns = numberOfColumns;
-    this.columns = Array(numberOfColumns).fill(undefined).map(() => []);
+    this.columns = Array.from({ length: numberOfColumns }, (): MediaObject[] => []);
     this.offsets = Array(numberOfColumns).fill(0);
   }
 

@@ -10,9 +10,10 @@ import {EMPTY, of} from "rxjs";
 
 const SNACKBAR_OPTIONS = { duration: 3000 };
 @Component({
-  selector: 'app-notes',
-  templateUrl: './notes.component.html',
-  styleUrls: ['./notes.component.scss'],
+    selector: 'app-notes',
+    templateUrl: './notes.component.html',
+    styleUrls: ['./notes.component.scss'],
+    standalone: false
 })
 export class NotesComponent implements OnInit {
   notes: NoteModel[];

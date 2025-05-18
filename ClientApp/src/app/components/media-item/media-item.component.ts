@@ -14,9 +14,10 @@ import {catchError, EMPTY, retry, Subject, takeUntil, tap} from "rxjs";
 import {DomSanitizer} from "@angular/platform-browser";
 
 @Component({
-  selector: 'app-media-item',
-  templateUrl: './media-item.component.html',
-  styleUrls: ['./media-item.component.scss']
+    selector: 'app-media-item',
+    templateUrl: './media-item.component.html',
+    styleUrls: ['./media-item.component.scss'],
+    standalone: false
 })
 export class MediaItemComponent implements OnInit, OnDestroy, AfterViewInit{
   @Input() item: MediaObject;

@@ -6,9 +6,10 @@ import {MAT_DIALOG_DATA} from "@angular/material/dialog";
 import {MatSlideToggleChange} from "@angular/material/slide-toggle";
 
 @Component({
-  selector: 'app-expense-chart',
-  templateUrl: './expense-chart.component.html',
-  styleUrl: './expense-chart.component.scss'
+    selector: 'app-expense-chart',
+    templateUrl: './expense-chart.component.html',
+    styleUrl: './expense-chart.component.scss',
+    standalone: false
 })
 export class ExpenseChartComponent {
   @ViewChild('byCategoryChart', { static: true }) byCategoryChartTemplate: TemplateRef<never>;

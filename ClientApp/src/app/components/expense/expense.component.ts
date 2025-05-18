@@ -17,9 +17,10 @@ const EXPENSE_SORT_DATE = (expenseA: Expense, expenseB: Expense) => {
   return dateA.getTime() - dateB.getTime();
 }
 @Component({
-  selector: 'app-expense',
-  templateUrl: './expense.component.html',
-  styleUrl: './expense.component.scss'
+    selector: 'app-expense',
+    templateUrl: './expense.component.html',
+    styleUrl: './expense.component.scss',
+    standalone: false
 })
 export class ExpenseComponent implements OnInit, OnDestroy {
   @ViewChild('paymentMethods', { static: true }) paymentMethodsTemplateRef: TemplateRef<never>;

@@ -20,9 +20,10 @@ import {
 const SNACKBAR_OPTIONS = { duration: 3000 };
 const DOUBLE_CLICK_THRESHOLD = 300;
 @Component({
-  selector: 'app-drive',
-  templateUrl: './drive.component.html',
-  styleUrls: ['./drive.component.scss'],
+    selector: 'app-drive',
+    templateUrl: './drive.component.html',
+    styleUrls: ['./drive.component.scss'],
+    standalone: false
 })
 export class DriveComponent implements OnInit, OnDestroy {
   private readonly DEFAULT_SORT = this.fsoSortService.sortByNameAscFn;

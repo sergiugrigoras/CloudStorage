@@ -2,9 +2,10 @@ import { FsoModel } from '../../model/fso.model';
 import { Component, Input, OnInit, Output, EventEmitter } from '@angular/core';
 
 @Component({
-  selector: 'fso',
-  templateUrl: './fso.component.html',
-  styleUrls: ['./fso.component.scss']
+    selector: 'fso',
+    templateUrl: './fso.component.html',
+    styleUrls: ['./fso.component.scss'],
+    standalone: false
 })
 export class FsoComponent implements OnInit {
 
