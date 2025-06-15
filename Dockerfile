@@ -20,9 +20,9 @@ FROM mcr.microsoft.com/dotnet/aspnet:8.0
 VOLUME /app/database
 VOLUME /app/storage
 RUN apt-get update -qq && apt-get install ffmpeg -y
-ARG JWT_KEY
-ARG GEMINI_URL
-ARG GEMINI_KEY
+#ARG JWT_KEY
+#ARG GEMINI_URL
+#ARG GEMINI_KEY
 ENV ASPNETCORE_URLS=http://+:5000
 ENV CloudStorage_Jwt__key=$JWT_KEY
 ENV CloudStorage_Jwt__lifetime=5
@@ -30,8 +30,8 @@ ENV CloudStorage_Jwt__issuer="http://localhost"
 ENV CloudStorage_Storage__Url="/app/storage"
 ENV CloudStorage_Storage__Size=5368709120
 ENV CloudStorage_Database__Sqlite="/app/database/cloud-storage.db"
-ENV CloudStorage_GeminiAPI__Url=$GEMINI_URL
-ENV CloudStorage_GeminiAPI__Key=$GEMINI_KEY
+#ENV CloudStorage_GeminiAPI__Url=$GEMINI_URL
+#ENV CloudStorage_GeminiAPI__Key=$GEMINI_KEY
 WORKDIR /app
 COPY --from=base /app/publish .
 COPY --from=node /app/dist/browser ./wwwroot
