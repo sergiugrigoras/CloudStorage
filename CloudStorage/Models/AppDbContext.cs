@@ -23,6 +23,7 @@ public partial class AppDbContext : DbContext
     public virtual DbSet<Expense> Expenses { get; set; }
     public virtual DbSet<Category> Categories { get; set; }
     public virtual DbSet<PaymentMethod> PaymentMethods { get; set; }
+    public virtual DbSet<InviteCode> InviteCodes { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

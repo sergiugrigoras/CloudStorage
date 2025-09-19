@@ -19,6 +19,7 @@ public interface IUserService
     Task<ResetToken> CreateResetTokenAsync(User user, string token);
     Task<ResetToken> GetResetTokenByIdAsync(int id);
     Task UpdateResetTokenAsync(ResetToken resetToken);
+    Task<bool> ValidateInviteCodeAsync(string code);
 
     string GenerateToken();
 }
@@ -90,6 +91,15 @@ public class UserService(AppDbContext context) : IUserService
     {
         context.Users.Update(user);
         await context.SaveChangesAsync();
+    }
+
+    public async Task<bool> ValidateInviteCodeAsync(string code)
+    {
+        var exists = await context.InviteCodes.FirstOrDefaultAsync(x => x.Code == code && x.Date == null);
+        if (exists == null) return false;
+        exists.Date = DateTime.UtcNow;
+        await context.SaveChangesAsync();
+        return true;
     }
 
     public string GenerateToken()

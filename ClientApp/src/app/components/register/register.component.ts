@@ -4,9 +4,11 @@ import { PasswordValidators } from './password.validators';
 import { Component, OnInit } from '@angular/core';
 import { AbstractControl, FormControl, FormGroup, ValidationErrors, Validators } from '@angular/forms';
 import { UsernameValidators } from './username.validators';
-import { Observable } from 'rxjs';
+import {catchError, EMPTY, Observable} from 'rxjs';
 import { filter, map } from 'rxjs/operators';
-import { Router } from '@angular/router';
+import {ActivatedRoute, Router} from '@angular/router';
+import {MatSnackBar} from "@angular/material/snack-bar";
+import {HttpErrorResponse} from "@angular/common/http";
 
 @Component({
     selector: 'app-register',
@@ -22,7 +24,7 @@ export class RegisterComponent implements OnInit {
     confirmPassword: new FormControl('', Validators.required),
   }, PasswordValidators.passwordsShouldMatch);
 
-  constructor(private authService: AuthService, private router: Router) { }
+  constructor(private authService: AuthService, private router: Router, private route: ActivatedRoute, private snackBar: MatSnackBar) { }
 
   ngOnInit(): void {
   }
@@ -44,15 +46,24 @@ export class RegisterComponent implements OnInit {
   }
 
   register() {
-    let user: UserModel = {
+    const user: UserModel = {
       username: this.username?.value,
       email: this.email?.value,
       password: this.password?.value
     };
-    this.authService.register(user).subscribe(res => {
-      if (res)
-        this.router.navigate(['/']);
-    });
+    const inviteCode = this.route.snapshot.queryParams['inviteCode'];
+    this.authService.register(user, inviteCode)
+      .pipe(
+        catchError(error => {
+          if (error instanceof HttpErrorResponse) {
+            this.snackBar.open(error.error, 'Ok', {duration: 5000});
+          }
+          return EMPTY;
+        })
+      )
+      .subscribe(() => {
+        void this.router.navigate(['/']);
+      });
   }
 
   shouldBeUnique(control: AbstractControl): Observable<ValidationErrors | null> {

@@ -2,7 +2,7 @@ import { TokenModel } from './../interfaces/token.interface';
 import { UserModel } from './../interfaces/user.interface';
 import { environment } from './../../environments/environment';
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpErrorResponse, HttpHeaders, HttpResponse } from '@angular/common/http';
+import {HttpClient, HttpErrorResponse, HttpHeaders, HttpParams} from '@angular/common/http';
 import { interval, Observable, of, Subject, throwError } from 'rxjs';
 import { catchError, debounceTime, map, mapTo, retry, tap } from 'rxjs/operators';
 import { Router } from '@angular/router';
@@ -76,15 +76,14 @@ export class AuthService {
     );
   }
 
-  register(user: UserModel) {
-    return this.http.post<TokenModel>(apiUrl + '/api/auth/register', user, httpOptions)
+  register(user: UserModel, inviteCode: unknown) {
+    let params = new HttpParams();
+    if (typeof inviteCode === 'string') {
+      params = params.set('inviteCode', inviteCode);
+    }
+    return this.http.post<TokenModel>(apiUrl + '/api/auth/register', user, {params: params, headers: {'Content-Type': 'application/json'}})
       .pipe(
         tap(tokens => this.doLoginUser(user.username, tokens)),
-        map(() => true),
-        catchError(error => {
-          console.error(error);
-          return of(false);
-        })
       );
   }
 
