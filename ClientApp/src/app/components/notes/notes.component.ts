@@ -5,7 +5,7 @@ import {delay, switchMap, take, tap} from 'rxjs/operators';
 import { MatDialog } from '@angular/material/dialog';
 import {MatSnackBar} from "@angular/material/snack-bar";
 import {FormArray, FormBuilder, FormGroup, Validators} from "@angular/forms";
-import {MatButton} from "@angular/material/button";
+import {MatButton, MatMiniFabButton} from "@angular/material/button";
 import {EMPTY, of} from "rxjs";
 
 const SNACKBAR_OPTIONS = { duration: 3000 };
@@ -90,7 +90,7 @@ export class NotesComponent implements OnInit {
     this.noteList.removeAt(itemIndex);
   }
 
-  createNote(button: MatButton, type: 'text' | 'list') {
+  createNote(button: MatMiniFabButton, type: 'text' | 'list') {
     this.createEmptyNoteForm(type);
     const element = button._elementRef.nativeElement;
     if (element instanceof HTMLElement) {
