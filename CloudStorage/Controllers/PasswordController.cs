@@ -34,36 +34,21 @@ namespace CloudStorage.Controllers
         [HttpPost, Route("token")]
         public async Task<IActionResult> GenerateResetTokenAsync([FromBody] User request)
         {
-            if (request == null)
-            {
-                return BadRequest("Invalid client request");
-            }
-
-            User user;
-            if (request.Username != "")
-            {
-                user = await _userService.GetUserByNameAsync(request.Username);
-            }
-            else
-            {
-                user = await _userService.GetUserByEmailAsync(request.Email);
-            }
-
-            if (user == null)
-            {
-                return NotFound("Invalid user");
-            }
-
+            if (request == null) return BadRequest("Invalid client request");
+            var user = !string.IsNullOrWhiteSpace(request.Username)
+                ? await _userService.GetUserByNameAsync(request.Username)
+                : await _userService.GetUserByEmailAsync(request.Email);
+            if (user == null) return NotFound("Invalid user");
+            
             var token = _userService.GenerateToken();
             var passwordResetToken = await _userService.CreateResetTokenAsync(user, token);
-
-            _mailService.SendEmail(
-                                    new MailAddress(user.Email),
-                                    new MailAddress("support@mail.sergiug.space", "SCS Support"),
-                                    "Password reset instructions",
-                                    $"Hello, \n\nPlease use below link to reset your password\n{Request.Scheme}://{Request.Host}/password/reset?token={token}&id={passwordResetToken.Id}"
-            );
-            var hiddenEmail = Regex.Replace(user.Email, @"(?<=[\w]{1})[\w-\._\+%]*(?=[\w]{2}@)", m => new string('*', m.Length));
+            
+            var resetLink =
+                $"{Request.Scheme}://{Request.Host}/password/reset?token={token}&id={passwordResetToken.Id}";
+            var emailBody = EmailHelper.GeneratePasswordResetEmailBody(user.Username, resetLink);
+            const string subject = EmailHelper.PasswordResetSubject;
+            await _mailService.SendEmailAsync(new MailAddress(user.Email, user.Username), subject, emailBody);
+            var hiddenEmail = EmailHelper.HideEmail(user.Email);
             return new JsonResult(hiddenEmail);
         }
 
@@ -72,27 +57,23 @@ namespace CloudStorage.Controllers
         public async Task<IActionResult> ResetPasswordAsync([FromBody] PasswordResetRequest request)
         {
             var resetToken = await _userService.GetResetTokenByIdAsync(request.TokenId);
-            if (resetToken == null || resetToken.ExpirationDate <= DateTime.Now || resetToken.TokenUsed || !BC.Verify(request.Token, resetToken.TokenHash))
-            {
+            if (resetToken == null || resetToken.ExpirationDate <= DateTime.UtcNow || resetToken.TokenUsed || !BC.Verify(request.Token, resetToken.TokenHash))
                 return BadRequest();
-            }
-            else
-            {
-                var user = await _userService.GetUserByIdAsync(resetToken.UserId);
-                user.Password = BC.HashPassword(request.NewPassword);
-                resetToken.TokenUsed = true;
+            
+            var user = await _userService.GetUserByIdAsync(resetToken.UserId);
+            user.Password = BC.HashPassword(request.NewPassword);
+            resetToken.TokenUsed = true;
 
-                var claims = _userService.GetUserClaims(user);
+            var claims = _userService.GetUserClaims(user);
 
-                var accessToken = _tokenService.GenerateAccessToken(claims);
-                var refreshToken = _tokenService.GenerateRefreshToken();
+            var accessToken = _tokenService.GenerateAccessToken(claims);
+            var refreshToken = _tokenService.GenerateRefreshToken();
 
-                user.RefreshToken = refreshToken;
-                user.RefreshTokenExpiryTime = DateTime.Now.AddDays(7);
-                await _userService.UpdateUserAsync(user);
-                await _userService.UpdateResetTokenAsync(resetToken);
-                return new JsonResult(new TokenApiModel(accessToken, refreshToken));
-            }
+            user.RefreshToken = refreshToken;
+            user.RefreshTokenExpiryTime = DateTime.Now.AddDays(7);
+            await _userService.UpdateUserAsync(user);
+            await _userService.UpdateResetTokenAsync(resetToken);
+            return new JsonResult(new TokenApiModel(accessToken, refreshToken));
         }
     }
 }

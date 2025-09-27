@@ -4,6 +4,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using CloudStorage.Models;
+using Microsoft.IdentityModel.Tokens;
 
 namespace CloudStorage.Services;
 
@@ -38,7 +39,7 @@ public class UserService(AppDbContext context) : IUserService
         {
             UserId = user.Id,
             TokenHash = BC.HashPassword(token),
-            ExpirationDate = DateTime.Now.AddHours(1)
+            ExpirationDate = DateTime.UtcNow.AddHours(1)
         };
 
         await context.ResetTokens.AddAsync(resetToken);
@@ -109,8 +110,8 @@ public class UserService(AppDbContext context) : IUserService
         {
             rng.GetBytes(randomNumber);
         }
-        var token = Convert.ToBase64String(randomNumber).TrimEnd('=').Replace('+', '-').Replace('/', '_');
-        return token;
+        
+        return Base64UrlEncoder.Encode(randomNumber);
     }
 
     public async Task<ResetToken> GetResetTokenByIdAsync(int id)

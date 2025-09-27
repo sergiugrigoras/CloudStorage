@@ -32,9 +32,9 @@ public static class ServiceExtension
         services.AddScoped<IGeminiService, GeminiService>();
         
         if (environment.IsProduction())
-            services.AddSingleton<IMailService, MailService>();
+            services.AddScoped<IMailService, MailService>();
         else
-            services.AddSingleton<IMailService>(s => new DevMailService(environment.ContentRootPath));
+            services.AddScoped<IMailService>(s => new DevMailService());
         return services;
     }
 }
