@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using CloudStorage.Extensions;
+using CloudStorage.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Configuration.AddEnvironmentVariables(prefix: "CloudStorage_");
@@ -30,14 +31,23 @@ builder.Services.AddDbContext<AppDbContext>(options =>
         inMemoryDb = true;
     }
 });
-
+var allowedOrigins = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>();
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("EnableCORS", builder =>
+    options.AddPolicy("EnableCORS", policyBuilder =>
     {
-        builder.AllowAnyOrigin()
-           .AllowAnyHeader()
-           .AllowAnyMethod();
+        if (allowedOrigins is { Length: > 0 })
+        {
+            policyBuilder.WithOrigins(allowedOrigins)
+                .AllowAnyHeader()
+                .AllowAnyMethod();
+        }
+        else
+        {
+            policyBuilder.AllowAnyOrigin()
+                .AllowAnyHeader()
+                .AllowAnyMethod();
+        }
     });
 });
 builder.Services.Configure<FormOptions>(o =>
@@ -59,9 +69,13 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJw
         ValidateAudience = true,
         ValidateLifetime = true,
         ValidIssuer = jwtIssuer,
-        ValidAudience = jwtIssuer
+        ValidAudience = jwtIssuer,
+        ClockSkew = TimeSpan.FromMinutes(2)
     };
 });
+builder.Services.AddAuthorizationBuilder()
+    .AddPolicy("Admin", policy => policy.RequireRole(Roles.Admin))
+    .AddPolicy("User", policy => policy.RequireRole(Roles.User, Roles.Admin));
 
 builder.Services.RegisterServices(builder.Environment);
 

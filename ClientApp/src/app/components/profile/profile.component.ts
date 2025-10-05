@@ -1,9 +1,8 @@
-import { HttpResponse, HttpErrorResponse } from '@angular/common/http';
+import { HttpErrorResponse } from '@angular/common/http';
 import { PasswordValidators } from './password.validators';
-import { FormControl, FormGroup, Validators } from '@angular/forms';
-import { Component, OnInit } from '@angular/core';
+import {FormControl, FormGroup, FormGroupDirective, Validators} from '@angular/forms';
+import {Component, OnInit, ViewChild} from '@angular/core';
 import { AuthService } from 'src/app/services/auth.service';
-import { Router } from '@angular/router';
 import { PasswordService } from 'src/app/services/password.service';
 import { MatSnackBar } from '@angular/material/snack-bar';
 
@@ -14,10 +13,12 @@ import { MatSnackBar } from '@angular/material/snack-bar';
     standalone: false
 })
 export class ProfileComponent implements OnInit {
+  @ViewChild(FormGroupDirective) formDirective: FormGroupDirective;
   profileForm = new FormGroup({
     profileInfo: new FormGroup({
       username: new FormControl(this.authService.getUser()),
       email: new FormControl(this.authService.getEmail()),
+      roles: new FormControl(this.authService.getRoles()),
     }),
     passwordChange: new FormGroup({
       oldPassword: new FormControl('', Validators.required),
@@ -57,9 +58,13 @@ export class ProfileComponent implements OnInit {
   }
 
   resetPasswordFields() {
-    this.profileForm.get('passwordChange.oldPassword').reset();
-    this.profileForm.get('passwordChange.newPassword').reset();
-    this.profileForm.get('passwordChange.confirmNewPassword').reset();
+    this.formDirective.resetForm({
+      profileInfo : {
+        username: this.authService.getUser(),
+        email: this.authService.getEmail(),
+        roles: this.authService.getRoles(),
+      },
+    });
   }
 
   changePassword() {

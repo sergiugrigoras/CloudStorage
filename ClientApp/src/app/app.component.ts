@@ -1,5 +1,15 @@
 import { HomeComponent } from './components/home/home.component';
-import { AfterViewInit, Component, ElementRef, HostBinding, HostListener, OnInit, TemplateRef, ViewChild } from '@angular/core';
+import {
+  AfterViewInit,
+  Component,
+  ElementRef,
+  HostBinding,
+  HostListener,
+  OnInit,
+  signal,
+  TemplateRef,
+  ViewChild, WritableSignal
+} from '@angular/core';
 import { Router } from '@angular/router';
 import { tap } from 'rxjs/operators';
 import { AuthService } from './services/auth.service';
@@ -37,7 +47,9 @@ const WHITE_THEME_CHART_OPTIONS: ChartOptions = {};
 export class AppComponent implements OnInit, AfterViewInit {
 
   title = 'scs';
-  isLoggedIn: boolean = false;
+  isLoggedIn = signal(false);
+  isLargeDevice = signal(false);
+  themeIcon = signal('');
   scrHeight: any;
   scrWidth: any;
   readonly darkClassName = 'darkMode';
@@ -77,12 +89,12 @@ export class AppComponent implements OnInit, AfterViewInit {
     } else {
       this.setTheme(userSelectedTheme, false);
     }
-    this.isLoggedIn = this.authService.isLoggedIn();
+    this.isLoggedIn.set(this.authService.isLoggedIn());
     this.getScreenSize();
   }
 
   checkLoggedIn() {
-    this.isLoggedIn = this.authService.isLoggedIn();
+    this.isLoggedIn.set(this.authService.isLoggedIn());
   }
 
   logout() {
@@ -98,17 +110,14 @@ export class AppComponent implements OnInit, AfterViewInit {
 
   onOutletLoaded(event: any) {
     if (event instanceof HomeComponent)
-      event.isLoggedIn = this.authService.isLoggedIn();
+      event.isLoggedIn.set(this.authService.isLoggedIn());
   }
 
   @HostListener('window:resize', ['$event'])
   private getScreenSize() {
     this.scrHeight = window.innerHeight;
     this.scrWidth = window.innerWidth;
-  }
-
-  isLargeDevice() {
-    return this.scrWidth >= 768;
+    this.isLargeDevice.set(this.scrWidth >= 768)
   }
 
   toggleTheme() {
@@ -121,6 +130,7 @@ export class AppComponent implements OnInit, AfterViewInit {
   }
 
   private setTheme(theme: string, save: boolean) {
+    this.themeIcon.set(theme === 'light' ? 'dark_mode' : 'light_mode');
     if (theme === 'light') {
       this.hostClassName = '';
       this.overlay.getContainerElement().classList.remove(this.darkClassName);

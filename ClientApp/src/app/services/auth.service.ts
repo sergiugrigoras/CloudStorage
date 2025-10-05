@@ -1,15 +1,16 @@
-import { TokenModel } from './../interfaces/token.interface';
-import { UserModel } from './../interfaces/user.interface';
-import { environment } from './../../environments/environment';
+import { TokenModel } from '../interfaces/token.interface';
+import { UserModel } from '../interfaces/user.interface';
+import { environment } from '../../environments/environment';
 import { Injectable } from '@angular/core';
 import {HttpClient, HttpErrorResponse, HttpHeaders, HttpParams} from '@angular/common/http';
-import { interval, Observable, of, Subject, throwError } from 'rxjs';
-import { catchError, debounceTime, map, mapTo, retry, tap } from 'rxjs/operators';
+import {  Observable, of, Subject, throwError } from 'rxjs';
+import { catchError, map, tap } from 'rxjs/operators';
 import { Router } from '@angular/router';
 import { JwtHelperService } from '@auth0/angular-jwt';
 
-
-
+const ADMIN_ROLE = 'Admin';
+const JWT_TOKEN = 'jwt';
+const REFRESH_TOKEN = 'refreshToken';
 const httpOptions = {
   headers: new HttpHeaders({
     'Content-Type': 'application/json'
@@ -22,9 +23,6 @@ const apiUrl: string = environment.baseUrl;
 })
 export class AuthService {
   isUserLoggedInSubject: Subject<boolean> = new Subject();
-  private readonly JWT_TOKEN = 'jwt';
-  private readonly REFRESH_TOKEN = 'refreshToken';
-  private loggedUser: string = '';
 
   constructor(private http: HttpClient, private jwtHelper: JwtHelperService, private router: Router) { }
 
@@ -49,18 +47,39 @@ export class AuthService {
     else
       return '';
   }
+  getRoles(): string | string[] {
+    const token = this.getJwtToken();
+    if (token)
+      return this.jwtHelper.decodeToken(token).role;
+    else
+      return '';
+  }
 
-  login(user: UserModel): Observable<boolean> {
+  isAdmin(): boolean {
+    const token = this.getJwtToken();
+    if (token) {
+      const roles = this.jwtHelper.decodeToken(token).role;
+      if (typeof roles === 'string')
+        return roles === ADMIN_ROLE;
+      if (Array.isArray(roles)) {
+        return roles.includes(ADMIN_ROLE);
+      }
+    }
+
+    return false;
+  }
+
+  loginWithPassword(user: UserModel): Observable<boolean> {
     return this.http.post<any>(apiUrl + '/api/auth/login', user)
       .pipe(
-        tap(tokens => this.doLoginUser(user.username, tokens)),
+        tap(tokens => this.doLoginUser(tokens)),
         map(() => true),
       );
   }
 
   loginWithToken(tokens: TokenModel): Observable<boolean> {
     return of(tokens).pipe(
-      tap(tokens => this.doLoginUser(this.jwtHelper.decodeToken(tokens.accessToken).unique_name, tokens)),
+      tap(tokens => this.doLoginUser(tokens)),
       map(() => true),
     );
   }
@@ -83,7 +102,7 @@ export class AuthService {
     }
     return this.http.post<TokenModel>(apiUrl + '/api/auth/register', user, {params: params, headers: {'Content-Type': 'application/json'}})
       .pipe(
-        tap(tokens => this.doLoginUser(user.username, tokens)),
+        tap(tokens => this.doLoginUser(tokens)),
       );
   }
 
@@ -109,32 +128,30 @@ export class AuthService {
   }
 
   getJwtToken() {
-    return localStorage.getItem(this.JWT_TOKEN);
+    return localStorage.getItem(JWT_TOKEN);
   }
 
-  private doLoginUser(username: string, tokens: TokenModel) {
+  private doLoginUser(tokens: TokenModel) {
     this.isUserLoggedInSubject.next(true);
-    this.loggedUser = username;
     this.storeTokens(tokens);
   }
 
   private doLogoutUser() {
     this.isUserLoggedInSubject.next(false);
-    this.loggedUser = '';
     this.removeTokens();
   }
 
 
   private getRefreshToken() {
-    return localStorage.getItem(this.REFRESH_TOKEN);
+    return localStorage.getItem(REFRESH_TOKEN);
   }
 
   private storeTokens(tokens: TokenModel) {
-    localStorage.setItem(this.JWT_TOKEN, tokens.accessToken);
-    localStorage.setItem(this.REFRESH_TOKEN, tokens.refreshToken);
+    localStorage.setItem(JWT_TOKEN, tokens.accessToken);
+    localStorage.setItem(REFRESH_TOKEN, tokens.refreshToken);
   }
   private removeTokens() {
-    localStorage.removeItem(this.JWT_TOKEN);
-    localStorage.removeItem(this.REFRESH_TOKEN);
+    localStorage.removeItem(JWT_TOKEN);
+    localStorage.removeItem(REFRESH_TOKEN);
   }
 }

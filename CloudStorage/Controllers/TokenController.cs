@@ -17,20 +17,21 @@ public class TokenController(ITokenService tokenService, IUserService userServic
     [Route("refresh")]
     public async Task<IActionResult> RefreshAsync([FromBody] TokenApiModel tokenApiModel)
     {
-        if (tokenApiModel is null || tokenApiModel.AccessToken == string.Empty || tokenApiModel.RefreshToken == string.Empty)
-        {
-            return BadRequest("Invalid client request");
-        }
-
-        var accessToken = tokenApiModel.AccessToken;
+        if (tokenApiModel is null ||
+            string.IsNullOrWhiteSpace(tokenApiModel.AccessToken) ||
+            string.IsNullOrWhiteSpace(tokenApiModel.RefreshToken)
+           ) return BadRequest("Invalid client request");
+        
         var refreshToken = tokenApiModel.RefreshToken;
 
-        var principal = _tokenService.GetPrincipalFromExpiredToken(accessToken);
+        var principal = _tokenService.GetPrincipalFromExpiredToken(tokenApiModel.AccessToken);
         var user = await _userService.GetUserAsync(principal);
-        if (user == null || user.RefreshToken != refreshToken || user.RefreshTokenExpiryTime <= DateTime.Now)
+        if (user == null || user.RefreshToken != refreshToken || user.RefreshTokenExpiryTime <= DateTime.UtcNow)
         {
             return BadRequest("Invalid client request");
         }
+        if (user.Disabled)
+            return BadRequest("Account is Disabled");
 
         var newAccessToken = _tokenService.GenerateAccessToken(principal.Claims);
         var newRefreshToken = _tokenService.GenerateRefreshToken();

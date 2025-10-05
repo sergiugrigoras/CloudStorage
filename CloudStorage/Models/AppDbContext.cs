@@ -168,6 +168,9 @@ public partial class AppDbContext : DbContext
             entity.Property(e => e.Username)
                 .IsRequired()
                 .HasMaxLength(255);
+            entity.Property(e => e.Disabled)
+                .IsRequired()
+                .HasDefaultValue(false);
         });
 
         modelBuilder.Entity<Category>().HasData(

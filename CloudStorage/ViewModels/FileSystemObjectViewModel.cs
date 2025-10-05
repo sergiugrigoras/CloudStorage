@@ -29,4 +29,19 @@ public class FileSystemObjectViewModel
     public DateTime Date { get; set; }
     public Guid OwnerId { get; set; }
     public ICollection<FileSystemObjectViewModel> Children { get; set; }
+
+    public FileSystemObject ToModel()
+    {
+
+        return new FileSystemObject
+        {
+            Name = Name,
+            FileName = FileName,
+            FileSize = FileSize,
+            IsFolder = IsFolder,
+            ParentId = ParentId,
+            Date = Date,
+            OwnerId = OwnerId
+        };
+    }
 }

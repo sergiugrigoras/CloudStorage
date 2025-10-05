@@ -1,10 +1,40 @@
-# See http://help.github.com/ignore-files/ for more about ignoring files.
+# Build output
+/bin/
+/obj/
+/[Ll]og/
+/[Ll]ogs/
+/TestResults/
 
-# Visual Studio Code
+# Rider / ReSharper
+.idea/
+*.DotSettings.user
+_ReSharper.Caches/
+_ReSharper*/
+
+# Visual Studio
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# NuGet
+*.nupkg
+*.snupkg
+.nuget/
+packages/
+
+# VS Code
 .vscode/*
-
-.vs/*
+#!.vscode/settings.json
+#!.vscode/tasks.json
+#!.vscode/launch.json
+#!.vscode/extensions.json
 
 # System files
 .DS_Store
 Thumbs.db
+
+# Publish / temporary files
+*.publish.xml
+.publish/

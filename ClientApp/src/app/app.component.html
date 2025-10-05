@@ -1,61 +1,72 @@
 <div class="app-container mat-app-background">
 
-    <mat-toolbar class="app-nav mat-elevation-z6" color="primary">
-        <mat-toolbar-row>
-            <div class="container">
-                <a class="logo" routerLink="/">SCS</a>
-                <div *ngIf="isLargeDevice()">
-                    <button *ngFor="let route of routes" mat-button [routerLink]="route.route" routerLinkActive="selected">{{route.displayName}}</button>
-                </div>
-                <span class="spacer"></span>
-                <button mat-button (click)="toggleTheme()" matTooltip="Theme">
-                    <span class="material-icons">
-                        format_color_fill
-                    </span>
-                </button>
-                <button mat-button [matMenuTriggerFor]="userMenu" matTooltip="User menu">
+  <mat-toolbar class="app-nav mat-elevation-z6" color="primary">
+    <mat-toolbar-row>
+      <div class="container">
+        <a class="logo" routerLink="/">SCS</a>
+        @if (isLargeDevice()) {
+          <div>
+            @for (route of routes; track route) {
+              <button mat-button [routerLink]="route.route" routerLinkActive="selected">{{ route.displayName }}</button>
+            }
+          </div>
+        }
+        <span class="spacer"></span>
+        <button mat-button (click)="toggleTheme()" matTooltip="Theme">
+          <span class="material-icons">
+            {{themeIcon()}}
+          </span>
+        </button>
+        <button mat-button [matMenuTriggerFor]="userMenu" matTooltip="User menu">
                     <span class="material-icons">
                         person
                     </span>
-                    <span *ngIf="isLoggedIn">&nbsp;<strong>{{getUser()}}</strong></span>
-                </button>
-            </div>
-        </mat-toolbar-row>
-        <mat-toolbar-row *ngIf="!isLargeDevice()" class="toolbar-small">
-            <div class="container">
-                <button *ngFor="let route of routes" mat-button [routerLink]="route.route" routerLinkActive="selected">{{route.displayName}}</button>
-            </div>
-        </mat-toolbar-row>
-    </mat-toolbar>
-    <div class="app-intersection-observer" #emptyDiv></div>
-    <div class="app-content container ">
-        <router-outlet (deactivate)="checkLoggedIn()" (activate)="onOutletLoaded($event)"></router-outlet>
-    </div>
-
-    <mat-toolbar class="app-footer" color="primary">
+          @if (isLoggedIn()) {
+            <span>&nbsp;<strong>{{ getUser() }}</strong></span>
+          }
+        </button>
+      </div>
+    </mat-toolbar-row>
+    @if (!isLargeDevice()) {
+      <mat-toolbar-row class="toolbar-small">
         <div class="container">
-            Copyright &copy; {{year}} - Sergiu Grigoras.
+          @for (route of routes; track route) {
+            <button mat-button [routerLink]="route.route" routerLinkActive="selected">{{ route.displayName }}</button>
+          }
         </div>
-    </mat-toolbar>
-    <div class="back-top">
-        <button mat-mini-fab color="primary" (click)="scrollTop()">
+      </mat-toolbar-row>
+    }
+  </mat-toolbar>
+  <div class="app-intersection-observer" #emptyDiv></div>
+  <div class="app-content container ">
+    <router-outlet (deactivate)="checkLoggedIn()" (activate)="onOutletLoaded($event)"></router-outlet>
+  </div>
+
+  <mat-toolbar class="app-footer" color="primary">
+    <div class="container">
+      Copyright &copy; {{ year }} - Sergiu Grigoras.
+    </div>
+  </mat-toolbar>
+  <div class="back-top">
+    <button mat-mini-fab color="primary" (click)="scrollTop()">
             <span class="material-icons">
                 arrow_upward
             </span>
-        </button>
-    </div>
+    </button>
+  </div>
 </div>
 
 
-
-
 <mat-menu #userMenu="matMenu">
-    <div *ngIf="!isLoggedIn">
-        <button mat-menu-item routerLink="/login">Login</button>
-        <button mat-menu-item routerLink="/register">Register</button>
+  @if (isLoggedIn()) {
+    <div>
+      <button mat-menu-item routerLink="/profile">Profile</button>
+      <button mat-menu-item (click)="logout()">Logout</button>
     </div>
-    <div *ngIf="isLoggedIn">
-        <button mat-menu-item routerLink="/profile">Profile</button>
-        <button mat-menu-item (click)="logout()">Logout</button>
+  } @else {
+    <div>
+      <button mat-menu-item routerLink="/login">Login</button>
+      <button mat-menu-item routerLink="/register">Register</button>
     </div>
+  }
 </mat-menu>

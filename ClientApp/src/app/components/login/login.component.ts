@@ -41,18 +41,23 @@ export class LoginComponent implements OnInit {
     const loginObserver = {
       next: (res: boolean) => {
         if (res) {
-          this.router.navigate([this.returnUrl]);
+          void this.router.navigate([this.returnUrl]);
         }
       },
       error: (error: any) => {
-        if (error instanceof HttpErrorResponse && error.status === 404) {
-          this._snackBar.open(`Invalid username or password.`, 'Ok', { duration: 5000 });
-        } else {
-          this._snackBar.open(`An error occurred.`, 'Ok', { duration: 5000 });
+        if (error instanceof HttpErrorResponse) {
+          switch (error.status) {
+            case 400:
+              this._snackBar.open(`${error.error}`, 'Ok', { duration: 5000 });
+              break;
+            default:
+              this._snackBar.open(`An error occurred.`, 'Ok', { duration: 5000 });
+              break;
+          }
         }
       }
     };
-    this.authService.login(user).subscribe(loginObserver);
+    this.authService.loginWithPassword(user).subscribe(loginObserver);
   }
 
 }

@@ -30,4 +30,9 @@ public static class Extension
             return base.Visit(node);
         }
     }
+
+    public static string AdminEmail(this IConfiguration configuration) =>
+        configuration.GetValue<string>("Authorization:AdminEmail");
+    public static bool InviteOnly(this IConfiguration configuration) =>
+        configuration.GetValue<bool>("Registration:InviteOnly");
 }

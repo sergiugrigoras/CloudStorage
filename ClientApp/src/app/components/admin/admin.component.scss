@@ -1,0 +1,14 @@
+.admin_user-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 8px 0;
+}
+
+.admin__invite-form {
+  &-input {
+    width: 300px;
+    max-width: 85vw;
+    margin-right: 8px;
+  }
+}

@@ -20,6 +20,7 @@ export class RegisterComponent implements OnInit {
   form = new FormGroup({
     username: new FormControl('', [Validators.required, UsernameValidators.checkPattern], this.shouldBeUnique.bind(this)),
     email: new FormControl('', [Validators.required, Validators.email], this.shouldBeUnique.bind(this)),
+    inviteCode: new FormControl(''),
     password: new FormControl('', Validators.required),
     confirmPassword: new FormControl('', Validators.required),
   }, PasswordValidators.passwordsShouldMatch);
@@ -27,6 +28,14 @@ export class RegisterComponent implements OnInit {
   constructor(private authService: AuthService, private router: Router, private route: ActivatedRoute, private snackBar: MatSnackBar) { }
 
   ngOnInit(): void {
+    const inviteCode = this.route.snapshot.queryParams['inviteCode'];
+    const email = this.route.snapshot.queryParams['email'];
+    if (inviteCode) {
+      this.inviteCode?.setValue(inviteCode);
+    }
+    if (email) {
+      this.email?.setValue(email);
+    }
   }
 
   get password() {
@@ -45,13 +54,17 @@ export class RegisterComponent implements OnInit {
     return this.form.get('username');
   }
 
+  get inviteCode() {
+    return this.form.get('inviteCode');
+  }
+
   register() {
     const user: UserModel = {
       username: this.username?.value,
       email: this.email?.value,
       password: this.password?.value
     };
-    const inviteCode = this.route.snapshot.queryParams['inviteCode'];
+    const inviteCode = this.inviteCode?.value;
     this.authService.register(user, inviteCode)
       .pipe(
         catchError(error => {

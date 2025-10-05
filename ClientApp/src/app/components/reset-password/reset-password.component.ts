@@ -6,7 +6,7 @@ import { FormControl, FormGroup, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { PasswordService } from 'src/app/services/password.service';
 import { PasswordValidators } from '../profile/password.validators';
-import { EMPTY, throwError } from 'rxjs';
+import {EMPTY, finalize, tap, throwError} from 'rxjs';
 import { MatSnackBar } from '@angular/material/snack-bar';
 
 @Component({
@@ -19,9 +19,6 @@ export class ResetPasswordComponent implements OnInit {
 
   resetToken = '';
   resetTokenId = '';
-  passwordError = '';
-  passwordSuccess = '';
-
   userIdentifierForm = new FormGroup({
     userIdentifier: new FormControl('', Validators.required),
   });
@@ -45,17 +42,31 @@ export class ResetPasswordComponent implements OnInit {
 
   getResetToken() {
     this.passwordService.sendResetToken(this.userIdentifierForm.get('userIdentifier')?.value)
-      .subscribe({
-        next: (response) => {
-          this.userIdentifierForm.reset();
+      .pipe(
+        catchError(error => {
+          if (error instanceof HttpErrorResponse) {
+            switch (error.status) {
+              case 404:
+                this._snackBar.open(`User not found.`, 'Ok', { duration: 5000 });
+                break;
+              case 400:
+                this._snackBar.open(`${error.error}`, 'Ok', { duration: 5000 });
+                break;
+              default:
+                this._snackBar.open(`An error occurred.`, 'Ok', { duration: 5000 });
+                break;
+            }
+          }
+          return EMPTY;
+        }),
+        tap((response) => {
           this._snackBar.open(`Instruction sent to ${response}`, 'Ok', { duration: 5000 });
-        },
-        error: error => {
+        }),
+        finalize(() => {
           this.userIdentifierForm.reset();
-          if (error instanceof HttpErrorResponse)
-            this._snackBar.open(`User not found.`, 'Ok', { duration: 5000 });
-        }
-      });
+        })
+      )
+      .subscribe()
   }
 
   resetPassword() {

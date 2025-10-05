@@ -89,7 +89,8 @@ public class FsoController(IConfiguration configuration, IFsoService fsoService,
         var parent = await _fsoService.GetByIdAsync(viewModel.ParentId.Value);
         if (!parent.CheckOwnership(user.Id)) return Forbid();
         viewModel.OwnerId = user.Id;
-        var folder = await _fsoService.CreateAsync(viewModel);
+        viewModel.Date = DateTime.UtcNow;
+        var folder = await _fsoService.CreateAsync(viewModel.ToModel());
         return new JsonResult(new FileSystemObjectViewModel(folder));
     }
 
@@ -169,7 +170,7 @@ public class FsoController(IConfiguration configuration, IFsoService fsoService,
                 var name = ContentDispositionHeaderValue.Parse(file.ContentDisposition).FileName;
                 if (name == null) continue;
                 name = await _fsoService.GetDistinctNameAsync(name.Trim('"'), root.Id, false);
-                FileSystemObjectViewModel model = new()
+                var model = new FileSystemObject
                 {
                     Name = name,
                     IsFolder = false,

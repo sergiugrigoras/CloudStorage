@@ -9,7 +9,6 @@ import { HTTP_INTERCEPTORS, provideHttpClient, withInterceptorsFromDi } from '@a
 import { LoginComponent } from './components/login/login.component';
 import { AuthInterceptor } from './services/auth.interceptor';
 import { DriveComponent } from './components/drive/drive.component';
-import { AuthGuard } from './services/auth-guard.service';
 import { JwtModule } from '@auth0/angular-jwt';
 import { HomeComponent } from './components/home/home.component';
 import { FsoComponent } from './components/fso/fso.component';
@@ -62,6 +61,7 @@ import {
 import {BaseChartDirective, provideCharts, withDefaultRegisterables} from "ng2-charts";
 import { ExpenseChartComponent } from './components/expense-chart/expense-chart.component';
 import {MatPaginator} from "@angular/material/paginator";
+import { AdminComponent } from './components/admin/admin.component';
 function tokenGetter() {
   return localStorage.getItem("jwt");
 }
@@ -86,6 +86,7 @@ function tokenGetter() {
         MediaItemComponent,
         ExpenseComponent,
         ExpenseChartComponent,
+        AdminComponent,
     ],
     bootstrap: [AppComponent], imports: [BrowserModule,
     CommonModule,
@@ -121,7 +122,6 @@ function tokenGetter() {
     NgxMatSelectSearchModule,
     DragDropModule,
     MatBadgeModule, MatTable, MatColumnDef, MatHeaderCell, MatCell, MatCellDef, MatHeaderRow, MatRow, MatRowDef, MatHeaderCellDef, MatHeaderRowDef, BaseChartDirective, MatPaginator], providers: [
-        AuthGuard,
         {
             provide: HTTP_INTERCEPTORS,
             useClass: AuthInterceptor,

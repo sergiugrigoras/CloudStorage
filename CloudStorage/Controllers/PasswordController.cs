@@ -38,18 +38,29 @@ namespace CloudStorage.Controllers
             var user = !string.IsNullOrWhiteSpace(request.Username)
                 ? await _userService.GetUserByNameAsync(request.Username)
                 : await _userService.GetUserByEmailAsync(request.Email);
-            if (user == null) return NotFound("Invalid user");
+            if (user == null) 
+                return NotFound("Invalid user");
+            if (user.Disabled)
+                return BadRequest("Account is Disabled");
             
             var token = _userService.GenerateToken();
-            var passwordResetToken = await _userService.CreateResetTokenAsync(user, token);
+            try
+            {
+                var passwordResetToken = await _userService.CreateResetTokenAsync(user, token);
             
-            var resetLink =
-                $"{Request.Scheme}://{Request.Host}/password/reset?token={token}&id={passwordResetToken.Id}";
-            var emailBody = EmailHelper.GeneratePasswordResetEmailBody(user.Username, resetLink);
-            const string subject = EmailHelper.PasswordResetSubject;
-            await _mailService.SendEmailAsync(new MailAddress(user.Email, user.Username), subject, emailBody);
-            var hiddenEmail = EmailHelper.HideEmail(user.Email);
-            return new JsonResult(hiddenEmail);
+                var resetLink =
+                    $"{Request.Scheme}://{Request.Host}/password/reset?token={token}&id={passwordResetToken.Id}";
+                var emailBody = EmailHelper.GeneratePasswordResetEmailBody(user.Username, resetLink);
+                const string subject = EmailHelper.PasswordResetSubject;
+                await _mailService.SendEmailAsync(new MailAddress(user.Email, user.Username), subject, emailBody);
+                var hiddenEmail = EmailHelper.HideEmail(user.Email);
+                return new JsonResult(hiddenEmail);
+            }
+            catch (Exception e)
+            {
+                return BadRequest(e.Message);
+            }
+            
         }
 
         [AllowAnonymous]
@@ -61,6 +72,10 @@ namespace CloudStorage.Controllers
                 return BadRequest();
             
             var user = await _userService.GetUserByIdAsync(resetToken.UserId);
+            if (user == null) 
+                return NotFound("Invalid user");
+            if (user.Disabled)
+                return BadRequest("Account is Disabled");
             user.Password = BC.HashPassword(request.NewPassword);
             resetToken.TokenUsed = true;
 
@@ -70,7 +85,7 @@ namespace CloudStorage.Controllers
             var refreshToken = _tokenService.GenerateRefreshToken();
 
             user.RefreshToken = refreshToken;
-            user.RefreshTokenExpiryTime = DateTime.Now.AddDays(7);
+            user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(7);
             await _userService.UpdateUserAsync(user);
             await _userService.UpdateResetTokenAsync(resetToken);
             return new JsonResult(new TokenApiModel(accessToken, refreshToken));

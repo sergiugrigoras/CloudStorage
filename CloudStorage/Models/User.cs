@@ -1,4 +1,6 @@
-﻿namespace CloudStorage.Models;
+﻿using System.ComponentModel.DataAnnotations.Schema;
+
+namespace CloudStorage.Models;
 
 public class User
 {
@@ -9,12 +11,22 @@ public class User
     public string Password { get; set; }
 
     public string Email { get; set; }
-
-    public string RefreshToken { get; set; }
+    
+    private string _refreshToken;
+    public string RefreshToken {
+        get => _refreshToken;
+        set
+        {
+            _refreshToken = value;
+            LastActive = DateTime.UtcNow;
+        }
+    }
 
     public DateTime? RefreshTokenExpiryTime { get; set; }
+    public bool Disabled { get; set; }
+    public DateTime? LastActive { get; set; }
 
-    public virtual ICollection<FileSystemObject> FileSystemObjects { get; } = [];
+    public virtual ICollection<FileSystemObject> FileSystemObjects { get; set; } = [];
 
     public virtual ICollection<Note> Notes { get; } = [];
 

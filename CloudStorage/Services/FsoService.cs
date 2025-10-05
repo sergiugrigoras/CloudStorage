@@ -25,7 +25,7 @@ namespace CloudStorage.Services
         Task<IEnumerable<FileSystemObject>> GetFullPathAsync(FileSystemObject fso);
         Task RenameAsync(FileSystemObject fso, string newName);
         Task DeleteAsync(FileSystemObject fso);
-        Task<FileSystemObject> CreateAsync(FileSystemObjectViewModel model);
+        Task<FileSystemObject> CreateAsync(FileSystemObject model);
         Task<string> StoreFileAsync(IFormFile file, Guid userId);
         Task<Stream> GetFileAsync(FileSystemObject root, ICollection<FileSystemObject> fsoList);
         Task MoveFsoAsync(FileSystemObject fso, FileSystemObject destination);
@@ -605,21 +605,11 @@ namespace CloudStorage.Services
         #endregion
         };
         
-        public async Task<FileSystemObject> CreateAsync(FileSystemObjectViewModel model)
+        public async Task<FileSystemObject> CreateAsync(FileSystemObject model)
         {
-            FileSystemObject fso = new()
-            {
-                Name = model.Name,
-                FileName = model.FileName,
-                FileSize = model.FileSize,
-                IsFolder = model.IsFolder,
-                ParentId = model.ParentId,
-                Date = DateTime.UtcNow,
-                OwnerId = model.OwnerId
-            };
-            context.FileSystemObjects.Add(fso);
+            context.FileSystemObjects.Add(model);
             await context.SaveChangesAsync();
-            return fso;
+            return model;
         }
 
         public async Task DeleteAsync(FileSystemObject fso)

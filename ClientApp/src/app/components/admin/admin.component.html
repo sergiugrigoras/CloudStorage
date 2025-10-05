@@ -1,0 +1,30 @@
+<div class="admin__invite-form">
+  <h3>Send invite codes</h3>
+  <div>
+    <mat-form-field appearance="outline" class="admin__invite-form-input">
+      <mat-label>Email</mat-label>
+      <input type="email" matInput [formControl]="inviteControl">
+      <mat-error>{{getInviteControlError()}}</mat-error>
+    </mat-form-field>
+    <button mat-raised-button color="primary" [disabled]="inviteControl.invalid" (click)="sendInviteCode()" type="button">Send invite</button>
+  </div>
+</div>
+<h3>Users</h3>
+@if (users) {
+  @for (user of users; track user) {
+    <div class="admin_user-item">
+      <div>
+        <div><strong>Name: </strong>{{user.username}}</div>
+        <div><strong>Email: </strong>{{user.email}}</div>
+        <div><strong>Last active: </strong>{{user.lastActive | date: 'short'}}</div>
+      </div>
+      <div>
+        <button mat-raised-button [color]="user.disabled ? 'primary' : 'accent'" (click)="toggleAccount(user)">{{user.disabled ? 'Enable' : 'Disable'}}</button>
+      </div>
+    </div>
+    <mat-divider></mat-divider>
+  }
+} @else {
+  <div>Loading data...</div>
+}
+
