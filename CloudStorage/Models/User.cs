@@ -39,19 +39,9 @@ public class User
     public ICollection<Category> CustomCategories { get; set; } = [];
 }
 
-public class TokenApiModel
+public class AccessToken(string token)
 {
-    public string AccessToken { get; set; }
-    public string RefreshToken { get; set; }
-
-    public TokenApiModel()
-    {
-    }
-    public TokenApiModel(string accessToken, string refreshToken)
-    {
-        AccessToken = accessToken;
-        RefreshToken = refreshToken;
-    }
+    public string Token { get; set; } = token;
 }
 
 public class Password

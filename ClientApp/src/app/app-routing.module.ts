@@ -10,9 +10,9 @@ import { ResetPasswordComponent } from './components/reset-password/reset-passwo
 import { MediaComponent } from './components/media/media.component';
 import {ExpenseComponent} from "./components/expense/expense.component";
 import {AdminComponent} from "./components/admin/admin.component";
-import {adminGuard} from "./services/admin.guard";
-import {authGuard} from "./services/auth.guard";
-import {registerGuard} from "./services/register.guard";
+import {adminGuard} from "./guards/admin.guard";
+import {authGuard} from "./guards/auth.guard";
+import {registerGuard} from "./guards/register.guard";
 
 const routes: Routes = [
   { path: '', component: HomeComponent },

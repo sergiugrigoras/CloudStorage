@@ -80,10 +80,5 @@ public class ExpenseController(IUserService userService, IExpenseService expense
         }
     }
 
-    [HttpGet("suggest-category")]
-    public async Task<IActionResult> GenerateCategoryAsync(string text)
-    {
-        var category = await _expenseService.SuggestCategoryIdAsync(text);
-        return new JsonResult(category);
-    }
+
 }

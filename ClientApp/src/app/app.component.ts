@@ -47,9 +47,9 @@ const WHITE_THEME_CHART_OPTIONS: ChartOptions = {};
 export class AppComponent implements OnInit, AfterViewInit {
 
   title = 'scs';
-  isLoggedIn = signal(false);
-  isLargeDevice = signal(false);
-  themeIcon = signal('');
+  readonly isLoggedIn = this.authService.isUserLoggedIn;
+  readonly isLargeDevice = signal(false);
+  readonly themeIcon = signal('');
   scrHeight: any;
   scrWidth: any;
   readonly darkClassName = 'darkMode';
@@ -83,34 +83,22 @@ export class AppComponent implements OnInit, AfterViewInit {
   }
 
   ngOnInit(): void {
+    this.isLoggedIn.set(this.authService.jwtTokenExists());
     const userSelectedTheme = localStorage.getItem('theme');
     if (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches && !userSelectedTheme) {
       this.setTheme('dark', false);
     } else {
       this.setTheme(userSelectedTheme, false);
     }
-    this.isLoggedIn.set(this.authService.isLoggedIn());
     this.getScreenSize();
   }
 
-  checkLoggedIn() {
-    this.isLoggedIn.set(this.authService.isLoggedIn());
-  }
-
   logout() {
-    this.authService.logout().pipe(tap(() => {
-      this.router.navigate(['/']);
-      this.checkLoggedIn();
-    })).subscribe();
+    this.authService.logout().subscribe();
   }
 
   getUser() {
-    return this.authService.getUser();
-  }
-
-  onOutletLoaded(event: any) {
-    if (event instanceof HomeComponent)
-      event.isLoggedIn.set(this.authService.isLoggedIn());
+    return this.authService.getUserNameFromJwtToken();
   }
 
   @HostListener('window:resize', ['$event'])

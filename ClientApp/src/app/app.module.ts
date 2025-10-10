@@ -21,7 +21,6 @@ import { NotesComponent } from './components/notes/notes.component';
 import { UploadProgressComponent } from './components/progress-bar/progress-bar.component';
 import { ProfileComponent } from './components/profile/profile.component';
 import { ResetPasswordComponent } from './components/reset-password/reset-password.component';
-import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { MatIconModule } from '@angular/material/icon';
 import { MatDialogModule } from '@angular/material/dialog';
 import { MatToolbarModule } from '@angular/material/toolbar';
@@ -98,7 +97,6 @@ function tokenGetter() {
         tokenGetter: tokenGetter
       }
     }),
-    BrowserAnimationsModule,
     MatIconModule,
     MatDialogModule,
     MatToolbarModule,

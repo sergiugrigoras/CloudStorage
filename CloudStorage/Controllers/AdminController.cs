@@ -7,23 +7,24 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace CloudStorage.Controllers;
 
-[Route("api/[controller]")]
-[ApiController]
 [Authorize(Roles = Roles.Admin)]
+[ApiController]
+[Route("api/[controller]")]
+
 public class AdminController(IUserService userService, IMailService mailService) : ControllerBase
 {
     private readonly IUserService _userService = userService ?? throw new ArgumentNullException(nameof(userService));
     private readonly IMailService _mailService = mailService ?? throw new ArgumentNullException(nameof(mailService));
     
     
-    [HttpGet("users"), ]
+    [HttpGet("all-users")]
     public async Task<IActionResult> GetUserListAsync()
     {
         var userList = await _userService.GetAllUsersAsync();
         return new JsonResult(userList.Select(UserViewModel.FromDomain));
     }
 
-    [HttpPatch("user")]
+    [HttpPatch("update-user")]
     public async Task<IActionResult> UpdateUserAsync([FromBody] UserViewModel userViewModel)
     {
         var currentUser = await _userService.GetUserAsync(HttpContext.User);
@@ -35,7 +36,7 @@ public class AdminController(IUserService userService, IMailService mailService)
         return new JsonResult(UserViewModel.FromDomain(dbUser));
     }
 
-    [HttpPost("invite")]
+    [HttpPost("invite-user")]
     public async Task<IActionResult> InviteUserAsync([FromQuery] string email)
     {
         if (string.IsNullOrWhiteSpace(email) || !EmailHelper.EmailRegex.IsMatch(email)) 

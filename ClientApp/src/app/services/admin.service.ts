@@ -1,11 +1,10 @@
 import { Injectable } from '@angular/core';
-import {environment} from "../../environments/environment";
 import {HttpClient, HttpParams} from "@angular/common/http";
 import {User} from "../model/user.model";
-const API_URL: string = environment.baseUrl;
-const HTTP_OPTIONS = {
-  headers: { 'Content-Type': 'application/json' }
-}
+import {buildUrl} from "../core/url-builder";
+import {API_ENDPOINTS} from "../core/api-endpoints";
+import {HTTP_OPTIONS_CONTENT_JSON} from "../core/constants";
+
 @Injectable({
   providedIn: 'root'
 })
@@ -13,19 +12,20 @@ export class AdminService {
   constructor(private http: HttpClient) { }
 
   getAllUsers() {
-    return this.http.get<User[]>(`${API_URL}/api/admin/users`, HTTP_OPTIONS)
+    const url = buildUrl(API_ENDPOINTS.ADMIN.BASE,API_ENDPOINTS.ADMIN.ALL_USERS);
+    return this.http.get<User[]>(url, HTTP_OPTIONS_CONTENT_JSON)
   }
 
   toggleAccount(user: User) {
-    return this.http.patch<User>(`${API_URL}/api/admin/user`, user, HTTP_OPTIONS)
+    const url = buildUrl(API_ENDPOINTS.ADMIN.BASE,API_ENDPOINTS.ADMIN.UPDATE_USER);
+    return this.http.patch<User>(url, user, HTTP_OPTIONS_CONTENT_JSON)
   }
 
   sendInviteCode(email: string) {
-    const params = new HttpParams().set('email', email);
+    const url = buildUrl(API_ENDPOINTS.ADMIN.BASE, API_ENDPOINTS.ADMIN.INVITE_USER);
     const options = {
-      ...HTTP_OPTIONS,
-      params: params
+      params: new HttpParams().set('email', email)
     };
-    return this.http.post(`${API_URL}/api/admin/invite`, null, options)
+    return this.http.post(url, null, options)
   }
 }

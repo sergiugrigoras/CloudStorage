@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace CloudStorage.Controllers.Expense;
 
 [Authorize]
-[Route("api/payment-method")]
+[Route("api/expense/payment-method")]
 [ApiController]
 public class PaymentMethodController(IUserService userService, IExpenseService expenseService)  : ControllerBase
 {

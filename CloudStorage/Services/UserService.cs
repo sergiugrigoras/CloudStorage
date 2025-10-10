@@ -17,52 +17,53 @@ public interface IUserService
     Task<User> GetUserByEmailAsync(string email);
     Task<User> GetUserByIdAsync(Guid id);
     Task UpdateUserAsync(User user);
-    Task<TokenApiModel> CreateUserAsync(User user);
+    Task<User> CreateUserAsync(string username, string email, string password);
     IEnumerable<Claim> GetUserClaims(User user);
-    Task<ResetToken> CreateResetTokenAsync(User user, string token);
+    Task<ResetToken> CreatePasswordResetTokenAsync(Guid userId, string token);
     Task<ResetToken> GetResetTokenByIdAsync(int id);
     Task UpdateResetTokenAsync(ResetToken resetToken);
     Task<bool> ValidateInviteCodeAsync(string code, string email);
     Task<string> CreateInviteCodeAsync(string email);
     Task<List<User>> GetAllUsersAsync();
-    string GenerateToken();
+    string GeneratePasswordResetToken();
 }
 
-public class UserService(AppDbContext context, IConfiguration configuration, ITokenService tokenService, IFsoService fsoService) : IUserService
+public class UserService(AppDbContext context, IConfiguration configuration) : IUserService
 {
     private readonly IConfiguration _configuration =
         configuration ?? throw new ArgumentNullException(nameof(configuration));
-    private readonly ITokenService _tokenService = tokenService ?? throw new ArgumentNullException(nameof(tokenService));
-    public async Task<TokenApiModel> CreateUserAsync(User user)
+    public async Task<User> CreateUserAsync(string username, string email, string password)
     {
-        if (await GetUserByNameAsync(user.Username) != null || await GetUserByEmailAsync(user.Email) != null)
+        if (await GetUserByNameAsync(username) != null || await GetUserByEmailAsync(email) != null)
         {
             throw new Exception("User already exists");
         }
-        user.Id = Guid.NewGuid();
-        var claims = GetUserClaims(user);
-        var accessToken = _tokenService.GenerateAccessToken(claims);
-        var refreshToken = _tokenService.GenerateRefreshToken();
-        var hashPassword = BC.HashPassword(user.Password);
 
-        user.Password = hashPassword;
-        user.RefreshToken = refreshToken;
-        user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(7);
-        user.Disabled = false;
-        user.FileSystemObjects = [new FileSystemObject { Name = "root", IsFolder = true, Date = DateTime.UtcNow }];
+        var user = new User
+        {
+            Id = Guid.NewGuid(),
+            Username = username,
+            Email = email,
+            Password = BC.HashPassword(password),
+            Disabled = false,
+            FileSystemObjects =
+            [
+                new FileSystemObject { Name = "root", IsFolder = true, Date = DateTime.UtcNow }
+            ]
+        };
         await context.Users.AddAsync(user);
         await context.SaveChangesAsync();
 
-        return new TokenApiModel(accessToken, refreshToken);
+        return user;
     }
 
-    public async Task<ResetToken> CreateResetTokenAsync(User user, string token)
+    public async Task<ResetToken> CreatePasswordResetTokenAsync(Guid userId, string token)
     {
-        var userHasUnexpiredToken = await context.ResetTokens.AnyAsync(x => x.UserId == user.Id && x.ExpirationDate >= DateTime.UtcNow && x.TokenUsed == false);
+        var userHasUnexpiredToken = await context.ResetTokens.AnyAsync(x => x.UserId == userId && x.ExpirationDate >= DateTime.UtcNow && x.TokenUsed == false);
         if (userHasUnexpiredToken) throw new Exception("Unable to create reset token");
         var resetToken = new ResetToken
         {
-            UserId = user.Id,
+            UserId = userId,
             TokenHash = BC.HashPassword(token),
             ExpirationDate = DateTime.UtcNow.AddMinutes(15)
         };
@@ -159,7 +160,7 @@ public class UserService(AppDbContext context, IConfiguration configuration, ITo
 
     public async Task<List<User>> GetAllUsersAsync() => await context.Users.ToListAsync();
 
-    public string GenerateToken()
+    public string GeneratePasswordResetToken()
     {
         var randomNumber = new byte[32];
         using (var rng = RandomNumberGenerator.Create())

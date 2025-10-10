@@ -3,7 +3,6 @@ import { PasswordValidators } from './password.validators';
 import {FormControl, FormGroup, FormGroupDirective, Validators} from '@angular/forms';
 import {Component, OnInit, ViewChild} from '@angular/core';
 import { AuthService } from 'src/app/services/auth.service';
-import { PasswordService } from 'src/app/services/password.service';
 import { MatSnackBar } from '@angular/material/snack-bar';
 
 @Component({
@@ -16,9 +15,9 @@ export class ProfileComponent implements OnInit {
   @ViewChild(FormGroupDirective) formDirective: FormGroupDirective;
   profileForm = new FormGroup({
     profileInfo: new FormGroup({
-      username: new FormControl(this.authService.getUser()),
-      email: new FormControl(this.authService.getEmail()),
-      roles: new FormControl(this.authService.getRoles()),
+      username: new FormControl(this.authService.getUserNameFromJwtToken()),
+      email: new FormControl(this.authService.getEmailFromJwtToken()),
+      roles: new FormControl(this.authService.getRolesFromJwtToken()),
     }),
     passwordChange: new FormGroup({
       oldPassword: new FormControl('', Validators.required),
@@ -27,7 +26,7 @@ export class ProfileComponent implements OnInit {
     }, PasswordValidators.passwordsShouldMatch)
   });
 
-  constructor(private authService: AuthService, private passwordService: PasswordService, private _snackBar: MatSnackBar) { }
+  constructor(private authService: AuthService, private _snackBar: MatSnackBar) { }
 
   ngOnInit(): void {
   }
@@ -60,15 +59,15 @@ export class ProfileComponent implements OnInit {
   resetPasswordFields() {
     this.formDirective.resetForm({
       profileInfo : {
-        username: this.authService.getUser(),
-        email: this.authService.getEmail(),
-        roles: this.authService.getRoles(),
+        username: this.authService.getUserNameFromJwtToken(),
+        email: this.authService.getEmailFromJwtToken(),
+        roles: this.authService.getRolesFromJwtToken(),
       },
     });
   }
 
   changePassword() {
-    this.passwordService.changePassword(this.oldPassword?.value, this.newPassword?.value)
+    this.authService.changePassword(this.oldPassword?.value, this.newPassword?.value)
       .subscribe({
         next: () => {
           this.resetPasswordFields();

@@ -181,10 +181,10 @@
       autoplay
       loop
       controls
-      [src]="'/api/content/'+activeMediaObject?.id"
+      [src]="buildContentUrl(activeMediaObject?.id)"
     >
     </video>
-    <img *ngIf="!activeMediaObject.isVideo" [src]="'/api/content/'+activeMediaObject?.id"/>
+    <img *ngIf="!activeMediaObject.isVideo" [src]="buildContentUrl(activeMediaObject?.id)"/>
     <span class="material-icons control control__close" (click)="closeDialog($event)">
       close
     </span>

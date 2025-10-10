@@ -14,9 +14,8 @@ public class NoteController(IUserService userService, INoteService noteService) 
 {
     private readonly IUserService _userService = userService ?? throw new ArgumentNullException(nameof(userService));
     private readonly INoteService _noteService = noteService ?? throw new ArgumentNullException(nameof(noteService));
-
     
-    [HttpGet("all")]
+    [HttpGet]
     public async Task<IActionResult> GetNotesAsync()
     {
         var user = await _userService.GetUserAsync(User);
@@ -48,10 +47,11 @@ public class NoteController(IUserService userService, INoteService noteService) 
         return new JsonResult(new NoteViewModel(result));
     }
 
-    [HttpDelete("{id:int}")]
-    public async Task<IActionResult> DeleteNote(int id)
+    [HttpDelete]
+    public async Task<IActionResult> DeleteNote(int? id)
     {
-        var model = await _noteService.GetByIdAsync(id);
+        if (id == null) return BadRequest();
+        var model = await _noteService.GetByIdAsync(id.Value);
         var user = await _userService.GetUserAsync(User);
         if (model == null) return NotFound();
         if (user == null) return Unauthorized();

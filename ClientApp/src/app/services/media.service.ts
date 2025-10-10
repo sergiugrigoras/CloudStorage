@@ -1,17 +1,15 @@
 import { HttpClient, HttpEvent, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Router } from '@angular/router';
-import { environment } from 'src/environments/environment';
 import {MediaObject, MediaObjectFilter} from '../model/media-object.model';
-import {Observable, map, Subject, BehaviorSubject} from 'rxjs';
+import {Observable, map, BehaviorSubject} from 'rxjs';
 import { MediaAlbum } from '../model/media-album.model';
+import {buildUrl} from "../core/url-builder";
+import {API_ENDPOINTS} from "../core/api-endpoints";
+import {HTTP_OPTIONS_CONTENT_JSON} from "../core/constants";
 
-const API_URL: string = environment.baseUrl;
-const httpOptions = {
-  headers: new HttpHeaders({
-    'Content-Type': 'application/json'
-  })
-}
+
+
 @Injectable({
   providedIn: 'root'
 })
@@ -27,35 +25,38 @@ export class MediaService {
     this._selectMode.next(false);
   }
   getMediaFile(id: string) {
-    return this.http.get(API_URL + `/api/media/${id}`, { responseType: 'blob', observe: 'response' });
+    const url = buildUrl(API_ENDPOINTS.MEDIA.BASE, id);
+    return this.http.get(url, { observe: 'response', responseType: 'blob' });
   }
 
   getSnapshotFile(id: string) {
-    return this.http.get(API_URL + `/api/media/snapshot/${id}`, { responseType: 'blob', observe: 'response' });
-  }
-
-  parseFolder() {
-    return this.http.post(API_URL + `/api/media/parse`, null);
+    const url = buildUrl(API_ENDPOINTS.MEDIA.BASE, API_ENDPOINTS.MEDIA.SNAPSHOT, id);
+    return this.http.get(url, { responseType: 'blob', observe: 'response' });
   }
 
   getMediaFiles(filter: MediaObjectFilter) {
-    return this.http.post<MediaObject[]>(API_URL + `/api/media/search`, filter);
+    const url = buildUrl(API_ENDPOINTS.MEDIA.BASE, API_ENDPOINTS.MEDIA.SEARCH);
+    return this.http.post<MediaObject[]>(url, filter, HTTP_OPTIONS_CONTENT_JSON);
   }
 
   addContentAccessKeyCookie() {
-    return this.http.get(API_URL + `/api/media/access-key`);
+    const url = buildUrl(API_ENDPOINTS.MEDIA.BASE, API_ENDPOINTS.MEDIA.ACCESS_KEY);
+    return this.http.get(url);
   }
 
-  removeContentAccesKey() {
-    return this.http.delete(API_URL + `/api/media/access-key`);
+  removeContentAccessKey() {
+    const url = buildUrl(API_ENDPOINTS.MEDIA.BASE, API_ENDPOINTS.MEDIA.ACCESS_KEY);
+    return this.http.delete(url);
   }
 
   toggleFavorite(id: string) {
-    return this.http.post<boolean>(API_URL + `/api/media/favorite`, { id });
+    const url = buildUrl(API_ENDPOINTS.MEDIA.BASE, API_ENDPOINTS.MEDIA.FAVORITE);
+    return this.http.post<boolean>(url, { id }, HTTP_OPTIONS_CONTENT_JSON);
   }
 
   upload(formData: FormData): Observable<HttpEvent<Object>> {
-    return this.http.post(API_URL + '/api/media/upload', formData,
+    const url = buildUrl(API_ENDPOINTS.MEDIA.BASE, API_ENDPOINTS.MEDIA.UPLOAD);
+    return this.http.post(url, formData,
       {
         observe: 'events',
         reportProgress: true
@@ -63,34 +64,55 @@ export class MediaService {
   }
 
   createAlbum(name: string) {
-    return this.http.post<string>(API_URL + '/api/media/new-album', { name })
+    const url = buildUrl(API_ENDPOINTS.MEDIA.BASE, API_ENDPOINTS.MEDIA.NEW_ALBUM);
+    return this.http.post<string>(url, { name }, HTTP_OPTIONS_CONTENT_JSON);
   }
 
   getAllAlbums() {
-    return this.http.get<MediaAlbum[]>(API_URL + '/api/media/all-albums').pipe(
-      map((albums: MediaAlbum[]) => albums.map(x => new MediaAlbum(x)))
-    );
+    const url = buildUrl(API_ENDPOINTS.MEDIA.BASE, API_ENDPOINTS.MEDIA.ALL_ALBUMS);
+    return this.http.get<MediaAlbum[]>(url)
+      .pipe(
+        map(
+          (albums: MediaAlbum[]) => albums.map(x => new MediaAlbum(x))
+        )
+      );
   }
 
   addToAlbum(payload: unknown) {
-    return this.http.post(API_URL + '/api/media/album-add', payload)
+    const url = buildUrl(API_ENDPOINTS.MEDIA.BASE, API_ENDPOINTS.MEDIA.ALBUM_ADD);
+    return this.http.post(url, payload, HTTP_OPTIONS_CONTENT_JSON)
   }
 
   albumUniqueName(name: string) {
-    return this.http.get(API_URL + `/api/media/unique-album-name?name=${name}`);
+    const options = {
+      params: new HttpParams().set('name', name)
+    };
+    const url = buildUrl(API_ENDPOINTS.MEDIA.BASE, API_ENDPOINTS.MEDIA.UNIQUE_ALBUM_NAME)
+    return this.http.get(url, options);
   }
 
   getAlbumContent(name: string) {
-    return this.http.get<MediaObject[]>(API_URL + `/api/media/album?name=${name}`);
+    const options = {
+      params: new HttpParams().set('name', name)
+    };
+    const url = buildUrl(API_ENDPOINTS.MEDIA.BASE, API_ENDPOINTS.MEDIA.ALBUM)
+    return this.http.get<MediaObject[]>(url, options);
   }
 
   deleteMediaObjects(id: string[], permanent: boolean) {
-    const httpParams = new HttpParams().set('permanent', permanent);
-    return this.http.delete<any>(API_URL + `/api/media`, { body: {ids: id}, params: httpParams});
+    const url = buildUrl(API_ENDPOINTS.MEDIA.BASE);
+    const options = {
+      params: new HttpParams().set('permanent', permanent),
+      body: {ids: id},
+      headers: HTTP_OPTIONS_CONTENT_JSON.headers
+    }
+    return this.http.delete<any>(url, options);
   }
 
   restoreMediaObjects(id: string[]) {
-    return this.http.post<string[]>(API_URL + `/api/media/restore`, {ids: id});
+    const url = buildUrl(API_ENDPOINTS.MEDIA.BASE, API_ENDPOINTS.MEDIA.RESTORE);
+    const body = {ids: id};
+    return this.http.post<string[]>(url, body, HTTP_OPTIONS_CONTENT_JSON);
   }
 
 }

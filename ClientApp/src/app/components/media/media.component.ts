@@ -24,6 +24,8 @@ import { MediaObject } from 'src/app/model/media-object.model';
 import { MediaService } from 'src/app/services/media.service';
 import {ActivatedRoute, Router} from "@angular/router";
 import { OverlayContainer } from "@angular/cdk/overlay";
+import {buildUrl} from "../../core/url-builder";
+import {API_ENDPOINTS} from "../../core/api-endpoints";
 
 const KEY_UPDATE_INTERVAL = 60000; // 1 minute
 const SNACKBAR_OPTIONS = { duration: 3000 };
@@ -252,7 +254,7 @@ export class MediaComponent implements OnInit, OnDestroy {
           window.clearTimeout(this.updateAccessKeyIntervalId);
           this.activeMediaObject = null;
           this.overlay.getContainerElement().classList.remove('media');
-          return this.mediaService.removeContentAccesKey();
+          return this.mediaService.removeContentAccessKey();
         })
       ).subscribe();
   }
@@ -275,11 +277,6 @@ export class MediaComponent implements OnInit, OnDestroy {
     });
   }
 
-  parseFolder() {
-    this.mediaService.parseFolder().subscribe(() => {
-      console.log('Done.');
-    });
-  }
 
   uploadFiles(input: HTMLInputElement) {
     if (input instanceof HTMLInputElement && input.files.length > 0) {
@@ -506,6 +503,12 @@ export class MediaComponent implements OnInit, OnDestroy {
       case "album": return this.albumName;
       default: return "";
     }
+  }
+
+  buildContentUrl(id: string | undefined) {
+    if (id)
+      return buildUrl(API_ENDPOINTS.CONTENT.BASE, id)
+    return undefined;
   }
 }
 

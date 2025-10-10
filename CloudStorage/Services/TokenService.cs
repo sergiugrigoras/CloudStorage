@@ -15,7 +15,7 @@ public interface ITokenService
 public class TokenService(IConfiguration config) : ITokenService
 {
     private readonly string _key = config.GetValue<string>("Jwt:Key");
-    private readonly string _lifetime = config.GetValue<string>("Jwt:Lifetime");
+    private readonly double _lifetimeSeconds = config.GetValue<double>("Jwt:Lifetime");
     private readonly string _issuer = config.GetValue<string>("Jwt:Issuer");
 
     public string GenerateAccessToken(IEnumerable<Claim> claims)
@@ -25,7 +25,7 @@ public class TokenService(IConfiguration config) : ITokenService
         var tokenDescriptor = new SecurityTokenDescriptor
         {
             Subject = new ClaimsIdentity(claims),
-            Expires = DateTime.UtcNow.AddMinutes(double.Parse(this._lifetime)),
+            Expires = DateTime.UtcNow.AddSeconds(_lifetimeSeconds),
             SigningCredentials = new SigningCredentials(secretKey, SecurityAlgorithms.HmacSha256),
             Issuer = _issuer,
             Audience = _issuer
@@ -40,15 +40,17 @@ public class TokenService(IConfiguration config) : ITokenService
         var randomNumber = new byte[32];
         using var rng = RandomNumberGenerator.Create();
         rng.GetBytes(randomNumber);
-        return Convert.ToBase64String(randomNumber);
+        return Base64UrlEncoder.Encode(randomNumber);
     }
 
     public ClaimsPrincipal GetPrincipalFromExpiredToken(string token)
     {
         var tokenValidationParameters = new TokenValidationParameters
         {
-            ValidateAudience = false,
-            ValidateIssuer = false,
+            ValidateAudience = true,
+            ValidAudience = _issuer,
+            ValidateIssuer = true,
+            ValidIssuer = _issuer,
             ValidateIssuerSigningKey = true,
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_key)),
             ValidateLifetime = false

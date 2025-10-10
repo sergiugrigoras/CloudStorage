@@ -1,18 +1,13 @@
 import { DiskInfoModel } from '../interfaces/disk.interface';
 import {FsoModel, FsoMoveResultModel} from '../model/fso.model';
-import { environment } from '../../environments/environment';
-import { HttpClient, HttpHeaders, HttpEvent, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpEvent, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Router } from '@angular/router';
 import {Observable, Subject, BehaviorSubject} from 'rxjs';
+import {buildUrl} from "../core/url-builder";
+import {API_ENDPOINTS} from "../core/api-endpoints";
+import {HTTP_OPTIONS_CONTENT_JSON} from "../core/constants";
 
-
-const apiUrl: string = environment.baseUrl;
-const httpOptions = {
-  headers: new HttpHeaders({
-    'Content-Type': 'application/json'
-  })
-}
 @Injectable({
   providedIn: 'root'
 })
@@ -20,18 +15,21 @@ export class DriveService {
 
   openFolder$ = new Subject<number>();
   clipboard$ = new BehaviorSubject<number[]>([]);
-  constructor(private http: HttpClient, private router: Router) { }
+  constructor(private http: HttpClient) { }
 
   getUserRoot() {
-    return this.http.get<FsoModel>(apiUrl + '/api/fso/root');
+    const url = buildUrl(API_ENDPOINTS.FSO.BASE, API_ENDPOINTS.FSO.ROOT);
+    return this.http.get<FsoModel>(url);
   }
 
   getFolder(id: number) {
-    return this.http.get<FsoModel>(apiUrl + '/api/fso/folder/' + id);
+    const url = buildUrl(API_ENDPOINTS.FSO.BASE, API_ENDPOINTS.FSO.FOLDER, `${id}`);
+    return this.http.get<FsoModel>(url);
   }
 
   getFullPath(id: any) {
-    return this.http.get<FsoModel[]>(apiUrl + '/api/fso/full-path/' + id);
+    const url = buildUrl(API_ENDPOINTS.FSO.BASE, API_ENDPOINTS.FSO.FULL_PATH, `${id}`);
+    return this.http.get<FsoModel[]>(url);
   }
 
   validateEmail(input: string) {
@@ -40,34 +38,41 @@ export class DriveService {
   }
 
   getDiskInfo() {
-    return this.http.get<DiskInfoModel>(apiUrl + '/api/fso/drive-info');
+    const url = buildUrl(API_ENDPOINTS.FSO.BASE, API_ENDPOINTS.FSO.DRIVE_INFO);
+    return this.http.get<DiskInfoModel>(url);
   }
 
   addFolder(newFso: any) {
-    return this.http.post<FsoModel>(apiUrl + '/api/fso/add-folder', newFso, httpOptions);
+    const url = buildUrl(API_ENDPOINTS.FSO.BASE, API_ENDPOINTS.FSO.ADD_FOLDER);
+    return this.http.post<FsoModel>(url, newFso, HTTP_OPTIONS_CONTENT_JSON);
   }
 
   delete(ids: number[]) {
-    return this.http.delete(apiUrl + '/api/fso/delete', {
-      headers: { 'Content-Type': 'application/json' }, body: ids
-    });
+    const url = buildUrl(API_ENDPOINTS.FSO.BASE, API_ENDPOINTS.FSO.DELETE);
+    const options = {
+      headers: HTTP_OPTIONS_CONTENT_JSON.headers,
+      body: ids
+    };
+    return this.http.delete(url, options);
   }
 
   move(list: number[], destination: number) {
-    let params = new HttpParams()
-      .set('destinationId', destination);
-
-    return this.http.post<FsoMoveResultModel>(apiUrl + '/api/fso/move', list, {
-      headers: { 'Content-Type': 'application/json' }, params
-    });
+    const url = buildUrl(API_ENDPOINTS.FSO.BASE, API_ENDPOINTS.FSO.MOVE);
+    const options = {
+      params: new HttpParams().set('destinationId', destination),
+      headers: HTTP_OPTIONS_CONTENT_JSON.headers
+    };
+    return this.http.post<FsoMoveResultModel>(url, list, options);
   }
 
   rename(fso: any) {
-    return this.http.put(apiUrl + '/api/fso/rename', fso, httpOptions);
+    const url = buildUrl(API_ENDPOINTS.FSO.BASE, API_ENDPOINTS.FSO.RENAME);
+    return this.http.put(url, fso, HTTP_OPTIONS_CONTENT_JSON);
   }
 
   upload(formData: FormData) {
-    return this.http.post(apiUrl + '/api/fso/upload', formData,
+    const url = buildUrl(API_ENDPOINTS.FSO.BASE, API_ENDPOINTS.FSO.UPLOAD);
+    return this.http.post(url, formData,
       {
         observe: 'events',
         reportProgress: true
@@ -75,20 +80,24 @@ export class DriveService {
   }
 
   download(list: number[]): Observable<HttpEvent<Object>> {
-    return this.http.post<Blob>(apiUrl + '/api/fso/download', list, {
+    const url = buildUrl(API_ENDPOINTS.FSO.BASE, API_ENDPOINTS.FSO.DOWNLOAD);
+
+    return this.http.post<Blob>(url, list, {
       observe: 'events',
       reportProgress: true,
       responseType: 'blob' as 'json',
-      headers: { 'Content-Type': 'application/json' }
+      headers: HTTP_OPTIONS_CONTENT_JSON.headers
     });
   }
 
   uniqueName(name: string, parentId: number, isFolder: boolean) {
-    let params = new HttpParams();
-    params = params
-      .set('parentId', parentId)
-      .set('name', name)
-      .set('isFolder', isFolder)
-    return this.http.get<boolean>(apiUrl + '/api/fso/unique', {params: params, headers: { 'Content-Type': 'application/json' } });
+    const url = buildUrl(API_ENDPOINTS.FSO.BASE, API_ENDPOINTS.FSO.UNIQUE);
+    const options = {
+      params: new HttpParams()
+        .set('parentId', parentId)
+        .set('name', name)
+        .set('isFolder', isFolder)
+    }
+    return this.http.get<boolean>(url, options);
   }
 }

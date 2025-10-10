@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace CloudStorage.Controllers.Expense;
 
 [Authorize]
-[Route("api/category")]
+[Route("api/expense/category")]
 [ApiController]
 public class CategoryController(IUserService userService, IExpenseService expenseService)  : ControllerBase
 {
@@ -87,5 +87,12 @@ public class CategoryController(IUserService userService, IExpenseService expens
         {
             return StatusCode(500);
         }
+    }
+    
+    [HttpGet("suggest")]
+    public async Task<IActionResult> GenerateCategoryAsync(string text)
+    {
+        var category = await _expenseService.SuggestCategoryIdAsync(text);
+        return new JsonResult(category);
     }
 }

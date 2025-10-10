@@ -16,6 +16,7 @@ import {
   ValidatorFn,
   Validators
 } from "@angular/forms";
+import {saveAs} from 'file-saver';
 
 const SNACKBAR_OPTIONS = { duration: 3000 };
 const DOUBLE_CLICK_THRESHOLD = 300;
@@ -316,13 +317,12 @@ export class DriveComponent implements OnInit, OnDestroy {
     let downloadFileName = '';
     if (elements.length == 1 && !elements[0].isFolder)
       downloadFileName = elements[0].name;
-    else downloadFileName = `files-${Date.now()}`;
+    else downloadFileName = `files-${Date.now()}.zip`;
 
     this.driveService.download(elements.map(x => x.id)).subscribe({
       next: (event: HttpEvent<any>) => {
         if (event.type === HttpEventType.Response) {
-          const FileSaver = require('file-saver');
-          FileSaver.saveAs(event.body as Blob, downloadFileName);
+          saveAs(event.body as Blob, downloadFileName);
           this.progressBar = 0;
         } else if (event.type === HttpEventType.DownloadProgress && event.total) {
           this.progressBar = Math.round((100 * event.loaded) / event.total);

@@ -2,10 +2,10 @@ import { Injectable } from '@angular/core';
 import {HttpClient, HttpParams} from "@angular/common/http";
 import {environment} from "../../environments/environment";
 import {Category, Expense, ExpenseFilter, PaymentMethod} from "../interfaces/expenses.interface";
-const API_URL: string = environment.baseUrl;
-const HTTP_OPTIONS = {
-  headers: { 'Content-Type': 'application/json' }
-}
+import {buildUrl} from "../core/url-builder";
+import {API_ENDPOINTS} from "../core/api-endpoints";
+import {HTTP_OPTIONS_CONTENT_JSON} from "../core/constants";
+
 @Injectable({
   providedIn: 'root'
 })
@@ -14,6 +14,7 @@ export class ExpenseService {
   constructor(private http: HttpClient) { }
 
   getExpenses(filter: ExpenseFilter) {
+    const url = buildUrl(API_ENDPOINTS.EXPENSE.BASE);
     let params = new HttpParams();
     if (filter.startDate) {
       params = params.set('startDate', filter.startDate as string)
@@ -26,45 +27,66 @@ export class ExpenseService {
         params = params.append('categories', category);
       }
     }
-    return this.http.get<Expense[]>(`${API_URL}/api/expense`, {params: params});
+    return this.http.get<Expense[]>(url, {params: params});
   }
+
   addExpense(payload: Expense) {
-    return this.http.post<Expense>(`${API_URL}/api/expense`, payload);
+    const url = buildUrl(API_ENDPOINTS.EXPENSE.BASE);
+    return this.http.post<Expense>(url, payload, HTTP_OPTIONS_CONTENT_JSON);
   }
   updateExpense(payload: Expense) {
-    return this.http.put<Expense>(`${API_URL}/api/expense`, payload);
+    const url = buildUrl(API_ENDPOINTS.EXPENSE.BASE);
+    return this.http.put<Expense>(url, payload, HTTP_OPTIONS_CONTENT_JSON);
   }
   deleteExpense(id: string) {
-    return this.http.delete<Expense>(`${API_URL}/api/expense?id=${id}`);
+    const url = buildUrl(API_ENDPOINTS.EXPENSE.BASE);
+    const options = {
+      params: new HttpParams().set('id', id)
+    };
+    return this.http.delete<Expense>(url, options);
   }
 
   getCategories() {
-    return this.http.get<Category[]>(`${API_URL}/api/category`);
+    const url = buildUrl(API_ENDPOINTS.EXPENSE.BASE, API_ENDPOINTS.EXPENSE.CATEGORY.BASE);
+    return this.http.get<Category[]>(url);
   }
   addCategory(payload: Category) {
-    return this.http.post<Category>(API_URL + '/api/category', payload);
+    const url = buildUrl(API_ENDPOINTS.EXPENSE.BASE, API_ENDPOINTS.EXPENSE.CATEGORY.BASE);
+    return this.http.post<Category>(url, payload, HTTP_OPTIONS_CONTENT_JSON);
   }
   updateCategory(payload: Category) {
-    return this.http.put<Category>(API_URL + '/api/category', payload);
+    const url = buildUrl(API_ENDPOINTS.EXPENSE.BASE, API_ENDPOINTS.EXPENSE.CATEGORY.BASE);
+    return this.http.put<Category>(url, payload, HTTP_OPTIONS_CONTENT_JSON);
   }
   deleteCategory(id: string) {
-    return this.http.delete<Category>(API_URL + '/api/category?id=' + id );
+    const url = buildUrl(API_ENDPOINTS.EXPENSE.BASE, API_ENDPOINTS.EXPENSE.CATEGORY.BASE);
+    const options = {
+      params: new HttpParams().set('id', id)
+    };
+    return this.http.delete<Category>(url, options);
+  }
+  suggestCategoryForExpense(text: string) {
+    const url = buildUrl(API_ENDPOINTS.EXPENSE.BASE, API_ENDPOINTS.EXPENSE.CATEGORY.BASE, API_ENDPOINTS.EXPENSE.CATEGORY.SUGGEST);
+    const options = {
+      params: new HttpParams().set('text', text)
+    };
+    return this.http.get<string>(url,options);
   }
 
   getPaymentMethods() {
-    return this.http.get<PaymentMethod[]>(`${API_URL}/api/payment-method`);
+    const url = buildUrl(API_ENDPOINTS.EXPENSE.BASE, API_ENDPOINTS.EXPENSE.PAYMENT_METHOD.BASE);
+    return this.http.get<PaymentMethod[]>(url);
   }
 
-  updatePaymentMethod(data: PaymentMethod) {
-    return this.http.put<PaymentMethod>(`${API_URL}/api/payment-method`, data, HTTP_OPTIONS);
+  updatePaymentMethod(payload: PaymentMethod) {
+    const url = buildUrl(API_ENDPOINTS.EXPENSE.BASE, API_ENDPOINTS.EXPENSE.PAYMENT_METHOD.BASE);
+    return this.http.put<PaymentMethod>(url, payload, HTTP_OPTIONS_CONTENT_JSON);
   }
 
-  addPaymentMethod(data: PaymentMethod) {
-    return this.http.post<PaymentMethod>(`${API_URL}/api/payment-method`, data, HTTP_OPTIONS);
+  addPaymentMethod(payload: PaymentMethod) {
+    const url = buildUrl(API_ENDPOINTS.EXPENSE.BASE, API_ENDPOINTS.EXPENSE.PAYMENT_METHOD.BASE);
+    return this.http.post<PaymentMethod>(url, payload, HTTP_OPTIONS_CONTENT_JSON);
   }
 
-  suggestCategoryForExpense(text: string) {
-    return this.http.get<string>(`${API_URL}/api/expense/suggest-category?text=${text}`);
-  }
 
 }

@@ -4,7 +4,6 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnInit } from '@angular/core';
 import { FormControl, FormGroup, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { PasswordService } from 'src/app/services/password.service';
 import { PasswordValidators } from '../profile/password.validators';
 import {EMPTY, finalize, tap, throwError} from 'rxjs';
 import { MatSnackBar } from '@angular/material/snack-bar';
@@ -31,7 +30,6 @@ export class ResetPasswordComponent implements OnInit {
   constructor(
     private route: ActivatedRoute,
     private router: Router,
-    private passwordService: PasswordService,
     private authService: AuthService,
     private _snackBar: MatSnackBar) { }
 
@@ -41,7 +39,7 @@ export class ResetPasswordComponent implements OnInit {
   }
 
   getResetToken() {
-    this.passwordService.sendResetToken(this.userIdentifierForm.get('userIdentifier')?.value)
+    this.authService.forgotPassword(this.userIdentifierForm.get('userIdentifier')?.value)
       .pipe(
         catchError(error => {
           if (error instanceof HttpErrorResponse) {
@@ -70,7 +68,7 @@ export class ResetPasswordComponent implements OnInit {
   }
 
   resetPassword() {
-    this.passwordService.resetPassword(+this.resetTokenId, this.resetToken, this.newPassword?.value)
+    this.authService.resetPassword(+this.resetTokenId, this.resetToken, this.newPassword?.value)
       .pipe(
         catchError(error => {
           this._snackBar.open(`Invalid reset token.`, 'Ok', { duration: 5000 });

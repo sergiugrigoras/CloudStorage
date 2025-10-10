@@ -7,8 +7,8 @@ using CloudStorage.ViewModels;
 namespace CloudStorage.Controllers;
 
 [Authorize]
-[Route("api/[controller]")]
 [ApiController]
+[Route("api/[controller]")]
 public class MediaController(
     IMediaService mediaService,
     IUserService userService,
@@ -16,7 +16,6 @@ public class MediaController(
     : ControllerBase
 {
     private const string SnapshotContentType = "image/jpg";
-    private const string ContentKey = "ContentKey";
 
     [HttpPost("search")]
     public async Task<IActionResult> SearchMediaObjectsAsync([FromBody]MediaObjectFilter filter)
@@ -69,7 +68,7 @@ public class MediaController(
             Path = "/api/content"
         };
         var key = contentAuthorization.GenerateKeyForUser(user.Id);
-        Response.Cookies.Append(ContentKey, key, cookieOptions);
+        Response.Cookies.Append(CookieNames.ContentKey, key, cookieOptions);
 
         return Ok();
     }

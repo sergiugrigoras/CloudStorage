@@ -64,7 +64,7 @@ export class RegisterComponent implements OnInit {
       email: this.email?.value,
       password: this.password?.value
     };
-    const inviteCode = this.inviteCode?.value;
+    const inviteCode = (this.inviteCode?.value || '').trim();
     this.authService.register(user, inviteCode)
       .pipe(
         catchError(error => {

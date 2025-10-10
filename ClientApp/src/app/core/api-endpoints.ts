@@ -1,0 +1,64 @@
+export const API_ENDPOINTS = {
+  AUTH: {
+    BASE: 'auth',
+    LOGIN: 'login',
+    REGISTER: 'register',
+    REFRESH: 'refresh',
+    CHECK_UNIQUE: 'check-unique',
+    CHANGE_PASSWORD: 'change-password',
+    FORGOT_PASSWORD: 'forgot-password',
+    RESET_PASSWORD: 'reset-password',
+    REVOKE: 'revoke',
+  },
+  ADMIN: {
+    BASE: 'admin',
+    ALL_USERS: 'all-users',
+    UPDATE_USER: 'update-user',
+    INVITE_USER: 'invite-user',
+  },
+  MEDIA: {
+    BASE: 'media',
+    SEARCH: 'search',
+    SNAPSHOT: 'snapshot',
+    ACCESS_KEY: 'access-key',
+    FAVORITE: 'favorite',
+    UPLOAD: 'upload',
+    NEW_ALBUM: 'new-album',
+    ALL_ALBUMS: 'all-albums',
+    ALBUM_ADD: 'album-add',
+    UNIQUE_ALBUM_NAME: 'unique-album-name',
+    ALBUM: 'album',
+    RESTORE: 'restore',
+  },
+  CONTENT: {
+    BASE: 'content',
+  },
+  EXPENSE: {
+    BASE: 'expense',
+    CATEGORY: {
+      BASE: 'category',
+      SUGGEST: 'suggest'
+    },
+    PAYMENT_METHOD: {
+      BASE: 'payment-method',
+    },
+  },
+  NOTE: {
+    BASE: 'note',
+  },
+  FSO: {
+    BASE: 'fso',
+    ROOT: 'root',
+    FOLDER: 'folder',
+    DRIVE_INFO: 'drive-info',
+    FULL_PATH: 'full-path',
+    ADD_FOLDER: 'add-folder',
+    RENAME: 'rename',
+    DELETE: 'delete',
+    MOVE: 'move',
+    UPLOAD: 'upload',
+    DOWNLOAD: 'download',
+    UNIQUE: 'unique'
+  }
+
+};

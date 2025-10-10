@@ -1,4 +1,3 @@
-export interface TokenModel {
-    accessToken: string,
-    refreshToken: string,
+export interface AccessToken {
+  token: string,
 }

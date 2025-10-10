@@ -1,6 +1,5 @@
 ﻿using CloudStorage.Interfaces.Media;
 using CloudStorage.Services;
-using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CloudStorage.Controllers;
@@ -14,7 +13,7 @@ public class ContentController(IMediaService mediaService, ContentAuthorization 
     {
         var mediaObject = await mediaService.GetMediaObjectByIdAsync(id);
         if (mediaObject == null) return NotFound();
-        var accessKey = Request.Cookies["ContentKey"];
+        var accessKey = Request.Cookies[CookieNames.ContentKey];
         if (!contentAuthorization.ValidKey(mediaObject.OwnerId, accessKey)) return Forbid();
         var stream = await mediaService.GetMediaStreamAsync(id);
         if (stream == null) return NotFound();

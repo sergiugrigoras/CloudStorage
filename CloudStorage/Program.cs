@@ -70,7 +70,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJw
         ValidateLifetime = true,
         ValidIssuer = jwtIssuer,
         ValidAudience = jwtIssuer,
-        ClockSkew = TimeSpan.FromMinutes(2)
+        ClockSkew = builder.Environment.IsDevelopment() ? TimeSpan.Zero : TimeSpan.FromMinutes(2)
     };
 });
 builder.Services.AddAuthorizationBuilder()

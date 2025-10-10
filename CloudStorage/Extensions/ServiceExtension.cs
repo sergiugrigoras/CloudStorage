@@ -30,11 +30,18 @@ public static class ServiceExtension
 
         services.AddHttpClient<GeminiService>();
         services.AddScoped<IGeminiService, GeminiService>();
-        
+
         if (environment.IsProduction())
+        {
             services.AddScoped<IMailService, MailService>();
+            services.AddScoped<ICookieOptionsProvider, CookieOptionsProvider>();
+        }
         else
+        {
             services.AddScoped<IMailService>(s => new DevMailService());
+            services.AddScoped<ICookieOptionsProvider, DevCookieOptionsProvider>();
+        }
+
         return services;
     }
 }

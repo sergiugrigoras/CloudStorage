@@ -1,6 +1,7 @@
 import { AuthService } from 'src/app/services/auth.service';
 import {Component, OnDestroy, OnInit, signal} from '@angular/core';
 import {Subject, Subscription, takeUntil} from 'rxjs';
+import {AppComponent} from "../../app.component";
 @Component({
     selector: 'app-home',
     templateUrl: './home.component.html',
@@ -8,10 +9,10 @@ import {Subject, Subscription, takeUntil} from 'rxjs';
     standalone: false
 })
 export class HomeComponent implements OnInit, OnDestroy {
-  isLoggedIn = signal(false);
+  readonly isLoggedIn = this.authService.isUserLoggedIn;
   private readonly destroy$ = new Subject<void>();
   constructor(private authService: AuthService) { }
-  cards: HomeCard[] = [
+  readonly cards: HomeCard[] = [
     { label: 'Drive', icon: 'backup', link: '/drive' },
     { label: 'Media', icon: 'image', link: '/media' },
     { label: 'Notes', icon: 'edit_note', link: '/notes' },
@@ -24,15 +25,18 @@ export class HomeComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    this.authService.isUserLoggedInSubject.pipe(
-      takeUntil(this.destroy$)
-    ).subscribe(val => {
-      this.isLoggedIn.set(val);
-    });
     if (this.authService.isAdmin()) {
       this.cards.push(this._adminCard);
     }
   }
+
+  // home.component.ts
+/*  readonly isLoggedIn = this.authService.isUserLoggedIn;
+  readonly cards = computed(() => {
+    const baseCards = [...this._defaultCards];
+    if (this.authService.isAdmin()) baseCards.push(this._adminCard);
+    return baseCards;
+  });*/
 }
 
 export interface HomeCard {
