@@ -22,11 +22,11 @@ FROM mcr.microsoft.com/dotnet/aspnet:8.0
 RUN apt-get update -qq && apt-get install ffmpeg -y
 
 ENV ASPNETCORE_URLS=http://+:5000
-ENV CloudStorage_Jwt__lifetime=5
-ENV CloudStorage_Jwt__issuer="http://localhost"
-ENV CloudStorage_Storage__Url="/app/storage"
-ENV CloudStorage_Storage__Size=5368709120
-ENV CloudStorage_Database__Sqlite="/app/database/cs.db"
+#ENV CloudStorage_Jwt__lifetime=5
+#ENV CloudStorage_Jwt__issuer="http://localhost"
+#ENV CloudStorage_Storage__Url="/app/storage"
+#ENV CloudStorage_Storage__Size=5368709120
+#ENV CloudStorage_Database__Sqlite="/app/database/cs.db"
 
 WORKDIR /app
 COPY --from=base /app/publish .
