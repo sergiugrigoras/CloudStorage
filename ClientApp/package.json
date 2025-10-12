@@ -42,6 +42,7 @@
     "@types/file-saver": "^2.0.7",
     "@types/jasmine": "~5.1.9",
     "@types/node": "^24.5.2",
+    "@typescript-eslint/eslint-plugin": "^8.46.0",
     "eslint": "^9.37.0",
     "eslint-config-prettier": "^10.1.8",
     "husky": "^9.1.7",
