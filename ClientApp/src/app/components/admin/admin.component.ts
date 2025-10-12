@@ -1,7 +1,6 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, inject, OnInit, signal } from '@angular/core';
 import { AdminService } from '../../services/admin.service';
 import { User } from '../../model/user.model';
-import { UserModel } from '../../interfaces/user.interface';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatDialog } from '@angular/material/dialog';
 import { SpinnerComponent } from '../spinner/spinner.component';
@@ -30,19 +29,33 @@ import { DatePipe } from '@angular/common';
   ],
 })
 export class AdminComponent implements OnInit {
-  users: User[] = null;
-  inviteControl: FormControl<string>;
-  constructor(
-    private readonly _adminService: AdminService,
-    private readonly _snackBar: MatSnackBar,
-    private readonly _dialog: MatDialog
-  ) {}
+  private readonly _adminService = inject(AdminService);
+  private readonly _snackBar = inject(MatSnackBar);
+  private readonly _dialog = inject(MatDialog);
+  users: User[] = [];
+  usersReady = signal(false);
+  inviteControl: FormControl<string | null> = new FormControl('', [
+    Validators.email,
+    Validators.required,
+  ]);
+  constructor() {}
 
   ngOnInit(): void {
-    this.inviteControl = new FormControl('', [Validators.email, Validators.required]);
-    this._adminService.getAllUsers().subscribe((users) => {
-      this.users = [...users];
-    });
+    this._adminService
+      .getAllUsers()
+      .pipe(
+        catchError(() => {
+          this._snackBar.open('An error occurred.', 'Ok', { duration: 3000 });
+          return EMPTY;
+        }),
+        tap((users) => {
+          this.users = [...users];
+        }),
+        finalize(() => {
+          this.usersReady.set(true);
+        })
+      )
+      .subscribe();
   }
 
   toggleAccount(user: User) {
@@ -97,10 +110,9 @@ export class AdminComponent implements OnInit {
   }
 
   sendInviteCode() {
-    console.log('test');
     if (this.inviteControl.invalid) return;
     this._adminService
-      .sendInviteCode(this.inviteControl.value)
+      .sendInviteCode((this.inviteControl.value || '').trim())
       .pipe(
         catchError((error) => {
           if (error instanceof HttpErrorResponse) {

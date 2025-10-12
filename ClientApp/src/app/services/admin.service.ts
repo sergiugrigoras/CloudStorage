@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { inject, Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { User } from '../model/user.model';
 import { buildUrl } from '../core/url-builder';
@@ -9,7 +9,8 @@ import { HTTP_OPTIONS_CONTENT_JSON } from '../core/constants';
   providedIn: 'root',
 })
 export class AdminService {
-  constructor(private http: HttpClient) {}
+  private readonly http = inject(HttpClient);
+  constructor() {}
 
   getAllUsers() {
     const url = buildUrl(API_ENDPOINTS.ADMIN.BASE, API_ENDPOINTS.ADMIN.ALL_USERS);

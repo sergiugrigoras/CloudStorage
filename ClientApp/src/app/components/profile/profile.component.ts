@@ -8,7 +8,7 @@ import {
   FormsModule,
   ReactiveFormsModule,
 } from '@angular/forms';
-import { Component, OnInit, ViewChild } from '@angular/core';
+import { Component, inject, ViewChild } from '@angular/core';
 import { AuthService } from 'src/app/services/auth.service';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatFormField, MatLabel, MatInput } from '@angular/material/input';
@@ -20,8 +20,10 @@ import { MatButton } from '@angular/material/button';
   styleUrls: ['./profile.component.scss'],
   imports: [FormsModule, ReactiveFormsModule, MatFormField, MatLabel, MatInput, MatButton],
 })
-export class ProfileComponent implements OnInit {
-  @ViewChild(FormGroupDirective) formDirective: FormGroupDirective;
+export class ProfileComponent {
+  private readonly authService = inject(AuthService);
+  private readonly _snackBar = inject(MatSnackBar);
+  @ViewChild(FormGroupDirective) formDirective: FormGroupDirective | undefined;
   profileForm = new FormGroup({
     profileInfo: new FormGroup({
       username: new FormControl(this.authService.getUserNameFromJwtToken()),
@@ -38,39 +40,22 @@ export class ProfileComponent implements OnInit {
     ),
   });
 
-  constructor(
-    private authService: AuthService,
-    private _snackBar: MatSnackBar
-  ) {}
-
-  ngOnInit(): void {}
+  constructor() {}
 
   get oldPassword() {
     return this.profileForm.get('passwordChange.oldPassword');
-  }
-
-  set oldPassword(value: any) {
-    this.profileForm.get('passwordChange.oldPassword').setValue(value);
   }
 
   get newPassword() {
     return this.profileForm.get('passwordChange.newPassword');
   }
 
-  set newPassword(value: any) {
-    this.profileForm.get('passwordChange.newPassword').setValue(value);
-  }
-
   get confirmNewPassword() {
     return this.profileForm.get('passwordChange.confirmNewPassword');
   }
 
-  set confirmNewPassword(value: any) {
-    this.profileForm.get('passwordChange.confirmNewPassword').setValue(value);
-  }
-
   resetPasswordFields() {
-    this.formDirective.resetForm({
+    this.formDirective?.resetForm({
       profileInfo: {
         username: this.authService.getUserNameFromJwtToken(),
         email: this.authService.getEmailFromJwtToken(),
@@ -80,12 +65,17 @@ export class ProfileComponent implements OnInit {
   }
 
   changePassword() {
-    this.authService.changePassword(this.oldPassword?.value, this.newPassword?.value).subscribe({
+    const oldPassword = this.profileForm.get('passwordChange.newPassword')?.value || '';
+    const newPassword = this.profileForm.get('passwordChange.newPassword')?.value || '';
+    if (oldPassword === '' || newPassword === '') {
+      return;
+    }
+    this.authService.changePassword(oldPassword, newPassword).subscribe({
       next: () => {
         this.resetPasswordFields();
         this._snackBar.open(`Password has been changed successfully!`, 'Ok', { duration: 5000 });
       },
-      error: (error: any) => {
+      error: (error: unknown) => {
         if (error instanceof HttpErrorResponse && error.status === 400) {
           this._snackBar.open(`Error. Invalid password.`, 'Ok', { duration: 5000 });
         } else {

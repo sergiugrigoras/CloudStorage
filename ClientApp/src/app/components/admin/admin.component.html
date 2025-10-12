@@ -18,7 +18,7 @@
   </div>
 </div>
 <h3>Users</h3>
-@if (users) {
+@if (usersReady()) {
   @for (user of users; track user) {
     <div class="admin_user-item">
       <div>
