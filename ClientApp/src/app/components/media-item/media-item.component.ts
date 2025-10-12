@@ -2,24 +2,25 @@ import {
   AfterViewInit,
   Component,
   ElementRef,
-  EventEmitter, HostListener,
+  EventEmitter,
+  HostListener,
   Input,
   OnDestroy,
   OnInit,
-  Output
+  Output,
 } from '@angular/core';
 import { MediaObject } from 'src/app/model/media-object.model';
-import {MediaService} from "../../services/media.service";
-import {catchError, EMPTY, retry, Subject, takeUntil, tap} from "rxjs";
-import {DomSanitizer} from "@angular/platform-browser";
+import { MediaService } from '../../services/media.service';
+import { catchError, EMPTY, retry, Subject, takeUntil, tap } from 'rxjs';
+import { DomSanitizer } from '@angular/platform-browser';
 
 @Component({
-    selector: 'app-media-item',
-    templateUrl: './media-item.component.html',
-    styleUrls: ['./media-item.component.scss'],
-    standalone: false
+  selector: 'app-media-item',
+  templateUrl: './media-item.component.html',
+  styleUrls: ['./media-item.component.scss'],
+  standalone: false,
 })
-export class MediaItemComponent implements OnInit, OnDestroy, AfterViewInit{
+export class MediaItemComponent implements OnInit, OnDestroy, AfterViewInit {
   @Input() item: MediaObject;
   @Input() xObserver: IntersectionObserver;
   url: string;
@@ -29,8 +30,8 @@ export class MediaItemComponent implements OnInit, OnDestroy, AfterViewInit{
   constructor(
     private mediaService: MediaService,
     private sanitizer: DomSanitizer,
-    private el: ElementRef) {
-  }
+    private el: ElementRef
+  ) {}
 
   itemTouched() {
     if (this.selectMode) {
@@ -51,27 +52,25 @@ export class MediaItemComponent implements OnInit, OnDestroy, AfterViewInit{
   }
 
   ngOnInit(): void {
-    this.mediaService.selectMode$
-      .pipe(
-        takeUntil(this.destroy$)
-      )
-      .subscribe(selectMode => {
+    this.mediaService.selectMode$.pipe(takeUntil(this.destroy$)).subscribe((selectMode) => {
       this.selectMode = selectMode;
     });
-    this.mediaService.getSnapshotFile(this.item.id)
+    this.mediaService
+      .getSnapshotFile(this.item.id)
       .pipe(
         takeUntil(this.destroy$),
         retry(3),
         catchError((error: any) => {
           return EMPTY;
         }),
-        tap(response => {
+        tap((response) => {
           this.url = URL.createObjectURL(response.body);
           const safeUrl = this.sanitizer.bypassSecurityTrustUrl(this.url);
           this.item.snapshot$.next(safeUrl);
           this.item.snapshot$.complete();
           this.item.isLoading = false;
-        }))
+        })
+      )
       .subscribe();
   }
 

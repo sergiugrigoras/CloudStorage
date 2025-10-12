@@ -33,7 +33,11 @@ import { MatFormFieldModule, MAT_FORM_FIELD_DEFAULT_OPTIONS } from '@angular/mat
 import { MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatCardModule } from '@angular/material/card';
 import { MatDatepickerModule } from '@angular/material/datepicker';
-import {ErrorStateMatcher, MatNativeDateModule, ShowOnDirtyErrorStateMatcher} from '@angular/material/core';
+import {
+  ErrorStateMatcher,
+  MatNativeDateModule,
+  ShowOnDirtyErrorStateMatcher,
+} from '@angular/material/core';
 import { MatSelectModule } from '@angular/material/select';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
@@ -45,57 +49,63 @@ import { MediaItemComponent } from './components/media-item/media-item.component
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { NgxMatSelectSearchModule } from 'ngx-mat-select-search';
-import {DragDropModule} from '@angular/cdk/drag-drop';
-import {MatBadgeModule} from "@angular/material/badge";
+import { DragDropModule } from '@angular/cdk/drag-drop';
+import { MatBadgeModule } from '@angular/material/badge';
 import { ExpenseComponent } from './components/expense/expense.component';
 import {
   MatCell,
   MatCellDef,
   MatColumnDef,
-  MatHeaderCell, MatHeaderCellDef,
-  MatHeaderRow, MatHeaderRowDef,
-  MatRow, MatRowDef,
-  MatTable
-} from "@angular/material/table";
-import {BaseChartDirective, provideCharts, withDefaultRegisterables} from "ng2-charts";
+  MatHeaderCell,
+  MatHeaderCellDef,
+  MatHeaderRow,
+  MatHeaderRowDef,
+  MatRow,
+  MatRowDef,
+  MatTable,
+} from '@angular/material/table';
+import { BaseChartDirective, provideCharts, withDefaultRegisterables } from 'ng2-charts';
 import { ExpenseChartComponent } from './components/expense-chart/expense-chart.component';
-import {MatPaginator} from "@angular/material/paginator";
+import { MatPaginator } from '@angular/material/paginator';
 import { AdminComponent } from './components/admin/admin.component';
 function tokenGetter() {
-  return localStorage.getItem("jwt");
+  return localStorage.getItem('jwt');
 }
 
-@NgModule({ declarations: [
-        AppComponent,
-        RegisterComponent,
-        LoginComponent,
-        DriveComponent,
-        HomeComponent,
-        FsoComponent,
-        ReadableBytesPipe,
-        ToolbarComponent,
-        PathbarComponent,
-        DiskinfoComponent,
-        NotesComponent,
-        UploadProgressComponent,
-        ProfileComponent,
-        ResetPasswordComponent,
-        SpinnerComponent,
-        MediaComponent,
-        MediaItemComponent,
-        ExpenseComponent,
-        ExpenseChartComponent,
-        AdminComponent,
-    ],
-    bootstrap: [AppComponent], imports: [BrowserModule,
+@NgModule({
+  declarations: [
+    AppComponent,
+    RegisterComponent,
+    LoginComponent,
+    DriveComponent,
+    HomeComponent,
+    FsoComponent,
+    ReadableBytesPipe,
+    ToolbarComponent,
+    PathbarComponent,
+    DiskinfoComponent,
+    NotesComponent,
+    UploadProgressComponent,
+    ProfileComponent,
+    ResetPasswordComponent,
+    SpinnerComponent,
+    MediaComponent,
+    MediaItemComponent,
+    ExpenseComponent,
+    ExpenseChartComponent,
+    AdminComponent,
+  ],
+  bootstrap: [AppComponent],
+  imports: [
+    BrowserModule,
     CommonModule,
     AppRoutingModule,
     FormsModule,
     ReactiveFormsModule,
     JwtModule.forRoot({
       config: {
-        tokenGetter: tokenGetter
-      }
+        tokenGetter: tokenGetter,
+      },
     }),
     MatIconModule,
     MatDialogModule,
@@ -119,19 +129,34 @@ function tokenGetter() {
     MatCheckboxModule,
     NgxMatSelectSearchModule,
     DragDropModule,
-    MatBadgeModule, MatTable, MatColumnDef, MatHeaderCell, MatCell, MatCellDef, MatHeaderRow, MatRow, MatRowDef, MatHeaderCellDef, MatHeaderRowDef, BaseChartDirective, MatPaginator], providers: [
-        {
-            provide: HTTP_INTERCEPTORS,
-            useClass: AuthInterceptor,
-            multi: true,
-        },
-        {
-            provide: ErrorHandler,
-            useClass: AppErrorHandler
-        },
-        { provide: MAT_FORM_FIELD_DEFAULT_OPTIONS, useValue: { appearance: 'outline' } },
-        { provide: ErrorStateMatcher, useClass: ShowOnDirtyErrorStateMatcher },
-        provideHttpClient(withInterceptorsFromDi()),
-        provideCharts(withDefaultRegisterables())
-    ] })
-export class AppModule { }
+    MatBadgeModule,
+    MatTable,
+    MatColumnDef,
+    MatHeaderCell,
+    MatCell,
+    MatCellDef,
+    MatHeaderRow,
+    MatRow,
+    MatRowDef,
+    MatHeaderCellDef,
+    MatHeaderRowDef,
+    BaseChartDirective,
+    MatPaginator,
+  ],
+  providers: [
+    {
+      provide: HTTP_INTERCEPTORS,
+      useClass: AuthInterceptor,
+      multi: true,
+    },
+    {
+      provide: ErrorHandler,
+      useClass: AppErrorHandler,
+    },
+    { provide: MAT_FORM_FIELD_DEFAULT_OPTIONS, useValue: { appearance: 'outline' } },
+    { provide: ErrorStateMatcher, useClass: ShowOnDirtyErrorStateMatcher },
+    provideHttpClient(withInterceptorsFromDi()),
+    provideCharts(withDefaultRegisterables()),
+  ],
+})
+export class AppModule {}

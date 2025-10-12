@@ -2,13 +2,12 @@ import { ProgressBarModel } from '../../interfaces/progress-bar.interface';
 import { Component, Input, OnInit } from '@angular/core';
 
 @Component({
-    selector: 'progress-bar',
-    templateUrl: './progress-bar.component.html',
-    styleUrls: ['./progress-bar.component.css', '../diskinfo/diskinfo.component.css'],
-    standalone: false
+  selector: 'progress-bar',
+  templateUrl: './progress-bar.component.html',
+  styleUrls: ['./progress-bar.component.css', '../diskinfo/diskinfo.component.css'],
+  standalone: false,
 })
 export class UploadProgressComponent implements OnInit {
-
   @Input('progressBar') progressBar: ProgressBarModel = {
     progress: 0,
     text: '',
@@ -16,11 +15,9 @@ export class UploadProgressComponent implements OnInit {
     loaded: 0,
     total: 0,
     background: 'success',
-  }
+  };
 
-  constructor() { }
+  constructor() {}
 
-  ngOnInit(): void {
-  }
-
+  ngOnInit(): void {}
 }

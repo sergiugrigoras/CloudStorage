@@ -4,19 +4,19 @@
     <div>
       <mat-form-field>
         <mat-label>Username</mat-label>
-        <input matInput formControlName="username" type="text" readonly>
+        <input matInput formControlName="username" type="text" readonly />
       </mat-form-field>
     </div>
     <div>
       <mat-form-field>
         <mat-label>Email</mat-label>
-        <input matInput formControlName="email" type="text" readonly>
+        <input matInput formControlName="email" type="text" readonly />
       </mat-form-field>
     </div>
     <div>
       <mat-form-field>
         <mat-label>Roles</mat-label>
-        <input matInput formControlName="roles" type="text" readonly>
+        <input matInput formControlName="roles" type="text" readonly />
       </mat-form-field>
     </div>
   </div>
@@ -25,30 +25,31 @@
     <div>
       <mat-form-field>
         <mat-label>Old password</mat-label>
-        <input matInput formControlName="oldPassword" type="password">
+        <input matInput formControlName="oldPassword" type="password" />
       </mat-form-field>
     </div>
     <div>
       <mat-form-field>
         <mat-label>New password</mat-label>
-        <input matInput formControlName="newPassword" type="password">
+        <input matInput formControlName="newPassword" type="password" />
       </mat-form-field>
     </div>
     <div>
       <mat-form-field>
         <mat-label>Confirm new password</mat-label>
-        <input matInput formControlName="confirmNewPassword" type="password">
+        <input matInput formControlName="confirmNewPassword" type="password" />
       </mat-form-field>
     </div>
     <div>
-      <button type="submit" mat-raised-button color="accent" [disabled]="profileForm.invalid">Change
-        password
+      <button type="submit" mat-raised-button color="accent" [disabled]="profileForm.invalid">
+        Change password
       </button>
-      <button type="button" mat-raised-button color="primary" (click)="resetPasswordFields()">Clear</button>
+      <button type="button" mat-raised-button color="primary" (click)="resetPasswordFields()">
+        Clear
+      </button>
     </div>
   </div>
 </form>
-
 
 <!-- <div class="row">
     <div class="col-md-4">

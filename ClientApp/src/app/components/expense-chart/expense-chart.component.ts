@@ -1,15 +1,15 @@
-import {Component, Inject, TemplateRef, ViewChild} from '@angular/core';
-import {Expense, ExpenseChartType} from "../../interfaces/expenses.interface";
-import dayjs from "dayjs";
-import {ChartConfiguration, ChartOptions} from "chart.js";
-import {MAT_DIALOG_DATA} from "@angular/material/dialog";
-import {MatSlideToggleChange} from "@angular/material/slide-toggle";
+import { Component, Inject, TemplateRef, ViewChild } from '@angular/core';
+import { Expense, ExpenseChartType } from '../../interfaces/expenses.interface';
+import dayjs from 'dayjs';
+import { ChartConfiguration, ChartOptions } from 'chart.js';
+import { MAT_DIALOG_DATA } from '@angular/material/dialog';
+import { MatSlideToggleChange } from '@angular/material/slide-toggle';
 
 @Component({
-    selector: 'app-expense-chart',
-    templateUrl: './expense-chart.component.html',
-    styleUrl: './expense-chart.component.scss',
-    standalone: false
+  selector: 'app-expense-chart',
+  templateUrl: './expense-chart.component.html',
+  styleUrl: './expense-chart.component.scss',
+  standalone: false,
 })
 export class ExpenseChartComponent {
   @ViewChild('byCategoryChart', { static: true }) byCategoryChartTemplate: TemplateRef<never>;
@@ -19,26 +19,26 @@ export class ExpenseChartComponent {
     scales: {
       x: {
         border: {
-          display: false
+          display: false,
         },
         grid: {
-          display: false
+          display: false,
         },
         ticks: {
-          display: false
-        }
+          display: false,
+        },
       },
       y: {
         border: {
-          display: false
+          display: false,
         },
         grid: {
-          display: false
+          display: false,
         },
         ticks: {
-          display: false
-        }
-      }
+          display: false,
+        },
+      },
     },
     responsive: true,
     plugins: {
@@ -48,17 +48,17 @@ export class ExpenseChartComponent {
       },
       tooltip: {
         callbacks: {
-          label: context => {
+          label: (context) => {
             let currentValue = context.raw as number;
             const meta = context.chart.getDatasetMeta(context.datasetIndex) as any;
             const total = meta.total as number;
-            let percentage = parseFloat((currentValue/total*100).toFixed(1));
+            let percentage = parseFloat(((currentValue / total) * 100).toFixed(1));
 
-            return "$" + currentValue.toFixed(2) + ' (' + percentage + '%)';
-          }
-        }
-      }
-    }
+            return '$' + currentValue.toFixed(2) + ' (' + percentage + '%)';
+          },
+        },
+      },
+    },
   };
   byCategoryChartDatasets: any[];
   byCategoryChartLabels: string[];
@@ -71,13 +71,13 @@ export class ExpenseChartComponent {
       },
       tooltip: {
         callbacks: {
-          label: context => {
-            let currentValue = context.raw as number
-            return context.dataset.label + ": $" + currentValue.toFixed(2);
-          }
-        }
-      }
-    }
+          label: (context) => {
+            let currentValue = context.raw as number;
+            return context.dataset.label + ': $' + currentValue.toFixed(2);
+          },
+        },
+      },
+    },
   };
   byDayChartDatasets: any[];
   byDayChartLabels: string[];
@@ -90,21 +90,21 @@ export class ExpenseChartComponent {
       },
       tooltip: {
         callbacks: {
-          label: context => {
-            let currentValue = context.raw as number
-            return context.dataset.label + ": $" + currentValue.toFixed(2);
-          }
-        }
-      }
+          label: (context) => {
+            let currentValue = context.raw as number;
+            return context.dataset.label + ': $' + currentValue.toFixed(2);
+          },
+        },
+      },
     },
     scales: {
       x: {
         stacked: true,
       },
       y: {
-        stacked: true
-      }
-    }
+        stacked: true,
+      },
+    },
   };
   byMonthChartDatasets: any[];
   byMonthChartLabels: string[];
@@ -122,16 +122,16 @@ export class ExpenseChartComponent {
 
   set chartType(value: ExpenseChartType) {
     switch (value) {
-      case "category": {
-        this.template = this.byCategoryChartTemplate
+      case 'category': {
+        this.template = this.byCategoryChartTemplate;
         break;
       }
-      case "day": {
-        this.template = this.byDayChartTemplate
+      case 'day': {
+        this.template = this.byDayChartTemplate;
         break;
       }
-      case "month": {
-        this.template = this.byMonthChartTemplate
+      case 'month': {
+        this.template = this.byMonthChartTemplate;
         break;
       }
     }
@@ -144,69 +144,96 @@ export class ExpenseChartComponent {
   }
 
   private setChartDataByCategory() {
-    this.byCategoryChartLabels = Array.from(new Set(this.expenses.map(x => x.category.name)));
-    const byCategoryAmount = this.byCategoryChartLabels
-      .map(category => this.expenses.filter(x => x.category.name === category).reduce((acc, obj) => acc + obj.amount, 0));
-    this.byCategoryChartDatasets = [{ data: byCategoryAmount}];
+    this.byCategoryChartLabels = Array.from(new Set(this.expenses.map((x) => x.category.name)));
+    const byCategoryAmount = this.byCategoryChartLabels.map((category) =>
+      this.expenses
+        .filter((x) => x.category.name === category)
+        .reduce((acc, obj) => acc + obj.amount, 0)
+    );
+    this.byCategoryChartDatasets = [{ data: byCategoryAmount }];
   }
 
   private setChartDataByDay(byCategory: boolean = false) {
-    const dates = Array.from(new Set(this.expenses.map(x => (new Date(x.date).getTime())))).sort((a, b) => a - b);
-    const categories = Array.from(new Set(this.expenses.map(x => x.category.name)));
-    this.byDayChartLabels = dates.map(x => dayjs(x).format('YYYY-MM-DD'));
+    const dates = Array.from(new Set(this.expenses.map((x) => new Date(x.date).getTime()))).sort(
+      (a, b) => a - b
+    );
+    const categories = Array.from(new Set(this.expenses.map((x) => x.category.name)));
+    this.byDayChartLabels = dates.map((x) => dayjs(x).format('YYYY-MM-DD'));
     this.byDayChartDatasets = [];
     if (byCategory) {
       for (const category of categories) {
         const byDateAmount = dates
-          .map(date => this.expenses.filter(x => (new Date(x.date)).getTime() === date && x.category.name === category).reduce((acc, obj) => acc + obj.amount, 0))
-          .map(amount => Number(amount.toFixed(2)));
+          .map((date) =>
+            this.expenses
+              .filter((x) => new Date(x.date).getTime() === date && x.category.name === category)
+              .reduce((acc, obj) => acc + obj.amount, 0)
+          )
+          .map((amount) => Number(amount.toFixed(2)));
         this.byDayChartDatasets.push({ data: byDateAmount, label: category });
       }
     } else {
       const byDateAmount = dates
-        .map(date => this.expenses.filter(x => (new Date(x.date)).getTime() === date).reduce((acc, obj) => acc + obj.amount, 0))
-        .map(amount => Number(amount.toFixed(2)));
+        .map((date) =>
+          this.expenses
+            .filter((x) => new Date(x.date).getTime() === date)
+            .reduce((acc, obj) => acc + obj.amount, 0)
+        )
+        .map((amount) => Number(amount.toFixed(2)));
       this.byDayChartDatasets.push({ data: byDateAmount, label: 'Total' });
     }
-
   }
 
   private setChartDataByMonth(byCategory: boolean = false) {
-    const dates = Array.from(new Set(this.expenses.map(x => (new Date(x.date).getTime())))).sort((a, b) => a - b);
-    const monthYear: {month: number, year: number}[] = [];
-    const categories = Array.from(new Set(this.expenses.map(x => x.category.name)));
+    const dates = Array.from(new Set(this.expenses.map((x) => new Date(x.date).getTime()))).sort(
+      (a, b) => a - b
+    );
+    const monthYear: { month: number; year: number }[] = [];
+    const categories = Array.from(new Set(this.expenses.map((x) => x.category.name)));
     for (const date of dates) {
       const dateObj = dayjs(date);
       const currentMonth = dateObj.get('month');
       const currentYear = dateObj.get('year');
-      if (monthYear.find(x => x.month === currentMonth && x.year === currentYear) === undefined) {
-        monthYear.push({month: currentMonth, year: currentYear});
+      if (monthYear.find((x) => x.month === currentMonth && x.year === currentYear) === undefined) {
+        monthYear.push({ month: currentMonth, year: currentYear });
       }
     }
-    this.byMonthChartLabels = monthYear.map(x => dayjs(new Date(x.year, x.month)).format('MMMM YYYY'));
+    this.byMonthChartLabels = monthYear.map((x) =>
+      dayjs(new Date(x.year, x.month)).format('MMMM YYYY')
+    );
     this.byMonthChartDatasets = [];
     if (byCategory) {
       for (const category of categories) {
         const byMonthYearAmount = monthYear
-          .map(my => this.expenses.filter(e => {
-            const date = dayjs(e.date);
-            return date.get('month') === my.month && date.get('year') === my.year && e.category.name === category;
-          }).reduce((acc, obj) => acc + obj.amount, 0))
-          .map(amount => Number(amount.toFixed(2)));
+          .map((my) =>
+            this.expenses
+              .filter((e) => {
+                const date = dayjs(e.date);
+                return (
+                  date.get('month') === my.month &&
+                  date.get('year') === my.year &&
+                  e.category.name === category
+                );
+              })
+              .reduce((acc, obj) => acc + obj.amount, 0)
+          )
+          .map((amount) => Number(amount.toFixed(2)));
 
         this.byMonthChartDatasets.push({ data: byMonthYearAmount, label: category });
       }
     } else {
       const byMonthYearAmount = monthYear
-        .map(my => this.expenses.filter(e => {
-          const date = dayjs(e.date);
-          return date.get('month') === my.month && date.get('year') === my.year;
-        }).reduce((acc, obj) => acc + obj.amount, 0))
-        .map(amount => Number(amount.toFixed(2)));
+        .map((my) =>
+          this.expenses
+            .filter((e) => {
+              const date = dayjs(e.date);
+              return date.get('month') === my.month && date.get('year') === my.year;
+            })
+            .reduce((acc, obj) => acc + obj.amount, 0)
+        )
+        .map((amount) => Number(amount.toFixed(2)));
 
       this.byMonthChartDatasets.push({ data: byMonthYearAmount, label: 'Total' });
     }
-
   }
 
   splitByCategory(value: boolean, chart: ExpenseChartType) {

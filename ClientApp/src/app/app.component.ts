@@ -8,44 +8,44 @@ import {
   OnInit,
   signal,
   TemplateRef,
-  ViewChild, WritableSignal
+  ViewChild,
+  WritableSignal,
 } from '@angular/core';
 import { Router } from '@angular/router';
 import { tap } from 'rxjs/operators';
 import { AuthService } from './services/auth.service';
 import { OverlayContainer } from '@angular/cdk/overlay';
-import {AppRoute} from "./interfaces/app-route.interface";
-import {ThemeService} from "ng2-charts";
-import {ChartOptions} from "chart.js";
+import { AppRoute } from './interfaces/app-route.interface';
+import { ThemeService } from 'ng2-charts';
+import { ChartOptions } from 'chart.js';
 
 const DARK_THEME_CHART_OVER: ChartOptions = {
   plugins: {
     legend: {
       labels: {
-        color: 'white'
-      }
+        color: 'white',
+      },
     },
   },
   scales: {
     x: {
       ticks: { color: 'white' },
-      grid: { color: 'rgba(255,255,255,0.1)' }
+      grid: { color: 'rgba(255,255,255,0.1)' },
     },
     y: {
       ticks: { color: 'white' },
-      grid: { color: 'rgba(255,255,255,0.1)' }
-    }
-  }
+      grid: { color: 'rgba(255,255,255,0.1)' },
+    },
+  },
 };
 const WHITE_THEME_CHART_OPTIONS: ChartOptions = {};
 @Component({
-    selector: 'app-root',
-    templateUrl: './app.component.html',
-    styleUrls: ['./app.component.scss'],
-    standalone: false
+  selector: 'app-root',
+  templateUrl: './app.component.html',
+  styleUrls: ['./app.component.scss'],
+  standalone: false,
 })
 export class AppComponent implements OnInit, AfterViewInit {
-
   title = 'scs';
   readonly isLoggedIn = this.authService.isUserLoggedIn;
   readonly isLargeDevice = signal(false);
@@ -57,20 +57,28 @@ export class AppComponent implements OnInit, AfterViewInit {
   @ViewChild('emptyDiv', { static: true }) emptyDiv: ElementRef<HTMLDivElement>;
   year = new Date().getFullYear();
   routes: AppRoute[] = [
-    {route: '/drive', displayName: 'Drive'},
-    {route: '/media', displayName: 'Media'},
-    {route: '/notes', displayName: 'Notes'},
-    {route: '/expenses', displayName: 'Expenses'},
+    { route: '/drive', displayName: 'Drive' },
+    { route: '/media', displayName: 'Media' },
+    { route: '/notes', displayName: 'Notes' },
+    { route: '/expenses', displayName: 'Expenses' },
   ];
-  constructor(private authService: AuthService, private router: Router, private overlay: OverlayContainer, private elem: ElementRef, private themeService: ThemeService) { }
+  constructor(
+    private authService: AuthService,
+    private router: Router,
+    private overlay: OverlayContainer,
+    private elem: ElementRef,
+    private themeService: ThemeService
+  ) {}
   ngAfterViewInit(): void {
     const backTopButton = this.elem.nativeElement.querySelector('.back-top') as HTMLElement;
     const intersectionCallback = (entries: IntersectionObserverEntry[]) => {
       backTopButton.classList.toggle('invisible');
     };
-    const intersectionObserver = new IntersectionObserver(
-      intersectionCallback,
-      { rootMargin: '0px', threshold: 1, root: null });
+    const intersectionObserver = new IntersectionObserver(intersectionCallback, {
+      rootMargin: '0px',
+      threshold: 1,
+      root: null,
+    });
     intersectionObserver.observe(this.emptyDiv?.nativeElement);
   }
 
@@ -78,14 +86,18 @@ export class AppComponent implements OnInit, AfterViewInit {
     window.scroll({
       top: 0,
       left: 0,
-      behavior: 'smooth'
+      behavior: 'smooth',
     });
   }
 
   ngOnInit(): void {
     this.isLoggedIn.set(this.authService.jwtTokenExists());
     const userSelectedTheme = localStorage.getItem('theme');
-    if (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches && !userSelectedTheme) {
+    if (
+      window.matchMedia &&
+      window.matchMedia('(prefers-color-scheme: dark)').matches &&
+      !userSelectedTheme
+    ) {
       this.setTheme('dark', false);
     } else {
       this.setTheme(userSelectedTheme, false);
@@ -105,14 +117,13 @@ export class AppComponent implements OnInit, AfterViewInit {
   private getScreenSize() {
     this.scrHeight = window.innerHeight;
     this.scrWidth = window.innerWidth;
-    this.isLargeDevice.set(this.scrWidth >= 768)
+    this.isLargeDevice.set(this.scrWidth >= 768);
   }
 
   toggleTheme() {
     if (this.hostClassName === this.darkClassName) {
       this.setTheme('light', true);
-    }
-    else {
+    } else {
       this.setTheme('dark', true);
     }
   }
@@ -133,5 +144,3 @@ export class AppComponent implements OnInit, AfterViewInit {
     }
   }
 }
-
-

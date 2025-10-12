@@ -1,7 +1,7 @@
 export interface PaymentMethod {
   id: string;
   name: string;
-  isActive:	boolean;
+  isActive: boolean;
   userId: string;
 }
 
@@ -24,9 +24,9 @@ export interface Expense {
 }
 
 export interface ExpenseFilter {
-  startDate: Date | string,
-  endDate: Date | string,
-  categories: string[],
+  startDate: Date | string;
+  endDate: Date | string;
+  categories: string[];
 }
 
 export type ExpenseChartType = 'category' | 'day' | 'month';

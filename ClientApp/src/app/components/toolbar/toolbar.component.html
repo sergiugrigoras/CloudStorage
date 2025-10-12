@@ -6,9 +6,15 @@
       (click)="emitEvent(button.event)"
       [disabled]="button.isDisabled()"
       [matMenuTriggerFor]="button.menu === 'sort-menu' ? sortMenu : null"
-
     >
-      <span class="material-icons" [matBadge]="button.badgeValue()" matBadgeColor="warn" matBadgePosition="below after" matBadgeSize="medium">{{ button.icon }}</span>
+      <span
+        class="material-icons"
+        [matBadge]="button.badgeValue()"
+        matBadgeColor="warn"
+        matBadgePosition="below after"
+        matBadgeSize="medium"
+        >{{ button.icon }}</span
+      >
     </button>
   </ng-container>
   <mat-menu #sortMenu="matMenu">

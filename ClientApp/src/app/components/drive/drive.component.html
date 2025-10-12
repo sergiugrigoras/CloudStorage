@@ -3,79 +3,102 @@
   <mat-progress-bar mode="determinate" *ngIf="progressBar" [value]="progressBar"></mat-progress-bar>
   <pathbar [folder]="currentFolder"></pathbar>
   <div>
-    <fso *ngIf="currentFolder.parentId" [text]="'..'" (click)="onFsoTouch($event, currentFolder.parentId)"
-         (dblclick)="openFolder(currentFolder.parentId)">
+    <fso
+      *ngIf="currentFolder.parentId"
+      [text]="'..'"
+      (click)="onFsoTouch($event, currentFolder.parentId)"
+      (dblclick)="openFolder(currentFolder.parentId)"
+    >
     </fso>
-    <fso *ngFor="let fso of currentFolder.children" [fso]="fso" (click)="onFsoTouch($event, fso.id)"
-         (dblclick)="openFolder(fso.id, fso.isFolder)">
+    <fso
+      *ngFor="let fso of currentFolder.children"
+      [fso]="fso"
+      (click)="onFsoTouch($event, fso.id)"
+      (dblclick)="openFolder(fso.id, fso.isFolder)"
+    >
     </fso>
     <p *ngIf="currentFolder.children.length === 0">Folder is empty</p>
   </div>
 </ng-container>
 
-<input type="file" #inputFiles (change)="uploadFile(inputFiles.files)" style="display:none;"
-  multiple>
+<input
+  type="file"
+  #inputFiles
+  (change)="uploadFile(inputFiles.files)"
+  style="display: none"
+  multiple
+/>
 <ng-template #loading>
   <mat-spinner></mat-spinner>
 </ng-template>
 
 <ng-template #newFolderDialog>
-  <h1
-    mat-dialog-title
-    cdkDrag
-    cdkDragRootElement=".cdk-overlay-pane"
-    cdkDragHandle>New Folder</h1>
+  <h1 mat-dialog-title cdkDrag cdkDragRootElement=".cdk-overlay-pane" cdkDragHandle>New Folder</h1>
   <div mat-dialog-content>
     <p>Input the name</p>
     <div class="dialog-inputs">
       <mat-form-field>
         <mat-label>Name</mat-label>
-        <input matInput type="text" [formControl]="newFolderControl">
-        <mat-error>{{getNewFolderErrorMessage()}}</mat-error>
+        <input matInput type="text" [formControl]="newFolderControl" />
+        <mat-error>{{ getNewFolderErrorMessage() }}</mat-error>
       </mat-form-field>
     </div>
   </div>
   <div mat-dialog-actions>
-    <button type="button" mat-raised-button color="primary" [mat-dialog-close]="true"
-      [disabled]="newFolderControl.invalid || newFolderControl.pending">Ok</button>
-    <button type="button" mat-raised-button color="accent" [mat-dialog-close]="false">Cancel</button>
+    <button
+      type="button"
+      mat-raised-button
+      color="primary"
+      [mat-dialog-close]="true"
+      [disabled]="newFolderControl.invalid || newFolderControl.pending"
+    >
+      Ok
+    </button>
+    <button type="button" mat-raised-button color="accent" [mat-dialog-close]="false">
+      Cancel
+    </button>
   </div>
 </ng-template>
 
 <ng-template #deleteConfirmDialog>
-  <h1
-    mat-dialog-title
-    cdkDrag
-    cdkDragRootElement=".cdk-overlay-pane"
-    cdkDragHandle>Delete Confirmation</h1>
+  <h1 mat-dialog-title cdkDrag cdkDragRootElement=".cdk-overlay-pane" cdkDragHandle>
+    Delete Confirmation
+  </h1>
   <div mat-dialog-content>
     <p>Are you sure want to delete {{ selectedCount }} item(s) ?</p>
   </div>
   <div mat-dialog-actions>
     <button type="button" mat-raised-button color="primary" [mat-dialog-close]="true">Ok</button>
-    <button type="button" mat-raised-button color="accent" [mat-dialog-close]="false">Cancel</button>
+    <button type="button" mat-raised-button color="accent" [mat-dialog-close]="false">
+      Cancel
+    </button>
   </div>
 </ng-template>
 
 <ng-template #renameDialog>
-  <h1
-    mat-dialog-title
-    cdkDrag
-    cdkDragRootElement=".cdk-overlay-pane"
-    cdkDragHandle>Rename</h1>
+  <h1 mat-dialog-title cdkDrag cdkDragRootElement=".cdk-overlay-pane" cdkDragHandle>Rename</h1>
   <div mat-dialog-content>
     <p>Input new name</p>
     <div class="dialog-inputs">
       <mat-form-field>
         <mat-label>Name</mat-label>
-        <input matInput type="text" [formControl]="renameControl">
+        <input matInput type="text" [formControl]="renameControl" />
         <mat-error>Name is required.</mat-error>
       </mat-form-field>
     </div>
   </div>
   <div mat-dialog-actions>
-    <button type="button" mat-raised-button color="primary" [mat-dialog-close]="true"
-            [disabled]="renameControl.invalid || renameControl.pending">Ok</button>
-    <button type="button" mat-raised-button color="accent" [mat-dialog-close]="false">Cancel</button>
+    <button
+      type="button"
+      mat-raised-button
+      color="primary"
+      [mat-dialog-close]="true"
+      [disabled]="renameControl.invalid || renameControl.pending"
+    >
+      Ok
+    </button>
+    <button type="button" mat-raised-button color="accent" [mat-dialog-close]="false">
+      Cancel
+    </button>
   </div>
 </ng-template>

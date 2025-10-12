@@ -1,6 +1,6 @@
-import {CanActivateFn, Router} from '@angular/router';
-import {inject} from "@angular/core";
-import {AuthService} from "../services/auth.service";
+import { CanActivateFn, Router } from '@angular/router';
+import { inject } from '@angular/core';
+import { AuthService } from '../services/auth.service';
 
 export const authGuard: CanActivateFn = (route, state) => {
   const authService = inject(AuthService);
@@ -8,7 +8,7 @@ export const authGuard: CanActivateFn = (route, state) => {
   if (authService.jwtTokenExists()) {
     return true;
   } else {
-    void router.navigate(["login"], { queryParams: { returnUrl: state.url } });
+    void router.navigate(['login'], { queryParams: { returnUrl: state.url } });
     return false;
   }
 };

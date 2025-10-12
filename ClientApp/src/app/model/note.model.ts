@@ -21,12 +21,10 @@ export class NoteModel {
   getListItems(): NoteListItem[] | null {
     try {
       return JSON.parse(this.body);
-    }
-    catch (e) {
+    } catch (e) {
       return null;
     }
   }
-
 }
 
 export interface NoteListItem {

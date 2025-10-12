@@ -1,5 +1,5 @@
 .media__controls {
-  padding: .8rem 0;
+  padding: 0.8rem 0;
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;
@@ -27,13 +27,13 @@
     justify-content: end;
 
     button {
-      margin-left: .5rem;
+      margin-left: 0.5rem;
     }
   }
 }
 
 .media__divider {
-  margin-bottom: .5rem;
+  margin-bottom: 0.5rem;
 }
 
 .media_upload-progress {
@@ -45,7 +45,7 @@
   align-items: flex-start;
 
   > div:not(:first-child) {
-    margin-left: .5rem;
+    margin-left: 0.5rem;
   }
 }
 
@@ -128,14 +128,12 @@ div.media-item__view {
     right: 0;
   }
 
-  &__right, &__left {
+  &__right,
+  &__left {
     bottom: 0;
     font-size: 5rem;
   }
-
-
 }
-
 
 .media__dialog-content {
   > div {

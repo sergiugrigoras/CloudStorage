@@ -8,11 +8,11 @@ import { RegisterComponent } from './components/register/register.component';
 import { HomeComponent } from './components/home/home.component';
 import { ResetPasswordComponent } from './components/reset-password/reset-password.component';
 import { MediaComponent } from './components/media/media.component';
-import {ExpenseComponent} from "./components/expense/expense.component";
-import {AdminComponent} from "./components/admin/admin.component";
-import {adminGuard} from "./guards/admin.guard";
-import {authGuard} from "./guards/auth.guard";
-import {registerGuard} from "./guards/register.guard";
+import { ExpenseComponent } from './components/expense/expense.component';
+import { AdminComponent } from './components/admin/admin.component';
+import { adminGuard } from './guards/admin.guard';
+import { authGuard } from './guards/auth.guard';
+import { registerGuard } from './guards/register.guard';
 
 const routes: Routes = [
   { path: '', component: HomeComponent },
@@ -31,6 +31,6 @@ const routes: Routes = [
 
 @NgModule({
   imports: [RouterModule.forRoot(routes)],
-  exports: [RouterModule]
+  exports: [RouterModule],
 })
-export class AppRoutingModule { }
+export class AppRoutingModule {}

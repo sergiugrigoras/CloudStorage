@@ -1,5 +1,5 @@
-import {SafeUrl} from "@angular/platform-browser";
-import {AsyncSubject} from "rxjs";
+import { SafeUrl } from '@angular/platform-browser';
+import { AsyncSubject } from 'rxjs';
 
 export class MediaObject {
   id: string;
@@ -36,11 +36,9 @@ export class MediaObject {
   private getVideoLength() {
     const minutes = Math.floor(this.duration / 60000);
     const seconds = Math.floor((this.duration % 60000) / 1000);
-    return (
-      seconds == 60 ?
-        (minutes + 1) + ":00" :
-        minutes + ":" + (seconds < 10 ? "0" : "") + seconds
-    );
+    return seconds == 60
+      ? minutes + 1 + ':00'
+      : minutes + ':' + (seconds < 10 ? '0' : '') + seconds;
   }
 }
 

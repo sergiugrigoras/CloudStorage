@@ -1,47 +1,97 @@
 <div *ngIf="mediaReady; else loading">
   <div class="media__controls">
     <span *ngIf="selectMode" [matTooltip]="'Selected'" class="media__controls-numbers">
-      <span class="material-icons-outlined">
-        check_box
-      </span>
-      <span>&nbsp;{{totalSelected}}</span>
+      <span class="material-icons-outlined"> check_box </span>
+      <span>&nbsp;{{ totalSelected }}</span>
     </span>
     <div class="media__controls-tasks">
-      <input type="file" #inputFiles placeholder="Choose file" (change)="uploadFiles(inputFiles)"
-             style="display:none;" multiple>
+      <input
+        type="file"
+        #inputFiles
+        placeholder="Choose file"
+        (change)="uploadFiles(inputFiles)"
+        style="display: none"
+        multiple
+      />
       <ng-container *ngIf="selectMode">
-        <button mat-icon-button color="primary" aria-label="Select All" matTooltip="Select All"
-                (click)="selectAll()">
+        <button
+          mat-icon-button
+          color="primary"
+          aria-label="Select All"
+          matTooltip="Select All"
+          (click)="selectAll()"
+        >
           <span class="material-icons-outlined">select_all</span>
         </button>
-        <button mat-icon-button color="primary" aria-label="Deselect All" matTooltip="Deselect All"
-                (click)="deselectAll()">
+        <button
+          mat-icon-button
+          color="primary"
+          aria-label="Deselect All"
+          matTooltip="Deselect All"
+          (click)="deselectAll()"
+        >
           <span class="material-icons-outlined">deselect</span>
         </button>
-        <button *ngIf="page !== 'trash'" mat-icon-button color="primary" aria-label="Add To Album" matTooltip="Add To Album"
-                (click)="addSelectedToAlbum()" [disabled]="totalSelected < 1">
+        <button
+          *ngIf="page !== 'trash'"
+          mat-icon-button
+          color="primary"
+          aria-label="Add To Album"
+          matTooltip="Add To Album"
+          (click)="addSelectedToAlbum()"
+          [disabled]="totalSelected < 1"
+        >
           <span class="material-icons-outlined">collections</span>
         </button>
-        <button mat-icon-button color="accent" aria-label="Delete" matTooltip="Delete Selected"
-                (click)="deleteSelected()" [disabled]="totalSelected < 1">
+        <button
+          mat-icon-button
+          color="accent"
+          aria-label="Delete"
+          matTooltip="Delete Selected"
+          (click)="deleteSelected()"
+          [disabled]="totalSelected < 1"
+        >
           <span class="material-icons-outlined">delete</span>
         </button>
-        <button *ngIf="page === 'trash'" mat-icon-button color="accent" aria-label="Restore" matTooltip="Restore media files"
-                (click)="restoreSelected()" [disabled]="totalSelected < 1">
+        <button
+          *ngIf="page === 'trash'"
+          mat-icon-button
+          color="accent"
+          aria-label="Restore"
+          matTooltip="Restore media files"
+          (click)="restoreSelected()"
+          [disabled]="totalSelected < 1"
+        >
           <span class="material-icons-outlined">settings_backup_restore</span>
         </button>
       </ng-container>
       <ng-container *ngIf="!selectMode">
-        <button mat-icon-button color="primary" aria-label="Select Items" matTooltip="Select Items"
-                (click)="enableSelectMode()">
+        <button
+          mat-icon-button
+          color="primary"
+          aria-label="Select Items"
+          matTooltip="Select Items"
+          (click)="enableSelectMode()"
+        >
           <span class="material-icons-outlined">highlight_alt</span>
         </button>
-        <button mat-icon-button color="primary" aria-label="Albums List" matTooltip="All Albums"
-                (click)="showAlbumsList()">
+        <button
+          mat-icon-button
+          color="primary"
+          aria-label="Albums List"
+          matTooltip="All Albums"
+          (click)="showAlbumsList()"
+        >
           <span class="material-icons-outlined">format_list_bulleted</span>
         </button>
-        <button *ngIf="page === 'home'" mat-icon-button color="primary" aria-label="Upload" matTooltip="Upload media files"
-                (click)="inputFiles.click()">
+        <button
+          *ngIf="page === 'home'"
+          mat-icon-button
+          color="primary"
+          aria-label="Upload"
+          matTooltip="Upload media files"
+          (click)="inputFiles.click()"
+        >
           <span class="material-icons-outlined">cloud_upload</span>
         </button>
       </ng-container>
@@ -52,9 +102,7 @@
     <mat-progress-bar mode="determinate" [value]="uploadProgress"></mat-progress-bar>
   </div>
 
-  <h3>
-    {{getPageName()}}<span *ngIf="displayedMediaObjects.length < 1"> - No content.</span>
-  </h3>
+  <h3>{{ getPageName() }}<span *ngIf="displayedMediaObjects.length < 1"> - No content.</span></h3>
 
   <div class="media__container" *ngIf="mediaReady && columnView === 'one-column'">
     <div class="media__column">
@@ -63,7 +111,7 @@
           [item]="item"
           [xObserver]="intersectionObserver"
           (open)="openMedia($event)"
-          [id]="'media-'+item.id"
+          [id]="'media-' + item.id"
         ></app-media-item>
       </ng-container>
     </div>
@@ -132,14 +180,19 @@
     <div>
       <mat-form-field appearance="outline">
         <mat-label>Album Name</mat-label>
-        <input matInput #albumNameInput formControlName="name">
-        <mat-error>{{newAlbumErrorMessage()}}</mat-error>
+        <input matInput #albumNameInput formControlName="name" />
+        <mat-error>{{ newAlbumErrorMessage() }}</mat-error>
       </mat-form-field>
     </div>
   </form>
   <div mat-dialog-actions class="media__dialog-actions">
-    <button mat-raised-button color="primary" [mat-dialog-close]="albumNameInput.value"
-            [disabled]="newAlbumForm.invalid">Create
+    <button
+      mat-raised-button
+      color="primary"
+      [mat-dialog-close]="albumNameInput.value"
+      [disabled]="newAlbumForm.invalid"
+    >
+      Create
     </button>
     <button mat-raised-button color="accent" [mat-dialog-close]="false">Cancel</button>
   </div>
@@ -154,24 +207,33 @@
         <mat-label>Select Album</mat-label>
         <mat-select #albumSelect [multiple]="true" ngModel>
           <mat-option>
-            <ngx-mat-select-search [formControl]="albumFilterCtrl" placeholderLabel="Search"
-                                   noEntriesFoundLabel="No results."></ngx-mat-select-search>
+            <ngx-mat-select-search
+              [formControl]="albumFilterCtrl"
+              placeholderLabel="Search"
+              noEntriesFoundLabel="No results."
+            ></ngx-mat-select-search>
           </mat-option>
-          <mat-option *ngFor="let item of filteredAlbums$ | async" [value]="item">{{item.name}}</mat-option>
+          <mat-option *ngFor="let item of filteredAlbums$ | async" [value]="item">{{
+            item.name
+          }}</mat-option>
         </mat-select>
       </mat-form-field>
     </div>
   </div>
   <div mat-dialog-actions class="media__dialog-actions">
-    <button mat-raised-button color="primary" [mat-dialog-close]="albumSelect.value"
-            [disabled]="!albumSelect.value">Add
+    <button
+      mat-raised-button
+      color="primary"
+      [mat-dialog-close]="albumSelect.value"
+      [disabled]="!albumSelect.value"
+    >
+      Add
     </button>
     <button mat-raised-button color="primary" [mat-dialog-close]="'new'">New Album</button>
     <span class="spacer"></span>
     <button mat-raised-button color="accent" [mat-dialog-close]="false">Cancel</button>
   </div>
 </ng-template>
-
 
 <ng-template #mediaViewDialog>
   <div class="media-item__view">
@@ -182,23 +244,30 @@
       loop
       controls
       [src]="buildContentUrl(activeMediaObject?.id)"
+    ></video>
+    <img *ngIf="!activeMediaObject.isVideo" [src]="buildContentUrl(activeMediaObject?.id)" />
+    <span class="material-icons control control__close" (click)="closeDialog($event)"> close </span>
+    <span
+      class="material-icons control control__favorite"
+      [ngClass]="activeMediaObject?.favorite ? 'control--pink' : ''"
+      (click)="favoriteToggle($event)"
     >
-    </video>
-    <img *ngIf="!activeMediaObject.isVideo" [src]="buildContentUrl(activeMediaObject?.id)"/>
-    <span class="material-icons control control__close" (click)="closeDialog($event)">
-      close
+      {{ activeMediaObject?.favorite ? 'favorite' : 'favorite_border' }}
     </span>
-    <span class="material-icons control control__favorite" [ngClass]="activeMediaObject?.favorite ? 'control--pink': ''"
-          (click)="favoriteToggle($event)">
-            {{ activeMediaObject?.favorite ? 'favorite' : 'favorite_border' }}
-        </span>
-    <span class="material-icons control control__left" [ngClass]="activeIndex === 0 ? 'control--disabled': ''"
-          (click)="scrollBack($event)">navigate_before</span>
-    <span class="material-icons control control__right" [ngClass]="activeIndex === maxScrollIndex ? 'control--disabled': ''"
-          (click)="scrollForward($event)">navigate_next</span>
+    <span
+      class="material-icons control control__left"
+      [ngClass]="activeIndex === 0 ? 'control--disabled' : ''"
+      (click)="scrollBack($event)"
+      >navigate_before</span
+    >
+    <span
+      class="material-icons control control__right"
+      [ngClass]="activeIndex === maxScrollIndex ? 'control--disabled' : ''"
+      (click)="scrollForward($event)"
+      >navigate_next</span
+    >
   </div>
 </ng-template>
-
 
 <ng-template #allAlbums>
   <div mat-dialog-title>All Media Albums</div>
@@ -212,10 +281,14 @@
         <mat-icon matListItemIcon>favorite</mat-icon>
         <span matListItemTitle>Favorites</span>
       </mat-list-option>
-      <mat-list-option *ngFor="let album of allMediaAlbums$ | async" [value]="album" (dblclick)="navigateToAlbum(album)">
+      <mat-list-option
+        *ngFor="let album of allMediaAlbums$ | async"
+        [value]="album"
+        (dblclick)="navigateToAlbum(album)"
+      >
         <mat-icon matListItemIcon>collections</mat-icon>
-        <span matListItemTitle>{{album.name}}</span>
-        <span matListItemLine>Created: {{album.createDate | date: 'mediumDate'}}</span>
+        <span matListItemTitle>{{ album.name }}</span>
+        <span matListItemLine>Created: {{ album.createDate | date: 'mediumDate' }}</span>
       </mat-list-option>
       <mat-divider></mat-divider>
       <mat-list-option value="trash" (dblclick)="navigateToAlbum('trash')">
@@ -225,7 +298,15 @@
     </mat-selection-list>
   </div>
   <div mat-dialog-actions>
-    <button type="button" mat-raised-button color="primary" [mat-dialog-close]="albumList.selectedOptions.selected[0]?.value" [disabled]="!albumList.selectedOptions.hasValue()">View</button>
+    <button
+      type="button"
+      mat-raised-button
+      color="primary"
+      [mat-dialog-close]="albumList.selectedOptions.selected[0]?.value"
+      [disabled]="!albumList.selectedOptions.hasValue()"
+    >
+      View
+    </button>
     <button type="button" mat-raised-button color="accent" [mat-dialog-close]="false">Close</button>
   </div>
 </ng-template>
@@ -233,13 +314,20 @@
 <ng-template #deleteConfirm>
   <div mat-dialog-title>Delete Confirmation</div>
   <div mat-dialog-content>
-    <div>Are you sure want to {{ page === 'trash' || deletePermanently ? 'permanently' : '' }} delete {{ totalSelected }} items(s) ?</div>
+    <div>
+      Are you sure want to {{ page === 'trash' || deletePermanently ? 'permanently' : '' }} delete
+      {{ totalSelected }} items(s) ?
+    </div>
     <div *ngIf="page !== 'trash'">
       <mat-checkbox [(ngModel)]="deletePermanently">Permanently Delete</mat-checkbox>
     </div>
   </div>
   <div mat-dialog-actions>
-    <button type="button" mat-raised-button color="primary" [mat-dialog-close]="true">Delete</button>
-    <button type="button" mat-raised-button color="accent" [mat-dialog-close]="false">Cancel</button>
+    <button type="button" mat-raised-button color="primary" [mat-dialog-close]="true">
+      Delete
+    </button>
+    <button type="button" mat-raised-button color="accent" [mat-dialog-close]="false">
+      Cancel
+    </button>
   </div>
 </ng-template>

@@ -1,5 +1,4 @@
 <div class="app-container mat-app-background">
-
   <mat-toolbar class="app-nav mat-elevation-z6" color="primary">
     <mat-toolbar-row>
       <div class="container">
@@ -7,22 +6,24 @@
         @if (isLargeDevice()) {
           <div>
             @for (route of routes; track route) {
-              <button mat-button [routerLink]="route.route" routerLinkActive="selected">{{ route.displayName }}</button>
+              <button mat-button [routerLink]="route.route" routerLinkActive="selected">
+                {{ route.displayName }}
+              </button>
             }
           </div>
         }
         <span class="spacer"></span>
         <button mat-button (click)="toggleTheme()" matTooltip="Theme">
           <span class="material-icons">
-            {{themeIcon()}}
+            {{ themeIcon() }}
           </span>
         </button>
         <button mat-button [matMenuTriggerFor]="userMenu" matTooltip="User menu">
-                    <span class="material-icons">
-                        person
-                    </span>
+          <span class="material-icons"> person </span>
           @if (isLoggedIn()) {
-            <span>&nbsp;<strong>{{ getUser() }}</strong></span>
+            <span
+              >&nbsp;<strong>{{ getUser() }}</strong></span
+            >
           }
         </button>
       </div>
@@ -31,31 +32,28 @@
       <mat-toolbar-row class="toolbar-small">
         <div class="container">
           @for (route of routes; track route) {
-            <button mat-button [routerLink]="route.route" routerLinkActive="selected">{{ route.displayName }}</button>
+            <button mat-button [routerLink]="route.route" routerLinkActive="selected">
+              {{ route.displayName }}
+            </button>
           }
         </div>
       </mat-toolbar-row>
     }
   </mat-toolbar>
   <div class="app-intersection-observer" #emptyDiv></div>
-  <div class="app-content container ">
+  <div class="app-content container">
     <router-outlet></router-outlet>
   </div>
 
   <mat-toolbar class="app-footer" color="primary">
-    <div class="container">
-      Copyright &copy; {{ year }} - Sergiu Grigoras.
-    </div>
+    <div class="container">Copyright &copy; {{ year }} - Sergiu Grigoras.</div>
   </mat-toolbar>
   <div class="back-top">
     <button mat-mini-fab color="primary" (click)="scrollTop()">
-            <span class="material-icons">
-                arrow_upward
-            </span>
+      <span class="material-icons"> arrow_upward </span>
     </button>
   </div>
 </div>
-
 
 <mat-menu #userMenu="matMenu">
   @if (isLoggedIn()) {

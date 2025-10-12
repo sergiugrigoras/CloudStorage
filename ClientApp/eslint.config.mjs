@@ -32,7 +32,9 @@ export default defineConfig([globalIgnores(["projects/**/*"]), {
         },
     },
 
-    rules: {},
+    rules: {
+      "no-console": ["error", { allow: ["warn", "error"] }],
+    },
 }, {
     files: ["**/*.html"],
     extends: compat.extends("plugin:@angular-eslint/template/recommended", "prettier"),

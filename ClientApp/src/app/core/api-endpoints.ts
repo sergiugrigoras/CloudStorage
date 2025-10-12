@@ -37,7 +37,7 @@ export const API_ENDPOINTS = {
     BASE: 'expense',
     CATEGORY: {
       BASE: 'category',
-      SUGGEST: 'suggest'
+      SUGGEST: 'suggest',
     },
     PAYMENT_METHOD: {
       BASE: 'payment-method',
@@ -58,7 +58,6 @@ export const API_ENDPOINTS = {
     MOVE: 'move',
     UPLOAD: 'upload',
     DOWNLOAD: 'download',
-    UNIQUE: 'unique'
-  }
-
+    UNIQUE: 'unique',
+  },
 };

@@ -1,8 +1,14 @@
 import { BreakpointObserver, BreakpointState } from '@angular/cdk/layout';
 import { HttpErrorResponse, HttpEvent, HttpEventType } from '@angular/common/http';
-import {Component, HostListener, OnDestroy, OnInit, TemplateRef, ViewChild} from '@angular/core';
-import { AbstractControl, FormControl, FormGroup, ValidationErrors, Validators } from '@angular/forms';
-import {MatDialog, MatDialogConfig, MatDialogRef} from '@angular/material/dialog';
+import { Component, HostListener, OnDestroy, OnInit, TemplateRef, ViewChild } from '@angular/core';
+import {
+  AbstractControl,
+  FormControl,
+  FormGroup,
+  ValidationErrors,
+  Validators,
+} from '@angular/forms';
+import { MatDialog, MatDialogConfig, MatDialogRef } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import {
   EMPTY,
@@ -17,24 +23,26 @@ import {
   ReplaySubject,
   throttleTime,
   Subject,
-  takeUntil, of, finalize
+  takeUntil,
+  of,
+  finalize,
 } from 'rxjs';
 import { MediaAlbum } from 'src/app/model/media-album.model';
 import { MediaObject } from 'src/app/model/media-object.model';
 import { MediaService } from 'src/app/services/media.service';
-import {ActivatedRoute, Router} from "@angular/router";
-import { OverlayContainer } from "@angular/cdk/overlay";
-import {buildUrl} from "../../core/url-builder";
-import {API_ENDPOINTS} from "../../core/api-endpoints";
+import { ActivatedRoute, Router } from '@angular/router';
+import { OverlayContainer } from '@angular/cdk/overlay';
+import { buildUrl } from '../../core/url-builder';
+import { API_ENDPOINTS } from '../../core/api-endpoints';
 
 const KEY_UPDATE_INTERVAL = 60000; // 1 minute
 const SNACKBAR_OPTIONS = { duration: 3000 };
 const LOAD_BY_DEFAULT_COUNT = 1;
 @Component({
-    selector: 'app-media',
-    templateUrl: './media.component.html',
-    styleUrls: ['./media.component.scss'],
-    standalone: false
+  selector: 'app-media',
+  templateUrl: './media.component.html',
+  styleUrls: ['./media.component.scss'],
+  standalone: false,
 })
 export class MediaComponent implements OnInit, OnDestroy {
   private allMediaObjects: MediaObject[] = [];
@@ -63,7 +71,11 @@ export class MediaComponent implements OnInit, OnDestroy {
   allMediaAlbums: MediaAlbum[];
   allMediaAlbums$ = this.mediaService.getAllAlbums();
   newAlbumForm = new FormGroup({
-    name: new FormControl('', [Validators.required, Validators.minLength(5)], this.uniqueAlbumName.bind(this))
+    name: new FormControl(
+      '',
+      [Validators.required, Validators.minLength(5)],
+      this.uniqueAlbumName.bind(this)
+    ),
   });
   dialogConfig: MatDialogConfig = {
     width: '500px',
@@ -80,11 +92,14 @@ export class MediaComponent implements OnInit, OnDestroy {
   dialogRef: MatDialogRef<any>;
   private readonly destroy$ = new Subject<void>();
   itemsLoaded: number;
-  intersectionObserver = new IntersectionObserver((entries: IntersectionObserverEntry[]) => {
-    const visible = entries.filter(x => x.isIntersecting);
-    this.loadItemsToView(visible.length);
-    visible.forEach(x => this.intersectionObserver.unobserve(x.target));
-  }, {threshold: 0});
+  intersectionObserver = new IntersectionObserver(
+    (entries: IntersectionObserverEntry[]) => {
+      const visible = entries.filter((x) => x.isIntersecting);
+      this.loadItemsToView(visible.length);
+      visible.forEach((x) => this.intersectionObserver.unobserve(x.target));
+    },
+    { threshold: 0 }
+  );
   page: 'home' | 'album' | 'favorites' | 'trash';
   albumName = '';
   deletePermanently = false;
@@ -96,13 +111,13 @@ export class MediaComponent implements OnInit, OnDestroy {
     private overlay: OverlayContainer,
     private snackBar: MatSnackBar,
     private route: ActivatedRoute,
-    private router: Router,
-  ) { }
+    private router: Router
+  ) {}
 
   @HostListener('document:keydown', ['$event'])
   private keyListener(event: KeyboardEvent) {
     switch (event.key) {
-      case 'Escape' : {
+      case 'Escape': {
         this.closeDialog();
         break;
       }
@@ -111,7 +126,7 @@ export class MediaComponent implements OnInit, OnDestroy {
         break;
       }
       case 'ArrowRight': {
-        this.scrollMediaForward()
+        this.scrollMediaForward();
         break;
       }
       default:
@@ -126,18 +141,14 @@ export class MediaComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    this.mediaService.selectMode$
-      .pipe(
-        takeUntil(this.destroy$)
-      )
-      .subscribe(selectMode => {
+    this.mediaService.selectMode$.pipe(takeUntil(this.destroy$)).subscribe((selectMode) => {
       this.selectMode = selectMode;
     });
     location.hash = '';
     this.route.paramMap
       .pipe(
         takeUntil(this.destroy$),
-        switchMap(params => {
+        switchMap((params) => {
           this.mediaService.disableSelectMode();
           const page = params.get('page');
           const id = params.get('id');
@@ -147,21 +158,21 @@ export class MediaComponent implements OnInit, OnDestroy {
             return this.mediaService.getAlbumContent(id);
           } else if (page === 'favorites') {
             this.page = page;
-            return this.mediaService.getMediaFiles({favorite: true, deleted: false});
+            return this.mediaService.getMediaFiles({ favorite: true, deleted: false });
           } else if (page === 'trash') {
             this.page = page;
-            return this.mediaService.getMediaFiles({deleted: true});
+            return this.mediaService.getMediaFiles({ deleted: true });
           } else {
             this.page = 'home';
-            return this.mediaService.getMediaFiles({deleted: false})
+            return this.mediaService.getMediaFiles({ deleted: false });
           }
         }),
-        catchError(error => {
+        catchError((error) => {
           console.error(error);
           return EMPTY;
         }),
         tap((mediaObjects: MediaObject[]) => {
-          this.allMediaObjects = mediaObjects.map(x => new MediaObject(x));
+          this.allMediaObjects = mediaObjects.map((x) => new MediaObject(x));
           this.displayedMediaObjects = [];
           this.twoColumns = new MultipleColumnsCollection(2);
           this.threeColumns = new MultipleColumnsCollection(3);
@@ -170,27 +181,24 @@ export class MediaComponent implements OnInit, OnDestroy {
         }),
         tap(() => {
           this.mediaReady = true;
-        }),
-      ).subscribe();
+        })
+      )
+      .subscribe();
 
     fromEvent(document, 'mousewheel')
-      .pipe(
-        takeUntil(this.destroy$),
-        throttleTime(150))
+      .pipe(takeUntil(this.destroy$), throttleTime(150))
       .subscribe((event: Event) => {
-      const wheelEvent = event as WheelEvent;
-      if (wheelEvent.deltaY > 0) {
-        this.scrollMediaBack();
-      } else {
-        this.scrollMediaForward();
-      }
-    });
+        const wheelEvent = event as WheelEvent;
+        if (wheelEvent.deltaY > 0) {
+          this.scrollMediaBack();
+        } else {
+          this.scrollMediaForward();
+        }
+      });
 
     this.breakpointObserver
       .observe(['(min-width: 1200px)', '(max-width: 768px)'])
-      .pipe(
-        takeUntil(this.destroy$)
-      )
+      .pipe(takeUntil(this.destroy$))
       .subscribe((state: BreakpointState) => {
         if (!state.matches) {
           this.columnView = 'two-columns';
@@ -202,29 +210,29 @@ export class MediaComponent implements OnInit, OnDestroy {
       });
 
     this.albumFilterCtrl.valueChanges
-      .pipe(
-        takeUntil(this.destroy$),
-        debounceTime(250)
-      )
+      .pipe(takeUntil(this.destroy$), debounceTime(250))
       .subscribe(() => {
         this.filterAlbums();
       });
-
   }
 
   uniqueAlbumName(control: AbstractControl): Observable<ValidationErrors | null> {
-    return this.mediaService.albumUniqueName(control.value)
-      .pipe(map(result => {
+    return this.mediaService.albumUniqueName(control.value).pipe(
+      map((result) => {
         if (result) return null;
-        else return { shouldBeUnique: true }
-      }));
+        else return { shouldBeUnique: true };
+      })
+    );
   }
 
   get totalItems() {
     return this.allMediaObjects?.length;
   }
   get totalSelected() {
-    return this.allMediaObjects.reduce((sum: number, current: MediaObject) => current.isSelected ? ++sum : sum, 0)
+    return this.allMediaObjects.reduce(
+      (sum: number, current: MediaObject) => (current.isSelected ? ++sum : sum),
+      0
+    );
   }
 
   loadItemsToView(count: number) {
@@ -238,7 +246,8 @@ export class MediaComponent implements OnInit, OnDestroy {
   openMedia(id: string) {
     location.hash = 'view';
     this.overlay.getContainerElement().classList.add('media');
-    this.mediaService.addContentAccessKeyCookie()
+    this.mediaService
+      .addContentAccessKeyCookie()
       .pipe(
         switchMap(() => {
           this.activeMediaObject = this.getMediaObjectById(id);
@@ -256,7 +265,8 @@ export class MediaComponent implements OnInit, OnDestroy {
           this.overlay.getContainerElement().classList.remove('media');
           return this.mediaService.removeContentAccessKey();
         })
-      ).subscribe();
+      )
+      .subscribe();
   }
 
   private updateAccessKey() {
@@ -277,28 +287,29 @@ export class MediaComponent implements OnInit, OnDestroy {
     });
   }
 
-
   uploadFiles(input: HTMLInputElement) {
     if (input instanceof HTMLInputElement && input.files.length > 0) {
       this.uploading = true;
       const formData = new FormData();
       for (var i = 0; i != input.files.length; i++) {
-        formData.append("files", input.files[i]);
+        formData.append('files', input.files[i]);
       }
-      this.mediaService.upload(formData)
+      this.mediaService
+        .upload(formData)
         .pipe(
-          tap(event => {
+          tap((event) => {
             if (event.type === HttpEventType.UploadProgress && event.total) {
               this.uploadProgress = Math.floor((event.loaded / event.total) * 100);
             }
           }),
-          switchMap(event => {
+          switchMap((event) => {
             if (event.type === HttpEventType.Response) {
-              return this.snackBar.open(`Upload complete.`, 'Ok', SNACKBAR_OPTIONS)
+              return this.snackBar
+                .open(`Upload complete.`, 'Ok', SNACKBAR_OPTIONS)
                 .afterDismissed()
                 .pipe(map(() => true));
             } else {
-              return of(false)
+              return of(false);
             }
           }),
           finalize(() => {
@@ -307,62 +318,72 @@ export class MediaComponent implements OnInit, OnDestroy {
           })
         )
         .subscribe({
-          next: result => {
+          next: (result) => {
             if (result) {
               window.location.reload();
             }
           },
           error: (error: HttpErrorResponse) => {
             console.error(error.error);
-          }
+          },
         });
     }
   }
 
   createAlbum() {
-    this.dialog.open(this.newAlbumDialog, this.dialogConfig).afterClosed().subscribe((dialogResult: boolean | string) => {
-      if (typeof dialogResult === 'string') {
-        this.mediaService.createAlbum(dialogResult).subscribe({ complete: () => this.newAlbumForm.reset() });
-      }
-      this.newAlbumForm.reset();
-    });
+    this.dialog
+      .open(this.newAlbumDialog, this.dialogConfig)
+      .afterClosed()
+      .subscribe((dialogResult: boolean | string) => {
+        if (typeof dialogResult === 'string') {
+          this.mediaService
+            .createAlbum(dialogResult)
+            .subscribe({ complete: () => this.newAlbumForm.reset() });
+        }
+        this.newAlbumForm.reset();
+      });
   }
 
   addSelectedToAlbum() {
     const addToAlbumObserver = {
       next: () => {
-        this.displayedMediaObjects.forEach(x => x.isSelected = false);
+        this.displayedMediaObjects.forEach((x) => (x.isSelected = false));
         this.snackBar.open(`Success.`, 'Ok', SNACKBAR_OPTIONS);
       },
       error: (error: unknown) => {
         console.error(error);
-      }
+      },
     };
 
-    this.mediaService.getAllAlbums().pipe(
-      retry(3),
-      catchError(error => {
-        this.snackBar.open(`An error occurred.`, 'Ok', SNACKBAR_OPTIONS);
-        console.error(error);
-        return EMPTY;
-      }),
-      switchMap(albums => {
-        this.allMediaAlbums = albums;
-        this.filteredAlbums$.next(albums);
-        return this.dialog.open(this.addToAlbumDialog, this.dialogConfig).afterClosed();
-      }),
-      switchMap((dialogResult: unknown) => {
-        if (Array.isArray(dialogResult) && dialogResult.length > 0) {
-          const mediaObjectsIds = this.displayedMediaObjects.filter(x => x.isSelected).map(x => x.id);
-          const albumsIds = dialogResult.map((x: MediaAlbum) => x.id);
-          return this.mediaService.addToAlbum({ albumsIds, mediaObjectsIds });
-        }
-        if (dialogResult === 'new') {
-          this.createAlbum();
-        }
-        return EMPTY;
-      })
-    ).subscribe(addToAlbumObserver);
+    this.mediaService
+      .getAllAlbums()
+      .pipe(
+        retry(3),
+        catchError((error) => {
+          this.snackBar.open(`An error occurred.`, 'Ok', SNACKBAR_OPTIONS);
+          console.error(error);
+          return EMPTY;
+        }),
+        switchMap((albums) => {
+          this.allMediaAlbums = albums;
+          this.filteredAlbums$.next(albums);
+          return this.dialog.open(this.addToAlbumDialog, this.dialogConfig).afterClosed();
+        }),
+        switchMap((dialogResult: unknown) => {
+          if (Array.isArray(dialogResult) && dialogResult.length > 0) {
+            const mediaObjectsIds = this.displayedMediaObjects
+              .filter((x) => x.isSelected)
+              .map((x) => x.id);
+            const albumsIds = dialogResult.map((x: MediaAlbum) => x.id);
+            return this.mediaService.addToAlbum({ albumsIds, mediaObjectsIds });
+          }
+          if (dialogResult === 'new') {
+            this.createAlbum();
+          }
+          return EMPTY;
+        })
+      )
+      .subscribe(addToAlbumObserver);
   }
 
   deleteSelected() {
@@ -375,19 +396,25 @@ export class MediaComponent implements OnInit, OnDestroy {
       error: (error: HttpErrorResponse) => {
         console.error(error);
         this.snackBar.open(`An error occurred.`, 'Ok', SNACKBAR_OPTIONS);
-      }
-    }
+      },
+    };
 
-    this.dialog.open(this.deleteDialog, this.dialogConfig).afterClosed()
+    this.dialog
+      .open(this.deleteDialog, this.dialogConfig)
+      .afterClosed()
       .pipe(
-        switchMap(dialogResult => {
+        switchMap((dialogResult) => {
           if (dialogResult) {
-            return this.mediaService.deleteMediaObjects(ids, this.page === 'trash' || this.deletePermanently)
+            return this.mediaService.deleteMediaObjects(
+              ids,
+              this.page === 'trash' || this.deletePermanently
+            );
           }
           this.deletePermanently = false;
           return EMPTY;
         })
-      ).subscribe(deleteObserver)
+      )
+      .subscribe(deleteObserver);
   }
 
   restoreSelected() {
@@ -400,13 +427,13 @@ export class MediaComponent implements OnInit, OnDestroy {
       error: (error: HttpErrorResponse) => {
         console.error(error);
         this.snackBar.open(`An error occurred.`, 'Ok', SNACKBAR_OPTIONS);
-      }
+      },
     };
     this.mediaService.restoreMediaObjects(ids).subscribe(restoreObserver);
   }
 
   private selectedItemsIds() {
-    return this.allMediaObjects.filter(x => x.isSelected).map(x => x.id);
+    return this.allMediaObjects.filter((x) => x.isSelected).map((x) => x.id);
   }
 
   scrollBack($event: MouseEvent) {
@@ -437,15 +464,16 @@ export class MediaComponent implements OnInit, OnDestroy {
   }
 
   private getMediaObjectById(id: string) {
-    return this.allMediaObjects.find(m => m.id === id);
+    return this.allMediaObjects.find((m) => m.id === id);
   }
 
   newAlbumErrorMessage() {
     const controlErrors = this.newAlbumForm.get('name').errors;
     if (controlErrors == null) return '';
     if (controlErrors['required']) return 'Name is required.';
-    if (controlErrors['minlength']) return `At least ${controlErrors['minlength'].requiredLength} characters long.`
-    if (controlErrors['shouldBeUnique']) return 'Name is not unique.'
+    if (controlErrors['minlength'])
+      return `At least ${controlErrors['minlength'].requiredLength} characters long.`;
+    if (controlErrors['shouldBeUnique']) return 'Name is not unique.';
     return '';
   }
 
@@ -458,23 +486,22 @@ export class MediaComponent implements OnInit, OnDestroy {
       search = search.toLowerCase();
     }
     this.filteredAlbums$.next(
-      this.allMediaAlbums.filter(album => album.name.toLowerCase().indexOf(search) > -1)
+      this.allMediaAlbums.filter((album) => album.name.toLowerCase().indexOf(search) > -1)
     );
   }
 
   showAlbumsList() {
     this.allAlbumDialogRef = this.dialog.open(this.allAlbumsDialog, this.dialogConfig);
-    this.allAlbumDialogRef.afterClosed()
-      .subscribe(result => {
-        if (result instanceof MediaAlbum) {
-          void this.router.navigate(['/media', 'album', result.name]);
-        } else if (result === 'favorites') {
-          void this.router.navigate(['/media', 'favorites']);
-        } else if (result === 'home') {
-          void this.router.navigate(['/media']);
-        } else if (result === 'trash') {
-          void this.router.navigate(['/media', 'trash']);
-        }
+    this.allAlbumDialogRef.afterClosed().subscribe((result) => {
+      if (result instanceof MediaAlbum) {
+        void this.router.navigate(['/media', 'album', result.name]);
+      } else if (result === 'favorites') {
+        void this.router.navigate(['/media', 'favorites']);
+      } else if (result === 'home') {
+        void this.router.navigate(['/media']);
+      } else if (result === 'trash') {
+        void this.router.navigate(['/media', 'trash']);
+      }
     });
   }
 
@@ -483,11 +510,11 @@ export class MediaComponent implements OnInit, OnDestroy {
   }
 
   selectAll() {
-    this.allMediaObjects.forEach(x => x.isSelected = true);
+    this.allMediaObjects.forEach((x) => (x.isSelected = true));
   }
 
   deselectAll() {
-    this.allMediaObjects.forEach(x => x.isSelected = false);
+    this.allMediaObjects.forEach((x) => (x.isSelected = false));
     this.mediaService.disableSelectMode();
   }
 
@@ -497,17 +524,21 @@ export class MediaComponent implements OnInit, OnDestroy {
 
   getPageName() {
     switch (this.page) {
-      case "home": return "Home";
-      case "favorites": return "Favorite";
-      case "trash": return "Trash";
-      case "album": return this.albumName;
-      default: return "";
+      case 'home':
+        return 'Home';
+      case 'favorites':
+        return 'Favorite';
+      case 'trash':
+        return 'Trash';
+      case 'album':
+        return this.albumName;
+      default:
+        return '';
     }
   }
 
   buildContentUrl(id: string | undefined) {
-    if (id)
-      return buildUrl(API_ENDPOINTS.CONTENT.BASE, id)
+    if (id) return buildUrl(API_ENDPOINTS.CONTENT.BASE, id);
     return undefined;
   }
 }
@@ -527,7 +558,7 @@ export class MultipleColumnsCollection {
     for (let item of items) {
       const index = this.smallestColumnIndex();
       this.columns[index].push(item);
-      this.offsets[index] = this.offsets[index] + (item.height/item.width);
+      this.offsets[index] = this.offsets[index] + item.height / item.width;
     }
   }
 
@@ -536,7 +567,7 @@ export class MultipleColumnsCollection {
     return this.columns[index];
   }
 
-  private smallestColumnIndex(): number  {
+  private smallestColumnIndex(): number {
     return this.offsets.indexOf(Math.min(...this.offsets));
   }
 }
