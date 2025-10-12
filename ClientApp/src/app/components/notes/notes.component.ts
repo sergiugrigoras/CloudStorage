@@ -2,15 +2,36 @@ import { NoteService } from '../../services/note.service';
 import { NoteListItem, NoteModel } from '../../model/note.model';
 import { Component, OnInit, TemplateRef, ViewChild } from '@angular/core';
 import { delay, switchMap, take, tap } from 'rxjs/operators';
-import { MatDialog, MatDialogTitle, MatDialogContent, MatDialogActions, MatDialogClose } from '@angular/material/dialog';
+import {
+  MatDialog,
+  MatDialogTitle,
+  MatDialogContent,
+  MatDialogActions,
+  MatDialogClose,
+} from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { FormArray, FormBuilder, FormGroup, Validators, FormsModule, ReactiveFormsModule } from '@angular/forms';
+import {
+  FormArray,
+  FormBuilder,
+  FormGroup,
+  Validators,
+  FormsModule,
+  ReactiveFormsModule,
+} from '@angular/forms';
 import { MatButton, MatMiniFabButton, MatIconButton } from '@angular/material/button';
 import { EMPTY, of } from 'rxjs';
 import { NgIf, NgFor, TitleCasePipe, DatePipe } from '@angular/common';
 import { MatMenuTrigger, MatMenu, MatMenuItem } from '@angular/material/menu';
 import { MatIcon } from '@angular/material/icon';
-import { MatCard, MatCardHeader, MatCardTitle, MatCardSubtitle, MatCardContent, MatCardActions, MatCardFooter } from '@angular/material/card';
+import {
+  MatCard,
+  MatCardHeader,
+  MatCardTitle,
+  MatCardSubtitle,
+  MatCardContent,
+  MatCardActions,
+  MatCardFooter,
+} from '@angular/material/card';
 import { MatDivider } from '@angular/material/list';
 import { MatProgressBar } from '@angular/material/progress-bar';
 import { MatProgressSpinner } from '@angular/material/progress-spinner';
@@ -22,47 +43,47 @@ import { MatCheckbox } from '@angular/material/checkbox';
 
 const SNACKBAR_OPTIONS = { duration: 3000 };
 @Component({
-    selector: 'app-notes',
-    templateUrl: './notes.component.html',
-    styleUrls: ['./notes.component.scss'],
-    imports: [
-        NgIf,
-        MatMiniFabButton,
-        MatMenuTrigger,
-        MatIcon,
-        MatMenu,
-        MatMenuItem,
-        NgFor,
-        MatCard,
-        MatCardHeader,
-        MatCardTitle,
-        MatCardSubtitle,
-        MatCardContent,
-        MatDivider,
-        MatCardActions,
-        MatIconButton,
-        MatCardFooter,
-        MatProgressBar,
-        MatProgressSpinner,
-        MatDialogTitle,
-        CdkDrag,
-        CdkDragHandle,
-        CdkScrollable,
-        MatDialogContent,
-        FormsModule,
-        ReactiveFormsModule,
-        MatFormField,
-        MatLabel,
-        MatInput,
-        MatError,
-        CdkTextareaAutosize,
-        MatCheckbox,
-        MatButton,
-        MatDialogActions,
-        MatDialogClose,
-        TitleCasePipe,
-        DatePipe,
-    ],
+  selector: 'app-notes',
+  templateUrl: './notes.component.html',
+  styleUrls: ['./notes.component.scss'],
+  imports: [
+    NgIf,
+    MatMiniFabButton,
+    MatMenuTrigger,
+    MatIcon,
+    MatMenu,
+    MatMenuItem,
+    NgFor,
+    MatCard,
+    MatCardHeader,
+    MatCardTitle,
+    MatCardSubtitle,
+    MatCardContent,
+    MatDivider,
+    MatCardActions,
+    MatIconButton,
+    MatCardFooter,
+    MatProgressBar,
+    MatProgressSpinner,
+    MatDialogTitle,
+    CdkDrag,
+    CdkDragHandle,
+    CdkScrollable,
+    MatDialogContent,
+    FormsModule,
+    ReactiveFormsModule,
+    MatFormField,
+    MatLabel,
+    MatInput,
+    MatError,
+    CdkTextareaAutosize,
+    MatCheckbox,
+    MatButton,
+    MatDialogActions,
+    MatDialogClose,
+    TitleCasePipe,
+    DatePipe,
+  ],
 })
 export class NotesComponent implements OnInit {
   notes: NoteModel[];

@@ -4,15 +4,10 @@ import { NgIf, NgStyle, DatePipe } from '@angular/common';
 import { ReadableBytesPipe } from '../../pipes/readable-bytes.pipe';
 
 @Component({
-    selector: 'fso',
-    templateUrl: './fso.component.html',
-    styleUrls: ['./fso.component.scss'],
-    imports: [
-        NgIf,
-        NgStyle,
-        DatePipe,
-        ReadableBytesPipe,
-    ],
+  selector: 'fso',
+  templateUrl: './fso.component.html',
+  styleUrls: ['./fso.component.scss'],
+  imports: [NgIf, NgStyle, DatePipe, ReadableBytesPipe],
 })
 export class FsoComponent implements OnInit {
   fileExtension: string;

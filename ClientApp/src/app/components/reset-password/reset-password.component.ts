@@ -2,7 +2,13 @@ import { catchError, switchMap } from 'rxjs/operators';
 import { AuthService } from 'src/app/services/auth.service';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnInit } from '@angular/core';
-import { FormControl, FormGroup, Validators, FormsModule, ReactiveFormsModule } from '@angular/forms';
+import {
+  FormControl,
+  FormGroup,
+  Validators,
+  FormsModule,
+  ReactiveFormsModule,
+} from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { PasswordValidators } from '../profile/password.validators';
 import { EMPTY, finalize, tap, throwError } from 'rxjs';
@@ -11,19 +17,19 @@ import { MatFormField, MatLabel, MatInput, MatError, MatHint } from '@angular/ma
 import { MatButton } from '@angular/material/button';
 
 @Component({
-    selector: 'app-reset-password',
-    templateUrl: './reset-password.component.html',
-    styleUrls: ['./reset-password.component.scss'],
-    imports: [
-        FormsModule,
-        ReactiveFormsModule,
-        MatFormField,
-        MatLabel,
-        MatInput,
-        MatError,
-        MatHint,
-        MatButton,
-    ],
+  selector: 'app-reset-password',
+  templateUrl: './reset-password.component.html',
+  styleUrls: ['./reset-password.component.scss'],
+  imports: [
+    FormsModule,
+    ReactiveFormsModule,
+    MatFormField,
+    MatLabel,
+    MatInput,
+    MatError,
+    MatHint,
+    MatButton,
+  ],
 })
 export class ResetPasswordComponent implements OnInit {
   resetToken = '';

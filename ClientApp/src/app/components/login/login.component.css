@@ -2,14 +2,14 @@ form {
   width: 500px;
   max-width: 85vw;
 }
-form>div {
-    display: flex;
+form > div {
+  display: flex;
 }
 
 mat-form-field {
-    flex: 1;
+  flex: 1;
 }
 
 button {
-    margin-right: .5rem;
+  margin-right: 0.5rem;
 }

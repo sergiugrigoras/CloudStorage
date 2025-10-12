@@ -1,8 +1,24 @@
 import { BreakpointObserver, BreakpointState } from '@angular/cdk/layout';
 import { HttpErrorResponse, HttpEvent, HttpEventType } from '@angular/common/http';
 import { Component, HostListener, OnDestroy, OnInit, TemplateRef, ViewChild } from '@angular/core';
-import { AbstractControl, FormControl, FormGroup, ValidationErrors, Validators, FormsModule, ReactiveFormsModule } from '@angular/forms';
-import { MatDialog, MatDialogConfig, MatDialogRef, MatDialogTitle, MatDialogContent, MatDialogActions, MatDialogClose } from '@angular/material/dialog';
+import {
+  AbstractControl,
+  FormControl,
+  FormGroup,
+  ValidationErrors,
+  Validators,
+  FormsModule,
+  ReactiveFormsModule,
+} from '@angular/forms';
+import {
+  MatDialog,
+  MatDialogConfig,
+  MatDialogRef,
+  MatDialogTitle,
+  MatDialogContent,
+  MatDialogActions,
+  MatDialogClose,
+} from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import {
   EMPTY,
@@ -31,7 +47,14 @@ import { API_ENDPOINTS } from '../../core/api-endpoints';
 import { NgIf, NgFor, NgClass, AsyncPipe, DatePipe } from '@angular/common';
 import { MatTooltip } from '@angular/material/tooltip';
 import { MatIconButton, MatButton } from '@angular/material/button';
-import { MatDivider, MatSelectionList, MatListOption, MatListItemIcon, MatListItemTitle, MatListItemLine } from '@angular/material/list';
+import {
+  MatDivider,
+  MatSelectionList,
+  MatListOption,
+  MatListItemIcon,
+  MatListItemTitle,
+  MatListItemLine,
+} from '@angular/material/list';
 import { MatProgressBar } from '@angular/material/progress-bar';
 import { MediaItemComponent } from '../media-item/media-item.component';
 import { MatProgressSpinner } from '@angular/material/progress-spinner';
@@ -46,44 +69,44 @@ const KEY_UPDATE_INTERVAL = 60000; // 1 minute
 const SNACKBAR_OPTIONS = { duration: 3000 };
 const LOAD_BY_DEFAULT_COUNT = 1;
 @Component({
-    selector: 'app-media',
-    templateUrl: './media.component.html',
-    styleUrls: ['./media.component.scss'],
-    imports: [
-        NgIf,
-        MatTooltip,
-        MatIconButton,
-        MatDivider,
-        MatProgressBar,
-        NgFor,
-        MediaItemComponent,
-        MatProgressSpinner,
-        MatDialogTitle,
-        FormsModule,
-        CdkScrollable,
-        MatDialogContent,
-        ReactiveFormsModule,
-        MatFormField,
-        MatLabel,
-        MatInput,
-        MatError,
-        MatDialogActions,
-        MatButton,
-        MatDialogClose,
-        MatSelect,
-        MatOption,
-        MatSelectSearchComponent,
-        NgClass,
-        MatSelectionList,
-        MatListOption,
-        MatIcon,
-        MatListItemIcon,
-        MatListItemTitle,
-        MatListItemLine,
-        MatCheckbox,
-        AsyncPipe,
-        DatePipe,
-    ],
+  selector: 'app-media',
+  templateUrl: './media.component.html',
+  styleUrls: ['./media.component.scss'],
+  imports: [
+    NgIf,
+    MatTooltip,
+    MatIconButton,
+    MatDivider,
+    MatProgressBar,
+    NgFor,
+    MediaItemComponent,
+    MatProgressSpinner,
+    MatDialogTitle,
+    FormsModule,
+    CdkScrollable,
+    MatDialogContent,
+    ReactiveFormsModule,
+    MatFormField,
+    MatLabel,
+    MatInput,
+    MatError,
+    MatDialogActions,
+    MatButton,
+    MatDialogClose,
+    MatSelect,
+    MatOption,
+    MatSelectSearchComponent,
+    NgClass,
+    MatSelectionList,
+    MatListOption,
+    MatIcon,
+    MatListItemIcon,
+    MatListItemTitle,
+    MatListItemLine,
+    MatCheckbox,
+    AsyncPipe,
+    DatePipe,
+  ],
 })
 export class MediaComponent implements OnInit, OnDestroy {
   private allMediaObjects: MediaObject[] = [];

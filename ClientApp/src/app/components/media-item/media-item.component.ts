@@ -18,16 +18,10 @@ import { MatProgressBar } from '@angular/material/progress-bar';
 import { MatIconButton } from '@angular/material/button';
 
 @Component({
-    selector: 'app-media-item',
-    templateUrl: './media-item.component.html',
-    styleUrls: ['./media-item.component.scss'],
-    imports: [
-        NgIf,
-        NgStyle,
-        MatProgressBar,
-        MatIconButton,
-        AsyncPipe,
-    ],
+  selector: 'app-media-item',
+  templateUrl: './media-item.component.html',
+  styleUrls: ['./media-item.component.scss'],
+  imports: [NgIf, NgStyle, MatProgressBar, MatIconButton, AsyncPipe],
 })
 export class MediaItemComponent implements OnInit, OnDestroy, AfterViewInit {
   @Input() item: MediaObject;

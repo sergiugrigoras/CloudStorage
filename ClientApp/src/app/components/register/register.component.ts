@@ -2,35 +2,50 @@ import { UserModel } from './../../interfaces/user.interface';
 import { AuthService } from './../../services/auth.service';
 import { PasswordValidators } from './password.validators';
 import { Component, OnInit } from '@angular/core';
-import { AbstractControl, FormControl, FormGroup, ValidationErrors, Validators, FormsModule, ReactiveFormsModule } from '@angular/forms';
+import {
+  AbstractControl,
+  FormControl,
+  FormGroup,
+  ValidationErrors,
+  Validators,
+  FormsModule,
+  ReactiveFormsModule,
+} from '@angular/forms';
 import { UsernameValidators } from './username.validators';
 import { catchError, EMPTY, Observable } from 'rxjs';
 import { filter, map } from 'rxjs/operators';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { HttpErrorResponse } from '@angular/common/http';
-import { MatFormField, MatLabel, MatInput, MatSuffix, MatError, MatHint } from '@angular/material/input';
+import {
+  MatFormField,
+  MatLabel,
+  MatInput,
+  MatSuffix,
+  MatError,
+  MatHint,
+} from '@angular/material/input';
 import { MatIcon } from '@angular/material/icon';
 import { MatTooltip } from '@angular/material/tooltip';
 import { MatButton } from '@angular/material/button';
 
 @Component({
-    selector: 'app-register',
-    templateUrl: './register.component.html',
-    styleUrls: ['./register.component.scss'],
-    imports: [
-        FormsModule,
-        ReactiveFormsModule,
-        MatFormField,
-        MatLabel,
-        MatInput,
-        MatIcon,
-        MatSuffix,
-        MatTooltip,
-        MatError,
-        MatHint,
-        MatButton,
-    ],
+  selector: 'app-register',
+  templateUrl: './register.component.html',
+  styleUrls: ['./register.component.scss'],
+  imports: [
+    FormsModule,
+    ReactiveFormsModule,
+    MatFormField,
+    MatLabel,
+    MatInput,
+    MatIcon,
+    MatSuffix,
+    MatTooltip,
+    MatError,
+    MatHint,
+    MatButton,
+  ],
 })
 export class RegisterComponent implements OnInit {
   form = new FormGroup(

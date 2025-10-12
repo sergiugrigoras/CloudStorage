@@ -1,1 +1,2 @@
+cd ClientApp
 npx lint-staged

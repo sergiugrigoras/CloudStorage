@@ -16,18 +16,10 @@ import { MatTooltip } from '@angular/material/tooltip';
 import { MatBadge } from '@angular/material/badge';
 
 @Component({
-    selector: 'toolbar',
-    templateUrl: './toolbar.component.html',
-    styleUrls: ['./toolbar.component.scss'],
-    imports: [
-        NgFor,
-        MatIconButton,
-        MatTooltip,
-        MatMenuTrigger,
-        MatBadge,
-        MatMenu,
-        MatMenuItem,
-    ],
+  selector: 'toolbar',
+  templateUrl: './toolbar.component.html',
+  styleUrls: ['./toolbar.component.scss'],
+  imports: [NgFor, MatIconButton, MatTooltip, MatMenuTrigger, MatBadge, MatMenu, MatMenuItem],
 })
 export class ToolbarComponent implements OnInit, OnDestroy {
   constructor(private driveService: DriveService) {}

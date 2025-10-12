@@ -14,9 +14,24 @@ import {
   OnDestroy,
   HostListener,
 } from '@angular/core';
-import { MatDialog, MatDialogTitle, MatDialogContent, MatDialogActions, MatDialogClose } from '@angular/material/dialog';
+import {
+  MatDialog,
+  MatDialogTitle,
+  MatDialogContent,
+  MatDialogActions,
+  MatDialogClose,
+} from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { AbstractControl, AsyncValidatorFn, FormControl, ValidationErrors, ValidatorFn, Validators, FormsModule, ReactiveFormsModule } from '@angular/forms';
+import {
+  AbstractControl,
+  AsyncValidatorFn,
+  FormControl,
+  ValidationErrors,
+  ValidatorFn,
+  Validators,
+  FormsModule,
+  ReactiveFormsModule,
+} from '@angular/forms';
 import { saveAs } from 'file-saver';
 import { NgIf, NgFor } from '@angular/common';
 import { ToolbarComponent } from '../toolbar/toolbar.component';
@@ -32,32 +47,32 @@ import { MatButton } from '@angular/material/button';
 const SNACKBAR_OPTIONS = { duration: 3000 };
 const DOUBLE_CLICK_THRESHOLD = 300;
 @Component({
-    selector: 'app-drive',
-    templateUrl: './drive.component.html',
-    styleUrls: ['./drive.component.scss'],
-    imports: [
-        NgIf,
-        ToolbarComponent,
-        MatProgressBar,
-        PathbarComponent,
-        FsoComponent,
-        NgFor,
-        MatProgressSpinner,
-        MatDialogTitle,
-        CdkDrag,
-        CdkDragHandle,
-        CdkScrollable,
-        MatDialogContent,
-        MatFormField,
-        MatLabel,
-        MatInput,
-        FormsModule,
-        ReactiveFormsModule,
-        MatError,
-        MatDialogActions,
-        MatButton,
-        MatDialogClose,
-    ],
+  selector: 'app-drive',
+  templateUrl: './drive.component.html',
+  styleUrls: ['./drive.component.scss'],
+  imports: [
+    NgIf,
+    ToolbarComponent,
+    MatProgressBar,
+    PathbarComponent,
+    FsoComponent,
+    NgFor,
+    MatProgressSpinner,
+    MatDialogTitle,
+    CdkDrag,
+    CdkDragHandle,
+    CdkScrollable,
+    MatDialogContent,
+    MatFormField,
+    MatLabel,
+    MatInput,
+    FormsModule,
+    ReactiveFormsModule,
+    MatError,
+    MatDialogActions,
+    MatButton,
+    MatDialogClose,
+  ],
 })
 export class DriveComponent implements OnInit, OnDestroy {
   private readonly DEFAULT_SORT = this.fsoSortService.sortByNameAscFn;

@@ -14,20 +14,20 @@ import { MatDivider } from '@angular/material/list';
 import { DatePipe } from '@angular/common';
 
 @Component({
-    selector: 'app-admin',
-    templateUrl: './admin.component.html',
-    styleUrl: './admin.component.scss',
-    imports: [
-        MatFormField,
-        MatLabel,
-        MatInput,
-        FormsModule,
-        ReactiveFormsModule,
-        MatError,
-        MatButton,
-        MatDivider,
-        DatePipe,
-    ],
+  selector: 'app-admin',
+  templateUrl: './admin.component.html',
+  styleUrl: './admin.component.scss',
+  imports: [
+    MatFormField,
+    MatLabel,
+    MatInput,
+    FormsModule,
+    ReactiveFormsModule,
+    MatError,
+    MatButton,
+    MatDivider,
+    DatePipe,
+  ],
 })
 export class AdminComponent implements OnInit {
   users: User[] = null;

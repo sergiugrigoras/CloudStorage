@@ -4,10 +4,10 @@ import { Component, Input, OnChanges, OnInit, SimpleChanges } from '@angular/cor
 import { NgFor } from '@angular/common';
 
 @Component({
-    selector: 'pathbar',
-    templateUrl: './pathbar.component.html',
-    styleUrls: ['./pathbar.component.scss'],
-    imports: [NgFor],
+  selector: 'pathbar',
+  templateUrl: './pathbar.component.html',
+  styleUrls: ['./pathbar.component.scss'],
+  imports: [NgFor],
 })
 export class PathbarComponent implements OnChanges {
   @Input('folder') folder: FsoModel;
