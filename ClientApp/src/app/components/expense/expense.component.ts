@@ -1,6 +1,6 @@
 import { Component, OnDestroy, OnInit, TemplateRef, ViewChild } from '@angular/core';
 import { ExpenseService } from '../../services/expense.service';
-import { MatDialog } from '@angular/material/dialog';
+import { MatDialog, MatDialogTitle, MatDialogContent, MatDialogActions, MatDialogClose } from '@angular/material/dialog';
 import {
   Category,
   Expense,
@@ -9,13 +9,24 @@ import {
   PaymentMethod,
 } from '../../interfaces/expenses.interface';
 import { EMPTY, forkJoin, Subject, takeUntil } from 'rxjs';
-import { FormControl, FormGroup, Validators } from '@angular/forms';
-import { MatTableDataSource } from '@angular/material/table';
+import { FormControl, FormGroup, Validators, FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { MatTableDataSource, MatTable, MatColumnDef, MatHeaderCellDef, MatHeaderCell, MatCellDef, MatCell, MatHeaderRowDef, MatHeaderRow, MatRowDef, MatRow } from '@angular/material/table';
 import dayjs from 'dayjs';
 import { ExpenseChartComponent } from '../expense-chart/expense-chart.component';
 import { MatPaginator } from '@angular/material/paginator';
 import { debounceTime, switchMap, tap } from 'rxjs/operators';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { MatFormField, MatLabel, MatSuffix, MatInput, MatError, MatPrefix } from '@angular/material/input';
+import { MatDateRangeInput, MatStartDate, MatEndDate, MatDatepickerToggle, MatDateRangePicker, MatDatepickerInput, MatDatepicker } from '@angular/material/datepicker';
+import { MatSelect, MatOption } from '@angular/material/select';
+import { NgFor, NgIf, TitleCasePipe, CurrencyPipe, DatePipe } from '@angular/common';
+import { MatIconButton, MatButton } from '@angular/material/button';
+import { MatTooltip } from '@angular/material/tooltip';
+import { MatIcon } from '@angular/material/icon';
+import { MatMenuTrigger, MatMenu, MatMenuItem, MatMenuContent } from '@angular/material/menu';
+import { CdkScrollable } from '@angular/cdk/scrolling';
+import { MatCheckbox } from '@angular/material/checkbox';
+import { MatDivider } from '@angular/material/list';
 
 const EXPENSE_SORT_DATE = (expenseA: Expense, expenseB: Expense) => {
   const dateA = new Date(expenseA.date);
@@ -23,10 +34,59 @@ const EXPENSE_SORT_DATE = (expenseA: Expense, expenseB: Expense) => {
   return dateA.getTime() - dateB.getTime();
 };
 @Component({
-  selector: 'app-expense',
-  templateUrl: './expense.component.html',
-  styleUrl: './expense.component.scss',
-  standalone: false,
+    selector: 'app-expense',
+    templateUrl: './expense.component.html',
+    styleUrl: './expense.component.scss',
+    imports: [
+        FormsModule,
+        ReactiveFormsModule,
+        MatFormField,
+        MatLabel,
+        MatDateRangeInput,
+        MatStartDate,
+        MatEndDate,
+        MatDatepickerToggle,
+        MatSuffix,
+        MatDateRangePicker,
+        MatSelect,
+        NgFor,
+        MatOption,
+        MatIconButton,
+        MatTooltip,
+        MatIcon,
+        MatMenuTrigger,
+        MatMenu,
+        MatMenuItem,
+        MatPaginator,
+        NgIf,
+        MatTable,
+        MatColumnDef,
+        MatHeaderCellDef,
+        MatHeaderCell,
+        MatCellDef,
+        MatCell,
+        MatHeaderRowDef,
+        MatHeaderRow,
+        MatRowDef,
+        MatRow,
+        MatMenuContent,
+        MatDialogTitle,
+        CdkScrollable,
+        MatDialogContent,
+        MatInput,
+        MatCheckbox,
+        MatDivider,
+        MatDialogActions,
+        MatButton,
+        MatDialogClose,
+        MatError,
+        MatPrefix,
+        MatDatepickerInput,
+        MatDatepicker,
+        TitleCasePipe,
+        CurrencyPipe,
+        DatePipe,
+    ],
 })
 export class ExpenseComponent implements OnInit, OnDestroy {
   @ViewChild('paymentMethods', { static: true }) paymentMethodsTemplateRef: TemplateRef<never>;

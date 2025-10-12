@@ -1,12 +1,13 @@
 import { DriveService } from 'src/app/services/drive.service';
 import { FsoModel } from '../../model/fso.model';
 import { Component, Input, OnChanges, OnInit, SimpleChanges } from '@angular/core';
+import { NgFor } from '@angular/common';
 
 @Component({
-  selector: 'pathbar',
-  templateUrl: './pathbar.component.html',
-  styleUrls: ['./pathbar.component.scss'],
-  standalone: false,
+    selector: 'pathbar',
+    templateUrl: './pathbar.component.html',
+    styleUrls: ['./pathbar.component.scss'],
+    imports: [NgFor],
 })
 export class PathbarComponent implements OnChanges {
   @Input('folder') folder: FsoModel;

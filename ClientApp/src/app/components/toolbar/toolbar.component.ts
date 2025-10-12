@@ -7,15 +7,27 @@ import {
   ViewChild,
   OnDestroy,
 } from '@angular/core';
-import { MatMenu } from '@angular/material/menu';
+import { MatMenu, MatMenuTrigger, MatMenuItem } from '@angular/material/menu';
 import { DriveService } from '../../services/drive.service';
 import { Subject, takeUntil } from 'rxjs';
+import { NgFor } from '@angular/common';
+import { MatIconButton } from '@angular/material/button';
+import { MatTooltip } from '@angular/material/tooltip';
+import { MatBadge } from '@angular/material/badge';
 
 @Component({
-  selector: 'toolbar',
-  templateUrl: './toolbar.component.html',
-  styleUrls: ['./toolbar.component.scss'],
-  standalone: false,
+    selector: 'toolbar',
+    templateUrl: './toolbar.component.html',
+    styleUrls: ['./toolbar.component.scss'],
+    imports: [
+        NgFor,
+        MatIconButton,
+        MatTooltip,
+        MatMenuTrigger,
+        MatBadge,
+        MatMenu,
+        MatMenuItem,
+    ],
 })
 export class ToolbarComponent implements OnInit, OnDestroy {
   constructor(private driveService: DriveService) {}

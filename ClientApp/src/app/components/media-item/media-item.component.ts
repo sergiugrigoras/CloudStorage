@@ -13,12 +13,21 @@ import { MediaObject } from 'src/app/model/media-object.model';
 import { MediaService } from '../../services/media.service';
 import { catchError, EMPTY, retry, Subject, takeUntil, tap } from 'rxjs';
 import { DomSanitizer } from '@angular/platform-browser';
+import { NgIf, NgStyle, AsyncPipe } from '@angular/common';
+import { MatProgressBar } from '@angular/material/progress-bar';
+import { MatIconButton } from '@angular/material/button';
 
 @Component({
-  selector: 'app-media-item',
-  templateUrl: './media-item.component.html',
-  styleUrls: ['./media-item.component.scss'],
-  standalone: false,
+    selector: 'app-media-item',
+    templateUrl: './media-item.component.html',
+    styleUrls: ['./media-item.component.scss'],
+    imports: [
+        NgIf,
+        NgStyle,
+        MatProgressBar,
+        MatIconButton,
+        AsyncPipe,
+    ],
 })
 export class MediaItemComponent implements OnInit, OnDestroy, AfterViewInit {
   @Input() item: MediaObject;

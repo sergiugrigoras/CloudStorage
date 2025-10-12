@@ -2,11 +2,19 @@ import { AuthService } from 'src/app/services/auth.service';
 import { Component, OnDestroy, OnInit, signal } from '@angular/core';
 import { Subject, Subscription, takeUntil } from 'rxjs';
 import { AppComponent } from '../../app.component';
+import { MatCard, MatCardContent } from '@angular/material/card';
+import { RouterLink } from '@angular/router';
+import { MatButton } from '@angular/material/button';
 @Component({
-  selector: 'app-home',
-  templateUrl: './home.component.html',
-  styleUrls: ['./home.component.scss'],
-  standalone: false,
+    selector: 'app-home',
+    templateUrl: './home.component.html',
+    styleUrls: ['./home.component.scss'],
+    imports: [
+        MatCard,
+        RouterLink,
+        MatCardContent,
+        MatButton,
+    ],
 })
 export class HomeComponent implements OnInit, OnDestroy {
   readonly isLoggedIn = this.authService.isUserLoggedIn;

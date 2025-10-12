@@ -7,13 +7,27 @@ import { MatDialog } from '@angular/material/dialog';
 import { SpinnerComponent } from '../spinner/spinner.component';
 import { catchError, EMPTY, finalize, tap } from 'rxjs';
 import { HttpErrorResponse } from '@angular/common/http';
-import { FormControl, Validators } from '@angular/forms';
+import { FormControl, Validators, FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { MatFormField, MatLabel, MatInput, MatError } from '@angular/material/input';
+import { MatButton } from '@angular/material/button';
+import { MatDivider } from '@angular/material/list';
+import { DatePipe } from '@angular/common';
 
 @Component({
-  selector: 'app-admin',
-  standalone: false,
-  templateUrl: './admin.component.html',
-  styleUrl: './admin.component.scss',
+    selector: 'app-admin',
+    templateUrl: './admin.component.html',
+    styleUrl: './admin.component.scss',
+    imports: [
+        MatFormField,
+        MatLabel,
+        MatInput,
+        FormsModule,
+        ReactiveFormsModule,
+        MatError,
+        MatButton,
+        MatDivider,
+        DatePipe,
+    ],
 })
 export class AdminComponent implements OnInit {
   users: User[] = null;

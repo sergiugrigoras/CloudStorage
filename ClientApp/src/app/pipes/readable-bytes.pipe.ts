@@ -1,9 +1,6 @@
 import { Pipe, PipeTransform } from '@angular/core';
 
-@Pipe({
-  name: 'readableBytes',
-  standalone: false,
-})
+@Pipe({ name: 'readableBytes', })
 export class ReadableBytesPipe implements PipeTransform {
   transform(bytes: any, precision: number) {
     if (!bytes || bytes == 0) return '0B';

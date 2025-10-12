@@ -2,14 +2,31 @@ import { Component, Inject, TemplateRef, ViewChild } from '@angular/core';
 import { Expense, ExpenseChartType } from '../../interfaces/expenses.interface';
 import dayjs from 'dayjs';
 import { ChartConfiguration, ChartOptions } from 'chart.js';
-import { MAT_DIALOG_DATA } from '@angular/material/dialog';
-import { MatSlideToggleChange } from '@angular/material/slide-toggle';
+import { MAT_DIALOG_DATA, MatDialogTitle, MatDialogContent, MatDialogActions, MatDialogClose } from '@angular/material/dialog';
+import { MatSlideToggleChange, MatSlideToggle } from '@angular/material/slide-toggle';
+import { NgTemplateOutlet } from '@angular/common';
+import { CdkDrag, CdkDragHandle } from '@angular/cdk/drag-drop';
+import { CdkScrollable } from '@angular/cdk/scrolling';
+import { BaseChartDirective } from 'ng2-charts';
+import { MatButton } from '@angular/material/button';
 
 @Component({
-  selector: 'app-expense-chart',
-  templateUrl: './expense-chart.component.html',
-  styleUrl: './expense-chart.component.scss',
-  standalone: false,
+    selector: 'app-expense-chart',
+    templateUrl: './expense-chart.component.html',
+    styleUrl: './expense-chart.component.scss',
+    imports: [
+        NgTemplateOutlet,
+        MatDialogTitle,
+        CdkDrag,
+        CdkDragHandle,
+        CdkScrollable,
+        MatDialogContent,
+        BaseChartDirective,
+        MatDialogActions,
+        MatButton,
+        MatDialogClose,
+        MatSlideToggle,
+    ],
 })
 export class ExpenseChartComponent {
   @ViewChild('byCategoryChart', { static: true }) byCategoryChartTemplate: TemplateRef<never>;
