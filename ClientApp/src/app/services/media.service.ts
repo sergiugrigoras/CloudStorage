@@ -1,6 +1,5 @@
-import { HttpClient, HttpEvent, HttpHeaders, HttpParams } from '@angular/common/http';
-import { Injectable } from '@angular/core';
-import { Router } from '@angular/router';
+import { HttpClient, HttpEvent, HttpParams } from '@angular/common/http';
+import { inject, Injectable } from '@angular/core';
 import { MediaObject, MediaObjectFilter } from '../model/media-object.model';
 import { Observable, map, BehaviorSubject } from 'rxjs';
 import { MediaAlbum } from '../model/media-album.model';
@@ -12,12 +11,10 @@ import { HTTP_OPTIONS_CONTENT_JSON } from '../core/constants';
   providedIn: 'root',
 })
 export class MediaService {
+  private readonly http = inject(HttpClient);
   private _selectMode = new BehaviorSubject<boolean>(false);
   selectMode$ = this._selectMode.asObservable();
-  constructor(
-    private http: HttpClient,
-    private router: Router
-  ) {}
+  constructor() {}
 
   enableSelectMode() {
     this._selectMode.next(true);
@@ -55,7 +52,7 @@ export class MediaService {
     return this.http.post<boolean>(url, { id }, HTTP_OPTIONS_CONTENT_JSON);
   }
 
-  upload(formData: FormData): Observable<HttpEvent<Object>> {
+  upload(formData: FormData): Observable<HttpEvent<object>> {
     const url = buildUrl(API_ENDPOINTS.MEDIA.BASE, API_ENDPOINTS.MEDIA.UPLOAD);
     return this.http.post(url, formData, {
       observe: 'events',
@@ -103,7 +100,7 @@ export class MediaService {
       body: { ids: id },
       headers: HTTP_OPTIONS_CONTENT_JSON.headers,
     };
-    return this.http.delete<any>(url, options);
+    return this.http.delete(url, options);
   }
 
   restoreMediaObjects(id: string[]) {

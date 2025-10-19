@@ -1,6 +1,6 @@
 import { NoteService } from '../../services/note.service';
 import { NoteListItem, NoteModel } from '../../model/note.model';
-import { Component, OnInit, TemplateRef, ViewChild } from '@angular/core';
+import { Component, inject, OnInit, signal, TemplateRef, ViewChild } from '@angular/core';
 import { delay, switchMap, take, tap } from 'rxjs/operators';
 import {
   MatDialog,
@@ -20,7 +20,7 @@ import {
 } from '@angular/forms';
 import { MatButton, MatMiniFabButton, MatIconButton } from '@angular/material/button';
 import { EMPTY, of } from 'rxjs';
-import { NgIf, NgFor, TitleCasePipe, DatePipe } from '@angular/common';
+import { TitleCasePipe, DatePipe } from '@angular/common';
 import { MatMenuTrigger, MatMenu, MatMenuItem } from '@angular/material/menu';
 import { MatIcon } from '@angular/material/icon';
 import {
@@ -36,7 +36,6 @@ import { MatDivider } from '@angular/material/list';
 import { MatProgressBar } from '@angular/material/progress-bar';
 import { MatProgressSpinner } from '@angular/material/progress-spinner';
 import { CdkDrag, CdkDragHandle } from '@angular/cdk/drag-drop';
-import { CdkScrollable } from '@angular/cdk/scrolling';
 import { MatFormField, MatLabel, MatInput, MatError } from '@angular/material/input';
 import { CdkTextareaAutosize } from '@angular/cdk/text-field';
 import { MatCheckbox } from '@angular/material/checkbox';
@@ -47,13 +46,11 @@ const SNACKBAR_OPTIONS = { duration: 3000 };
   templateUrl: './notes.component.html',
   styleUrls: ['./notes.component.scss'],
   imports: [
-    NgIf,
     MatMiniFabButton,
     MatMenuTrigger,
     MatIcon,
     MatMenu,
     MatMenuItem,
-    NgFor,
     MatCard,
     MatCardHeader,
     MatCardTitle,
@@ -68,7 +65,6 @@ const SNACKBAR_OPTIONS = { duration: 3000 };
     MatDialogTitle,
     CdkDrag,
     CdkDragHandle,
-    CdkScrollable,
     MatDialogContent,
     FormsModule,
     ReactiveFormsModule,
@@ -86,17 +82,18 @@ const SNACKBAR_OPTIONS = { duration: 3000 };
   ],
 })
 export class NotesComponent implements OnInit {
-  notes: NoteModel[];
-  noteForm: FormGroup;
+  private readonly noteService = inject(NoteService);
+  private readonly _dialog = inject(MatDialog);
+  private readonly _snackBar = inject(MatSnackBar);
+  private readonly fb = inject(FormBuilder);
+  notes: NoteModel[] = [];
+  notesLoaded = signal(false);
+  noteForm: FormGroup | null = null;
 
-  @ViewChild('noteDialog', { static: true }) noteDialog: TemplateRef<any>;
-  @ViewChild('deleteConfirmDialog', { static: true }) deleteConfirmDialog: TemplateRef<any>;
-  constructor(
-    private noteService: NoteService,
-    private _dialog: MatDialog,
-    private _snackBar: MatSnackBar,
-    private fb: FormBuilder
-  ) {}
+  @ViewChild('noteDialog', { static: true }) noteDialog: TemplateRef<unknown> | null = null;
+  @ViewChild('deleteConfirmDialog', { static: true })
+  deleteConfirmDialog: TemplateRef<unknown> | null = null;
+  constructor() {}
 
   ngOnInit(): void {
     this.noteService
@@ -104,6 +101,7 @@ export class NotesComponent implements OnInit {
       .pipe(
         tap((notes) => {
           this.notes = notes ?? [];
+          this.notesLoaded.set(true);
         })
       )
       .subscribe();
@@ -116,7 +114,7 @@ export class NotesComponent implements OnInit {
       text: note.type === 'text' ? note.body : null,
       list:
         note.type === 'list'
-          ? this.fb.array(note.getListItems().map(this.listItemToGroup.bind(this)))
+          ? this.fb.array(note.getListItems()?.map(this.listItemToGroup.bind(this)) ?? [])
           : null,
     });
   }
@@ -138,10 +136,12 @@ export class NotesComponent implements OnInit {
   }
 
   get noteList() {
-    return this.noteForm.get('list') as FormArray<FormGroup>;
+    const formArray = this.noteForm?.get('list');
+    return formArray ? (formArray as FormArray<FormGroup>) : null;
   }
 
   addListItem(itemIndex?: number) {
+    if (this.noteList == null || this.noteForm == null) return;
     const itemFormGroup = this.fb.group({
       label: [''],
       checked: [false],
@@ -163,10 +163,12 @@ export class NotesComponent implements OnInit {
   }
 
   deleteListItem(itemIndex: number) {
+    if (this.noteList == null) return;
     this.noteList.removeAt(itemIndex);
   }
 
   createNote(button: MatMiniFabButton, type: 'text' | 'list') {
+    if (this.noteDialog == null) return;
     this.createEmptyNoteForm(type);
     const element = button._elementRef.nativeElement;
     if (element instanceof HTMLElement) {
@@ -187,8 +189,9 @@ export class NotesComponent implements OnInit {
         .afterClosed()
         .pipe(
           switchMap((dialogResult) => {
-            if (dialogResult) {
-              return this.noteService.add(this.convertFormToNote());
+            const newNote = this.convertFormToNote();
+            if (dialogResult && newNote) {
+              return this.noteService.add(newNote);
             }
             return EMPTY;
           })
@@ -205,6 +208,7 @@ export class NotesComponent implements OnInit {
   }
 
   deleteNote(note: NoteModel) {
+    if (this.deleteConfirmDialog == null) return;
     if (note == null) return;
     this._dialog
       .open(this.deleteConfirmDialog, {
@@ -236,6 +240,7 @@ export class NotesComponent implements OnInit {
   }
 
   editNote(note: NoteModel) {
+    if (this.noteDialog == null) return;
     this.createNoteForm(note);
     this._dialog
       .open(this.noteDialog, {
@@ -247,9 +252,9 @@ export class NotesComponent implements OnInit {
       .afterClosed()
       .pipe(
         switchMap((dialogResult) => {
-          if (dialogResult) {
+          const noteUpdate = this.convertFormToNote();
+          if (dialogResult && noteUpdate) {
             note.updating = true;
-            const noteUpdate = this.convertFormToNote();
             noteUpdate.id = note.id;
             return this.noteService.update(noteUpdate);
           }
@@ -269,7 +274,8 @@ export class NotesComponent implements OnInit {
       });
   }
 
-  private convertFormToNote(): NoteModel {
+  private convertFormToNote(): NoteModel | null {
+    if (this.noteForm == null || this.noteList == null) return null;
     const type = this.noteForm.get('type')?.value;
     const title = this.noteForm.get('title')?.value;
     const text = this.noteForm.get('text')?.value;

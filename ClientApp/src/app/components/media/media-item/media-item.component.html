@@ -1,0 +1,42 @@
+<div class="media-item__snapshot">
+  @if (item) {
+    @if (item.isVideo) {
+      <span class="media-item__snapshot-duration">{{ item.videoLength }}</span>
+    }
+    @if (item.isLoading) {
+      <div
+        class="media-item__snapshot-placeholder"
+        [ngStyle]="{ 'aspect-ratio': item.width / item.height }"
+      >
+        <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+      </div>
+    } @else {
+      <img [src]="(item.snapshot$ | async) ?? ''" (click)="itemTouched()" alt="snapshot" />
+    }
+    @if (selectMode) {
+      <button
+        mat-icon-button
+        color="primary"
+        class="media-item__snapshot-button-select"
+        type="button"
+        (click)="item.isSelected = !item.isSelected; $event.stopPropagation()"
+      >
+        <span class="material-icons-outlined">
+          {{ item.isSelected ? 'check_box' : 'check_box_outline_blank' }}
+        </span>
+      </button>
+      <button
+        mat-icon-button
+        color="primary"
+        class="media-item__snapshot-button-open"
+        type="button"
+        (click)="openItem(); $event.stopPropagation()"
+      >
+        <span class="material-icons-outlined"> open_in_full </span>
+      </button>
+    }
+    @if (item.isSelected) {
+      <div class="media-item__snapshot-highlight theme-color-border"></div>
+    }
+  }
+</div>

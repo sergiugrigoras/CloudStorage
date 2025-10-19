@@ -6,10 +6,10 @@ import { FsoModel } from '../model/fso.model';
 })
 export class FsoSortService {
   sortByNameAscFn = (first: FsoModel, second: FsoModel) => {
-    let isFirstFolder = first.isFolder;
-    let isSecondFolder = second.isFolder;
-    let firstIsLessThanSecond = -1;
-    let firstIsGreaterThanSecond = 1;
+    const isFirstFolder = first.isFolder;
+    const isSecondFolder = second.isFolder;
+    const firstIsLessThanSecond = -1;
+    const firstIsGreaterThanSecond = 1;
     if (isFirstFolder && isSecondFolder) return first.name.localeCompare(second.name);
     else if (isFirstFolder || isSecondFolder)
       return isFirstFolder ? firstIsLessThanSecond : firstIsGreaterThanSecond;
@@ -73,3 +73,5 @@ export class FsoSortService {
     return first.date! > second.date! ? firstIsLessThanSecond : firstIsGreaterThanSecond;
   };
 }
+
+export type CompareFsoFn = (first: FsoModel, second: FsoModel) => number;

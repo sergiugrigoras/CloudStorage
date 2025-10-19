@@ -1,118 +1,136 @@
-<ng-container *ngIf="notes; else loading">
-  <div class="notes__controls">
-    <button mat-mini-fab color="primary" [matMenuTriggerFor]="noteMenu" #createBtn>
-      <mat-icon>add</mat-icon>
-    </button>
-    <mat-menu #noteMenu="matMenu">
-      <button mat-menu-item (click)="createNote(createBtn, 'text')">
-        <mat-icon>subject</mat-icon>Text
+@if (notesLoaded()) {
+  <ng-container>
+    <div class="notes__controls">
+      <button mat-mini-fab color="primary" [matMenuTriggerFor]="noteMenu" #createBtn>
+        <mat-icon>add</mat-icon>
       </button>
-      <button mat-menu-item (click)="createNote(createBtn, 'list')">
-        <mat-icon>checklist</mat-icon>List
-      </button>
-    </mat-menu>
-  </div>
-  <div class="notes__container">
-    <h3 *ngIf="notes.length === 0">No notes</h3>
-    <mat-card appearance="raised" class="note__card" *ngFor="let note of notes">
-      <mat-card-header>
-        <mat-card-title>{{ note.title }}</mat-card-title>
-        <mat-card-subtitle>{{ note.creationDate | date: 'medium' }}</mat-card-subtitle>
-      </mat-card-header>
-      <mat-card-content class="note__card-body">
-        <p *ngIf="note.type === 'text'">{{ note.body }}</p>
-        <div *ngIf="note.type === 'list'" class="note__card-body-list">
-          <div *ngFor="let item of note.getListItems()">
-            <span class="material-icons-outlined">{{
-              item.checked ? 'check_box' : 'check_box_outline_blank'
-            }}</span>
-            <span>{{ item.label }}</span>
-          </div>
-        </div>
-        <mat-divider></mat-divider>
-      </mat-card-content>
-      <mat-card-actions class="notes__actions">
-        <button mat-icon-button color="primary" (click)="editNote(note)">
-          <mat-icon>edit</mat-icon>
+      <mat-menu #noteMenu="matMenu">
+        <button mat-menu-item (click)="createNote(createBtn, 'text')">
+          <mat-icon>subject</mat-icon>Text
         </button>
-        <button mat-icon-button color="accent" (click)="deleteNote(note)">
-          <mat-icon>clear</mat-icon>
+        <button mat-menu-item (click)="createNote(createBtn, 'list')">
+          <mat-icon>checklist</mat-icon>List
         </button>
-      </mat-card-actions>
-      <mat-card-footer>
-        <mat-progress-bar mode="indeterminate" *ngIf="note.updating"></mat-progress-bar>
-      </mat-card-footer>
-    </mat-card>
-  </div>
-</ng-container>
-<ng-template #loading>
+      </mat-menu>
+    </div>
+    <div class="notes__container">
+      @if (notes.length === 0) {
+        <h3>No notes</h3>
+      }
+      @for (note of notes; track note.id) {
+        <mat-card appearance="raised" class="note__card">
+          <mat-card-header>
+            <mat-card-title>{{ note.title }}</mat-card-title>
+            <mat-card-subtitle>{{ note.creationDate | date: 'medium' }}</mat-card-subtitle>
+          </mat-card-header>
+          <mat-card-content class="note__card-body">
+            @if (note.type === 'text') {
+              <p>{{ note.body }}</p>
+            } @else if (note.type === 'list') {
+              <div class="note__card-body-list">
+                @let items = note.getListItems() ?? [];
+                @for (item of items; track $index) {
+                  <div>
+                    <span class="material-icons-outlined">{{
+                      item.checked ? 'check_box' : 'check_box_outline_blank'
+                    }}</span>
+                    <span>{{ item.label }}</span>
+                  </div>
+                }
+              </div>
+            }
+            <mat-divider></mat-divider>
+          </mat-card-content>
+          <mat-card-actions class="notes__actions">
+            <button mat-icon-button color="primary" (click)="editNote(note)">
+              <mat-icon>edit</mat-icon>
+            </button>
+            <button mat-icon-button color="accent" (click)="deleteNote(note)">
+              <mat-icon>clear</mat-icon>
+            </button>
+          </mat-card-actions>
+          <mat-card-footer>
+            @if (note.updating) {
+              <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+            }
+          </mat-card-footer>
+        </mat-card>
+      }
+    </div>
+  </ng-container>
+} @else {
+  <p>Loading...</p>
   <mat-spinner></mat-spinner>
-</ng-template>
+}
 
 <ng-template let-data #noteDialog>
   <h1 mat-dialog-title cdkDrag cdkDragRootElement=".cdk-overlay-pane" cdkDragHandle>
     {{ data | titlecase }} Note
   </h1>
-  <div mat-dialog-content [formGroup]="noteForm" class="note-dialog__content">
-    <mat-form-field>
-      <mat-label>Title</mat-label>
-      <input matInput type="text" formControlName="title" />
-      <mat-error>Title is Required.</mat-error>
-    </mat-form-field>
-    <ng-container *ngIf="data === 'text'">
+  @if (noteForm) {
+    <div mat-dialog-content [formGroup]="noteForm" class="note-dialog__content">
       <mat-form-field>
-        <mat-label>Content</mat-label>
-        <textarea
-          matInput
-          type="text"
-          formControlName="text"
-          cdkTextareaAutosize
-          cdkAutosizeMinRows="1"
-          cdkAutosizeMaxRows="15"
-        ></textarea>
+        <mat-label>Title</mat-label>
+        <input matInput type="text" formControlName="title" />
+        <mat-error>Title is Required.</mat-error>
       </mat-form-field>
-    </ng-container>
-
-    <ng-container *ngIf="data === 'list'" formArrayName="list">
-      <ng-container
-        *ngFor="let listItem of noteList.controls; let i = index"
-        [formGroup]="listItem"
-      >
-        <div class="list-item">
-          <mat-checkbox formControlName="checked" color="primary"></mat-checkbox>
-          <input
-            matInput
-            type="text"
-            formControlName="label"
-            class="list-item-input"
-            [id]="'list-item-' + i"
-            (keyup.enter)="addListItem(i + 1)"
-          />
-          <button mat-icon-button color="primary" (click)="deleteListItem(i)">
-            <mat-icon>clear</mat-icon>
+      @if (data === 'text') {
+        <ng-container>
+          <mat-form-field>
+            <mat-label>Content</mat-label>
+            <textarea
+              matInput
+              type="text"
+              formControlName="text"
+              cdkTextareaAutosize
+              cdkAutosizeMinRows="1"
+              cdkAutosizeMaxRows="15"
+            ></textarea>
+          </mat-form-field>
+        </ng-container>
+      } @else if (data === 'list') {
+        <ng-container formArrayName="list">
+          @let controls = noteList?.controls;
+          @for (listItem of controls ?? []; let i = $index; track $index) {
+            <ng-container [formGroup]="listItem">
+              <div class="list-item">
+                <mat-checkbox formControlName="checked" color="primary"></mat-checkbox>
+                <input
+                  matInput
+                  type="text"
+                  formControlName="label"
+                  class="list-item-input"
+                  [id]="'list-item-' + i"
+                  (keyup.enter)="addListItem(i + 1)"
+                />
+                <button mat-icon-button color="primary" (click)="deleteListItem(i)">
+                  <mat-icon>clear</mat-icon>
+                </button>
+              </div>
+            </ng-container>
+          }
+          <button mat-button (click)="addListItem()">
+            <mat-icon>add</mat-icon>
+            Add item
           </button>
-        </div>
-      </ng-container>
-      <button mat-button (click)="addListItem()">
-        <mat-icon>add</mat-icon>
-        Add item
+        </ng-container>
+      }
+    </div>
+    <div mat-dialog-actions>
+      <button
+        type="button"
+        mat-raised-button
+        color="primary"
+        [mat-dialog-close]="true"
+        [disabled]="noteForm.invalid"
+      >
+        Save
       </button>
-    </ng-container>
-  </div>
-  <div mat-dialog-actions>
-    <button
-      type="button"
-      mat-raised-button
-      color="primary"
-      [mat-dialog-close]="true"
-      [disabled]="noteForm.invalid"
-    >
-      Save
-    </button>
-    <button type="button" mat-raised-button color="accent" [mat-dialog-close]="false">
-      Cancel
-    </button>
-  </div>
+      <button type="button" mat-raised-button color="accent" [mat-dialog-close]="false">
+        Cancel
+      </button>
+    </div>
+  }
 </ng-template>
 
 <ng-template #deleteConfirmDialog let-data>

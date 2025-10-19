@@ -6,7 +6,7 @@ import {
   HttpInterceptor,
   HttpRequest,
 } from '@angular/common/http';
-import { Injectable } from '@angular/core';
+import { inject, Injectable } from '@angular/core';
 import { Observable, ReplaySubject, throwError } from 'rxjs';
 import { catchError, switchMap, take } from 'rxjs/operators';
 import { AuthService } from './auth.service';
@@ -15,6 +15,7 @@ import { API_ENDPOINTS } from '../core/api-endpoints';
 
 @Injectable()
 export class AuthInterceptor implements HttpInterceptor {
+  public authService = inject(AuthService);
   private isRefreshing = false;
   private newAccessTokenSubject = new ReplaySubject<string>(1);
   private readonly _anonymousEndpoints = [
@@ -26,9 +27,9 @@ export class AuthInterceptor implements HttpInterceptor {
     buildUrl(API_ENDPOINTS.AUTH.BASE, API_ENDPOINTS.AUTH.RESET_PASSWORD),
   ];
   private readonly _revokeEndpoint = buildUrl(API_ENDPOINTS.AUTH.BASE, API_ENDPOINTS.AUTH.REVOKE);
-  constructor(public authService: AuthService) {}
+  constructor() {}
 
-  intercept(request: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {
+  intercept(request: HttpRequest<unknown>, next: HttpHandler): Observable<HttpEvent<unknown>> {
     const token = this.authService.getJwtToken();
     if (token && this.shouldAttachToken(request.url)) {
       request = this.addTokenToRequest(request, token);
@@ -45,7 +46,7 @@ export class AuthInterceptor implements HttpInterceptor {
     );
   }
 
-  private handle401Error(request: HttpRequest<any>, next: HttpHandler) {
+  private handle401Error(request: HttpRequest<unknown>, next: HttpHandler) {
     if (!this.isRefreshing) {
       this.isRefreshing = true;
 
@@ -69,7 +70,7 @@ export class AuthInterceptor implements HttpInterceptor {
     }
   }
 
-  private addTokenToRequest(request: HttpRequest<any>, token: string) {
+  private addTokenToRequest(request: HttpRequest<unknown>, token: string) {
     return request.clone({
       setHeaders: {
         Authorization: `Bearer ${token}`,

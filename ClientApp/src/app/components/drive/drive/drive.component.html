@@ -1,0 +1,113 @@
+@if (pageIsReady()) {
+  <ng-container>
+    <toolbar [selectedCount]="selectedCount" (action)="onToolbarEvent($event)"></toolbar>
+    @if (progressBar) {
+      <mat-progress-bar mode="determinate" [value]="progressBar"></mat-progress-bar>
+    }
+    <path-bar [folder]="currentFolder"></path-bar>
+    <div>
+      @if (currentFolder && currentFolder.parentId) {
+        <fso
+          [text]="'..'"
+          (click)="onFsoTouch($event, currentFolder.parentId)"
+          (dblclick)="openFolder(currentFolder.parentId)"
+        >
+        </fso>
+      }
+      @for (fso of currentFolder?.children; track fso.id) {
+        <fso
+          [fso]="fso"
+          (click)="onFsoTouch($event, fso.id)"
+          (dblclick)="openFolder(fso.id, fso.isFolder)"
+        >
+        </fso>
+      }
+      @if (currentFolder && currentFolder.children.length === 0) {
+        <p>Folder is empty</p>
+      }
+    </div>
+  </ng-container>
+} @else {
+  <ng-template #loading>
+    <mat-spinner></mat-spinner>
+  </ng-template>
+}
+
+<input
+  type="file"
+  #inputFiles
+  (change)="uploadFile(inputFiles.files)"
+  style="display: none"
+  multiple
+/>
+
+<ng-template #newFolderDialog>
+  <h1 mat-dialog-title cdkDrag cdkDragRootElement=".cdk-overlay-pane" cdkDragHandle>New Folder</h1>
+  <div mat-dialog-content>
+    <p>Input the name</p>
+    <div class="dialog-inputs">
+      <mat-form-field>
+        <mat-label>Name</mat-label>
+        <input matInput type="text" [formControl]="newFolderControl" />
+        <mat-error>{{ getNewFolderErrorMessage() }}</mat-error>
+      </mat-form-field>
+    </div>
+  </div>
+  <div mat-dialog-actions>
+    <button
+      type="button"
+      mat-raised-button
+      color="primary"
+      [mat-dialog-close]="true"
+      [disabled]="newFolderControl.invalid || newFolderControl.pending"
+    >
+      Ok
+    </button>
+    <button type="button" mat-raised-button color="accent" [mat-dialog-close]="false">
+      Cancel
+    </button>
+  </div>
+</ng-template>
+
+<ng-template #deleteConfirmDialog>
+  <h1 mat-dialog-title cdkDrag cdkDragRootElement=".cdk-overlay-pane" cdkDragHandle>
+    Delete Confirmation
+  </h1>
+  <div mat-dialog-content>
+    <p>Are you sure want to delete {{ selectedCount }} item(s) ?</p>
+  </div>
+  <div mat-dialog-actions>
+    <button type="button" mat-raised-button color="primary" [mat-dialog-close]="true">Ok</button>
+    <button type="button" mat-raised-button color="accent" [mat-dialog-close]="false">
+      Cancel
+    </button>
+  </div>
+</ng-template>
+
+<ng-template #renameDialog>
+  <h1 mat-dialog-title cdkDrag cdkDragRootElement=".cdk-overlay-pane" cdkDragHandle>Rename</h1>
+  <div mat-dialog-content>
+    <p>Input new name</p>
+    <div class="dialog-inputs">
+      <mat-form-field>
+        <mat-label>Name</mat-label>
+        <input matInput type="text" [formControl]="renameControl" />
+        <mat-error>Name is required.</mat-error>
+      </mat-form-field>
+    </div>
+  </div>
+  <div mat-dialog-actions>
+    <button
+      type="button"
+      mat-raised-button
+      color="primary"
+      [mat-dialog-close]="true"
+      [disabled]="renameControl.invalid || renameControl.pending"
+    >
+      Ok
+    </button>
+    <button type="button" mat-raised-button color="accent" [mat-dialog-close]="false">
+      Cancel
+    </button>
+  </div>
+</ng-template>

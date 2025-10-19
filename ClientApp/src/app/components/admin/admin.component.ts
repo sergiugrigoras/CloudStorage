@@ -3,7 +3,7 @@ import { AdminService } from '../../services/admin.service';
 import { User } from '../../model/user.model';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatDialog } from '@angular/material/dialog';
-import { SpinnerComponent } from '../spinner/spinner.component';
+import { SpinnerComponent } from '../shared/spinner/spinner.component';
 import { catchError, EMPTY, finalize, tap } from 'rxjs';
 import { HttpErrorResponse } from '@angular/common/http';
 import { FormControl, Validators, FormsModule, ReactiveFormsModule } from '@angular/forms';

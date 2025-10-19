@@ -30,6 +30,6 @@ ENV ASPNETCORE_URLS=http://+:5000
 
 WORKDIR /app
 COPY --from=base /app/publish .
-COPY --from=node /app/dist/browser ./wwwroot
+COPY --from=node /app/dist ./wwwroot
 EXPOSE 5000
 ENTRYPOINT [ "dotnet", "CloudStorage.dll" ]

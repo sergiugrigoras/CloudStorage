@@ -1,23 +1,24 @@
-import { HomeComponent } from './components/home/home.component';
 import {
   AfterViewInit,
   Component,
   ElementRef,
   HostBinding,
   HostListener,
+  inject,
   OnInit,
   signal,
-  TemplateRef,
   ViewChild,
-  WritableSignal,
 } from '@angular/core';
-import { Router } from '@angular/router';
-import { tap } from 'rxjs/operators';
 import { AuthService } from './services/auth.service';
 import { OverlayContainer } from '@angular/cdk/overlay';
 import { AppRoute } from './interfaces/app-route.interface';
 import { ThemeService } from 'ng2-charts';
 import { ChartOptions } from 'chart.js';
+import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { MatToolbar, MatToolbarRow } from '@angular/material/toolbar';
+import { MatMenu, MatMenuItem, MatMenuTrigger } from '@angular/material/menu';
+import { MatButton, MatMiniFabButton } from '@angular/material/button';
+import { MatTooltip } from '@angular/material/tooltip';
 
 const DARK_THEME_CHART_OVER: ChartOptions = {
   plugins: {
@@ -43,18 +44,36 @@ const WHITE_THEME_CHART_OPTIONS: ChartOptions = {};
   selector: 'app-root',
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.scss'],
-  standalone: false,
+  imports: [
+    RouterOutlet,
+    MatToolbar,
+    MatMenu,
+    MatToolbarRow,
+    RouterLink,
+    MatButton,
+    RouterLinkActive,
+    MatTooltip,
+    MatMenuTrigger,
+    MatMiniFabButton,
+    MatMenuItem,
+    MatTooltip,
+  ],
 })
 export class AppComponent implements OnInit, AfterViewInit {
+  private readonly authService = inject(AuthService);
+  private readonly overlay = inject(OverlayContainer);
+  private readonly elem = inject(ElementRef);
+  private readonly themeService = inject(ThemeService);
   title = 'scs';
   readonly isLoggedIn = this.authService.isUserLoggedIn;
   readonly isLargeDevice = signal(false);
   readonly themeIcon = signal('');
-  scrHeight: any;
-  scrWidth: any;
+  scrHeight = 0;
+  scrWidth = 0;
   readonly darkClassName = 'darkMode';
   @HostBinding('class') hostClassName = '';
-  @ViewChild('emptyDiv', { static: true }) emptyDiv: ElementRef<HTMLDivElement>;
+  @ViewChild('intersectionElement', { static: true })
+  intersectionDiv: ElementRef<HTMLDivElement> | null = null;
   year = new Date().getFullYear();
   routes: AppRoute[] = [
     { route: '/drive', displayName: 'Drive' },
@@ -62,16 +81,10 @@ export class AppComponent implements OnInit, AfterViewInit {
     { route: '/notes', displayName: 'Notes' },
     { route: '/expenses', displayName: 'Expenses' },
   ];
-  constructor(
-    private authService: AuthService,
-    private router: Router,
-    private overlay: OverlayContainer,
-    private elem: ElementRef,
-    private themeService: ThemeService
-  ) {}
+  constructor() {}
   ngAfterViewInit(): void {
     const backTopButton = this.elem.nativeElement.querySelector('.back-top') as HTMLElement;
-    const intersectionCallback = (entries: IntersectionObserverEntry[]) => {
+    const intersectionCallback = () => {
       backTopButton.classList.toggle('invisible');
     };
     const intersectionObserver = new IntersectionObserver(intersectionCallback, {
@@ -79,7 +92,9 @@ export class AppComponent implements OnInit, AfterViewInit {
       threshold: 1,
       root: null,
     });
-    intersectionObserver.observe(this.emptyDiv?.nativeElement);
+    if (this.intersectionDiv) {
+      intersectionObserver.observe(this.intersectionDiv.nativeElement);
+    }
   }
 
   scrollTop() {
@@ -92,16 +107,14 @@ export class AppComponent implements OnInit, AfterViewInit {
 
   ngOnInit(): void {
     this.isLoggedIn.set(this.authService.jwtTokenExists());
+
     const userSelectedTheme = localStorage.getItem('theme');
-    if (
-      window.matchMedia &&
-      window.matchMedia('(prefers-color-scheme: dark)').matches &&
-      !userSelectedTheme
-    ) {
-      this.setTheme('dark', false);
-    } else {
-      this.setTheme(userSelectedTheme, false);
-    }
+    const prefersDark =
+      window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+    const theme = userSelectedTheme ?? (prefersDark ? 'dark' : 'light');
+    this.setTheme(theme, false);
+
     this.getScreenSize();
   }
 

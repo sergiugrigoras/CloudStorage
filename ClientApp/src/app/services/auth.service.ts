@@ -1,7 +1,7 @@
 import { AccessToken } from '../interfaces/token.interface';
 import { UserModel } from '../interfaces/user.interface';
-import { Injectable, signal } from '@angular/core';
-import { HttpClient, HttpErrorResponse, HttpHeaders, HttpParams } from '@angular/common/http';
+import { inject, Injectable, signal } from '@angular/core';
+import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { finalize, Observable, of, throwError } from 'rxjs';
 import { catchError, map, tap } from 'rxjs/operators';
 import { Router } from '@angular/router';
@@ -9,19 +9,18 @@ import { JwtHelperService } from '@auth0/angular-jwt';
 import { API_ENDPOINTS } from '../core/api-endpoints';
 import { buildUrl } from '../core/url-builder';
 import { HTTP_OPTIONS_CONTENT_JSON } from '../core/constants';
+import { JWT_KEY } from '../../main';
 
 @Injectable({
   providedIn: 'root',
 })
 export class AuthService {
+  private readonly http = inject(HttpClient);
+  private readonly jwtHelper = inject(JwtHelperService);
+  private readonly router = inject(Router);
   isUserLoggedIn = signal(false);
   private readonly _adminRole = 'Admin';
-  private readonly _jwt = 'jwt';
-  constructor(
-    private http: HttpClient,
-    private jwtHelper: JwtHelperService,
-    private router: Router
-  ) {}
+  constructor() {}
 
   checkUniqueLogin(login: string): Observable<boolean> {
     const url = buildUrl(API_ENDPOINTS.AUTH.BASE, API_ENDPOINTS.AUTH.CHECK_UNIQUE);
@@ -152,7 +151,7 @@ export class AuthService {
     this.doLogoutUser();
   }
   getJwtToken() {
-    return localStorage.getItem(this._jwt);
+    return localStorage.getItem(JWT_KEY);
   }
 
   jwtTokenExists() {
@@ -170,9 +169,9 @@ export class AuthService {
   }
 
   private storeToken(token: AccessToken) {
-    localStorage.setItem(this._jwt, token.token);
+    localStorage.setItem(JWT_KEY, token.token);
   }
   private removeToken() {
-    localStorage.removeItem(this._jwt);
+    localStorage.removeItem(JWT_KEY);
   }
 }

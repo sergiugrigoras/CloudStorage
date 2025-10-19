@@ -1,15 +1,15 @@
 export interface PaymentMethod {
-  id: string;
+  id?: string;
   name: string;
   isActive: boolean;
-  userId: string;
+  userId?: string;
 }
 
 export interface Category {
-  id: string;
+  id?: string;
   name: string;
   emoji?: string;
-  userId: string;
+  userId?: string;
 }
 
 export interface Expense {

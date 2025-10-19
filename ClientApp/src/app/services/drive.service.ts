@@ -1,9 +1,8 @@
 import { DiskInfoModel } from '../interfaces/disk.interface';
 import { FsoModel, FsoMoveResultModel } from '../model/fso.model';
-import { HttpClient, HttpEvent, HttpParams } from '@angular/common/http';
-import { Injectable } from '@angular/core';
-import { Router } from '@angular/router';
-import { Observable, Subject, BehaviorSubject } from 'rxjs';
+import { HttpClient, HttpParams } from '@angular/common/http';
+import { inject, Injectable } from '@angular/core';
+import { Subject, BehaviorSubject } from 'rxjs';
 import { buildUrl } from '../core/url-builder';
 import { API_ENDPOINTS } from '../core/api-endpoints';
 import { HTTP_OPTIONS_CONTENT_JSON } from '../core/constants';
@@ -14,7 +13,8 @@ import { HTTP_OPTIONS_CONTENT_JSON } from '../core/constants';
 export class DriveService {
   openFolder$ = new Subject<number>();
   clipboard$ = new BehaviorSubject<number[]>([]);
-  constructor(private http: HttpClient) {}
+  private readonly http = inject(HttpClient);
+  constructor() {}
 
   getUserRoot() {
     const url = buildUrl(API_ENDPOINTS.FSO.BASE, API_ENDPOINTS.FSO.ROOT);
@@ -26,15 +26,9 @@ export class DriveService {
     return this.http.get<FsoModel>(url);
   }
 
-  getFullPath(id: any) {
+  getFullPath(id: number) {
     const url = buildUrl(API_ENDPOINTS.FSO.BASE, API_ENDPOINTS.FSO.FULL_PATH, `${id}`);
     return this.http.get<FsoModel[]>(url);
-  }
-
-  validateEmail(input: string) {
-    const regularExpression =
-      /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
-    return regularExpression.test(input?.toLowerCase());
   }
 
   getDiskInfo() {
@@ -42,9 +36,10 @@ export class DriveService {
     return this.http.get<DiskInfoModel>(url);
   }
 
-  addFolder(newFso: any) {
+  addFolder(name: string, parentId: number) {
     const url = buildUrl(API_ENDPOINTS.FSO.BASE, API_ENDPOINTS.FSO.ADD_FOLDER);
-    return this.http.post<FsoModel>(url, newFso, HTTP_OPTIONS_CONTENT_JSON);
+    const body = { name, parentId, isFolder: true };
+    return this.http.post<FsoModel>(url, body, HTTP_OPTIONS_CONTENT_JSON);
   }
 
   delete(ids: number[]) {
@@ -65,9 +60,9 @@ export class DriveService {
     return this.http.post<FsoMoveResultModel>(url, list, options);
   }
 
-  rename(fso: any) {
+  rename(id: number, name: string) {
     const url = buildUrl(API_ENDPOINTS.FSO.BASE, API_ENDPOINTS.FSO.RENAME);
-    return this.http.put(url, fso, HTTP_OPTIONS_CONTENT_JSON);
+    return this.http.put(url, { id, name }, HTTP_OPTIONS_CONTENT_JSON);
   }
 
   upload(formData: FormData) {
@@ -78,7 +73,7 @@ export class DriveService {
     });
   }
 
-  download(list: number[]): Observable<HttpEvent<Object>> {
+  download(list: number[]) {
     const url = buildUrl(API_ENDPOINTS.FSO.BASE, API_ENDPOINTS.FSO.DOWNLOAD);
 
     return this.http.post<Blob>(url, list, {

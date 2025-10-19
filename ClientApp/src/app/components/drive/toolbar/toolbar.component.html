@@ -1,0 +1,27 @@
+<div class="mat-elevation-z6 toolbar-container">
+  @for (toolbarButton of buttons; track $index) {
+    <ng-container>
+      <button
+        mat-icon-button
+        [matTooltip]="toolbarButton.label"
+        (click)="emitEvent(toolbarButton.event)"
+        [disabled]="toolbarButton.isDisabled()"
+        [matMenuTriggerFor]="toolbarButton.menu === 'sort-menu' ? sortMenu : null"
+      >
+        <span
+          [class]="toolbarButton.class ?? 'material-icons'"
+          [matBadge]="toolbarButton.badgeValue ? toolbarButton.badgeValue() : null"
+          matBadgeColor="warn"
+          matBadgePosition="below after"
+          matBadgeSize="medium"
+          >{{ toolbarButton.icon }}</span
+        >
+      </button>
+    </ng-container>
+  }
+  <mat-menu #sortMenu="matMenu">
+    <button mat-menu-item (click)="emitEvent('sortName')">Name</button>
+    <button mat-menu-item (click)="emitEvent('sortSize')">Size</button>
+    <button mat-menu-item (click)="emitEvent('sortDate')">Date</button>
+  </mat-menu>
+</div>

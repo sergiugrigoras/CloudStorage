@@ -1,7 +1,7 @@
 <h1>Welcome to SCS</h1>
 @if (isLoggedIn()) {
   <div class="items-box">
-    @for (card of cards; track card) {
+    @for (card of cards; track $index) {
       <ng-container>
         <mat-card class="card" [routerLink]="card.link">
           <mat-card-content class="card-content">

@@ -5,7 +5,7 @@
         <a class="logo" routerLink="/">SCS</a>
         @if (isLargeDevice()) {
           <div>
-            @for (route of routes; track route) {
+            @for (route of routes; track route.route) {
               <button mat-button [routerLink]="route.route" routerLinkActive="selected">
                 {{ route.displayName }}
               </button>
@@ -31,7 +31,7 @@
     @if (!isLargeDevice()) {
       <mat-toolbar-row class="toolbar-small">
         <div class="container">
-          @for (route of routes; track route) {
+          @for (route of routes; track route.route) {
             <button mat-button [routerLink]="route.route" routerLinkActive="selected">
               {{ route.displayName }}
             </button>
@@ -40,7 +40,7 @@
       </mat-toolbar-row>
     }
   </mat-toolbar>
-  <div class="app-intersection-observer" #emptyDiv></div>
+  <div class="app-intersection-observer" #intersectionElement></div>
   <div class="app-content container">
     <router-outlet></router-outlet>
   </div>

@@ -7,9 +7,9 @@ export class MediaAlbum {
   createDate: Date;
   lastUpdate: Date;
   ownerName: string;
-  mediaObjects: MediaObject[];
+  mediaObjects: MediaObject[] = [];
 
-  constructor(mediaAlbum: any) {
+  constructor(mediaAlbum: MediaAlbum) {
     this.id = mediaAlbum.id;
     this.name = mediaAlbum.name;
     this.ownerId = mediaAlbum.ownerId;
@@ -17,7 +17,7 @@ export class MediaAlbum {
     this.lastUpdate = new Date(mediaAlbum.lastUpdate);
     this.ownerName = mediaAlbum.ownerName;
     if (Array.isArray(mediaAlbum.mediaObjects)) {
-      this.mediaObjects = mediaAlbum.mediaObjects.map((x: any) => new MediaObject(x));
+      this.mediaObjects = mediaAlbum.mediaObjects.map((x: MediaObject) => new MediaObject(x));
     }
   }
 }

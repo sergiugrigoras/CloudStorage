@@ -1,4 +1,4 @@
-import { SafeUrl } from '@angular/platform-browser';
+import { SafeValue } from '@angular/platform-browser';
 import { AsyncSubject } from 'rxjs';
 
 export class MediaObject {
@@ -12,7 +12,7 @@ export class MediaObject {
   videoLength: string;
   favorite: boolean;
   ownerId: string;
-  snapshot$: AsyncSubject<SafeUrl>;
+  snapshot$: AsyncSubject<SafeValue>;
   isLoading = true;
   isSelected = false;
   isVideo: boolean;

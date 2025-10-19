@@ -1,6 +1,6 @@
 import { NoteModel } from '../model/note.model';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Injectable } from '@angular/core';
+import { inject, Injectable } from '@angular/core';
 import { map } from 'rxjs';
 import { buildUrl } from '../core/url-builder';
 import { API_ENDPOINTS } from '../core/api-endpoints';
@@ -10,11 +10,12 @@ import { HTTP_OPTIONS_CONTENT_JSON } from '../core/constants';
   providedIn: 'root',
 })
 export class NoteService {
-  constructor(private http: HttpClient) {}
+  private readonly http = inject(HttpClient);
+  constructor() {}
   private readonly _url = buildUrl(API_ENDPOINTS.NOTE.BASE);
   private readonly _noteSort = (firstNote: NoteModel, secondNote: NoteModel) => {
-    const firstDate = new Date(firstNote.creationDate).getTime();
-    const secondDate = new Date(secondNote.creationDate).getTime();
+    const firstDate = firstNote.creationDate?.getTime() ?? 0;
+    const secondDate = secondNote.creationDate?.getTime() ?? 0;
     return secondDate - firstDate;
   };
   getAll() {
@@ -39,6 +40,6 @@ export class NoteService {
     const options = {
       params: new HttpParams().set('id', id),
     };
-    return this.http.delete<any>(this._url, options);
+    return this.http.delete<unknown>(this._url, options);
   }
 }

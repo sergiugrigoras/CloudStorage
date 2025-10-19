@@ -1,7 +1,6 @@
 import { AuthService } from 'src/app/services/auth.service';
-import { Component, OnDestroy, OnInit, signal } from '@angular/core';
-import { Subject, Subscription, takeUntil } from 'rxjs';
-import { AppComponent } from '../../app.component';
+import { Component, inject, OnDestroy, OnInit } from '@angular/core';
+import { Subject } from 'rxjs';
 import { MatCard, MatCardContent } from '@angular/material/card';
 import { RouterLink } from '@angular/router';
 import { MatButton } from '@angular/material/button';
@@ -12,9 +11,11 @@ import { MatButton } from '@angular/material/button';
   imports: [MatCard, RouterLink, MatCardContent, MatButton],
 })
 export class HomeComponent implements OnInit, OnDestroy {
+  private readonly authService = inject(AuthService);
   readonly isLoggedIn = this.authService.isUserLoggedIn;
   private readonly destroy$ = new Subject<void>();
-  constructor(private authService: AuthService) {}
+  constructor() {}
+
   readonly cards: HomeCard[] = [
     { label: 'Drive', icon: 'backup', link: '/drive' },
     { label: 'Media', icon: 'image', link: '/media' },
@@ -22,6 +23,7 @@ export class HomeComponent implements OnInit, OnDestroy {
     { label: 'Expenses', icon: 'paid', link: '/expenses' },
   ];
   private _adminCard: HomeCard = { label: 'Admin', icon: 'settings', link: '/admin' };
+
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
@@ -32,14 +34,6 @@ export class HomeComponent implements OnInit, OnDestroy {
       this.cards.push(this._adminCard);
     }
   }
-
-  // home.component.ts
-  /*  readonly isLoggedIn = this.authService.isUserLoggedIn;
-  readonly cards = computed(() => {
-    const baseCards = [...this._defaultCards];
-    if (this.authService.isAdmin()) baseCards.push(this._adminCard);
-    return baseCards;
-  });*/
 }
 
 export interface HomeCard {

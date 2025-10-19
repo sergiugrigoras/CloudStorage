@@ -1,0 +1,127 @@
+import { catchError, switchMap } from 'rxjs/operators';
+import { AuthService } from '../../../services/auth.service';
+import { HttpErrorResponse } from '@angular/common/http';
+import { Component, inject, OnInit } from '@angular/core';
+import {
+  FormControl,
+  FormGroup,
+  Validators,
+  FormsModule,
+  ReactiveFormsModule,
+} from '@angular/forms';
+import { ActivatedRoute, Router } from '@angular/router';
+import { PasswordValidators } from '../profile/password.validators';
+import { EMPTY, finalize, tap } from 'rxjs';
+import { MatSnackBar } from '@angular/material/snack-bar';
+import { MatFormField, MatLabel, MatInput, MatError, MatHint } from '@angular/material/input';
+import { MatButton } from '@angular/material/button';
+
+@Component({
+  selector: 'app-reset-password',
+  templateUrl: './reset-password.component.html',
+  styleUrls: ['./reset-password.component.scss'],
+  imports: [
+    FormsModule,
+    ReactiveFormsModule,
+    MatFormField,
+    MatLabel,
+    MatInput,
+    MatError,
+    MatHint,
+    MatButton,
+  ],
+})
+export class ResetPasswordComponent implements OnInit {
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
+  private readonly authService = inject(AuthService);
+  private readonly _snackBar = inject(MatSnackBar);
+  resetToken = '';
+  resetTokenId = '';
+  userIdentifierForm = new FormGroup({
+    userIdentifier: new FormControl('', Validators.required),
+  });
+
+  passwordForm = new FormGroup(
+    {
+      newPassword: new FormControl('', Validators.required),
+      confirmNewPassword: new FormControl('', Validators.required),
+    },
+    PasswordValidators.passwordsShouldMatch
+  );
+
+  constructor() {}
+
+  ngOnInit(): void {
+    this.resetToken = this.route.snapshot.queryParams['token'];
+    this.resetTokenId = this.route.snapshot.queryParams['id'];
+  }
+
+  getResetToken() {
+    const identifier = (this.userIdentifierForm.get('userIdentifier')?.value || '').trim();
+    if (identifier === '') return;
+    this.authService
+      .forgotPassword(identifier)
+      .pipe(
+        catchError((error) => {
+          if (error instanceof HttpErrorResponse) {
+            switch (error.status) {
+              case 404:
+                this._snackBar.open(`User not found.`, 'Ok', { duration: 5000 });
+                break;
+              case 400:
+                this._snackBar.open(`${error.error}`, 'Ok', { duration: 5000 });
+                break;
+              default:
+                this._snackBar.open(`An error occurred.`, 'Ok', { duration: 5000 });
+                break;
+            }
+          }
+          return EMPTY;
+        }),
+        tap((response) => {
+          this._snackBar.open(`Instruction sent to ${response}`, 'Ok', { duration: 5000 });
+        }),
+        finalize(() => {
+          this.userIdentifierForm.reset();
+        })
+      )
+      .subscribe();
+  }
+
+  resetPassword() {
+    const newPassword = this.newPassword?.value || '';
+    if (newPassword === '') {
+      this._snackBar.open('New Password is Empty.', 'Ok', { duration: 5000 });
+      return;
+    }
+    this.authService
+      .resetPassword(+this.resetTokenId, this.resetToken, newPassword)
+      .pipe(
+        catchError(() => {
+          this._snackBar.open(`Invalid reset token.`, 'Ok', { duration: 5000 });
+          this.passwordForm.reset();
+          return EMPTY;
+        }),
+        switchMap((tokens) => {
+          return this.authService.loginWithToken(tokens);
+        })
+      )
+      .subscribe((res) => {
+        if (res) {
+          this._snackBar.open(`Password has been changed successfully.`, 'Ok', { duration: 3000 });
+          setTimeout(() => {
+            this.router.navigate(['/']);
+          }, 3000);
+        }
+      });
+  }
+
+  get newPassword() {
+    return this.passwordForm.get('newPassword');
+  }
+
+  get confirmNewPassword() {
+    return this.passwordForm.get('confirmNewPassword');
+  }
+}

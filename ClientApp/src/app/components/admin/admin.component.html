@@ -19,7 +19,7 @@
 </div>
 <h3>Users</h3>
 @if (usersReady()) {
-  @for (user of users; track user) {
+  @for (user of users; track user.id) {
     <div class="admin_user-item">
       <div>
         <div><strong>Name: </strong>{{ user.username }}</div>

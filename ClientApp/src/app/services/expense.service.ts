@@ -1,6 +1,5 @@
-import { Injectable } from '@angular/core';
+import { inject, Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { environment } from '../../environments/environment';
 import { Category, Expense, ExpenseFilter, PaymentMethod } from '../interfaces/expenses.interface';
 import { buildUrl } from '../core/url-builder';
 import { API_ENDPOINTS } from '../core/api-endpoints';
@@ -10,7 +9,8 @@ import { HTTP_OPTIONS_CONTENT_JSON } from '../core/constants';
   providedIn: 'root',
 })
 export class ExpenseService {
-  constructor(private http: HttpClient) {}
+  private readonly http = inject(HttpClient);
+  constructor() {}
 
   getExpenses(filter: ExpenseFilter) {
     const url = buildUrl(API_ENDPOINTS.EXPENSE.BASE);
@@ -22,7 +22,7 @@ export class ExpenseService {
       params = params.set('endDate', filter.endDate as string);
     }
     if (Array.isArray(filter.categories)) {
-      for (let category of filter.categories) {
+      for (const category of filter.categories) {
         params = params.append('categories', category);
       }
     }
