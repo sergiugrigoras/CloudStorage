@@ -45,3 +45,9 @@ public class FileSystemObjectViewModel
         };
     }
 }
+
+public class FsoUploadModel 
+{
+    public List<IFormFile> Files { get; set; }
+    public int ParentId { get; set; }
+}

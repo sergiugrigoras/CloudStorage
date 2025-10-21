@@ -1,7 +1,7 @@
-import { Component, Input, OnInit, Output, EventEmitter, OnDestroy, inject } from '@angular/core';
+import { Component, Input, Output, EventEmitter, inject, computed } from '@angular/core';
 import { MatMenu, MatMenuTrigger, MatMenuItem } from '@angular/material/menu';
 import { DriveService } from '../../../services/drive.service';
-import { Subject, takeUntil } from 'rxjs';
+import { Subject } from 'rxjs';
 import { MatIconButton } from '@angular/material/button';
 import { MatTooltip } from '@angular/material/tooltip';
 import { MatBadge } from '@angular/material/badge';
@@ -12,22 +12,13 @@ import { MatBadge } from '@angular/material/badge';
   styleUrls: ['./toolbar.component.scss'],
   imports: [MatIconButton, MatTooltip, MatMenuTrigger, MatBadge, MatMenu, MatMenuItem],
 })
-export class ToolbarComponent implements OnInit, OnDestroy {
+export class ToolbarComponent {
   private readonly driveService = inject(DriveService);
+  private clipboard = this.driveService.clipboard;
+  private clipboardCount = computed(() => this.clipboard().length);
   constructor() {}
 
-  ngOnDestroy(): void {
-    this.destroy$.next();
-    this.destroy$.complete();
-  }
-
-  ngOnInit(): void {
-    this.driveService.clipboard$.pipe(takeUntil(this.destroy$)).subscribe((clipboard) => {
-      this.clipboardValues = clipboard;
-    });
-  }
   private readonly destroy$ = new Subject<void>();
-  clipboardValues: number[] = [];
   @Input() selectedCount: number = 0;
   @Output() action = new EventEmitter<string>();
   buttons: ToolbarButton[] = [
@@ -76,8 +67,8 @@ export class ToolbarComponent implements OnInit, OnDestroy {
     {
       label: 'Paste',
       icon: 'content_paste',
-      isDisabled: () => this.isClipboardEmpty,
-      badgeValue: () => this.clipboardCount,
+      isDisabled: () => this.clipboardCount() === 0,
+      badgeValue: () => (this.clipboardCount() === 0 ? undefined : this.clipboardCount()),
       event: 'paste',
     },
     {
@@ -91,15 +82,6 @@ export class ToolbarComponent implements OnInit, OnDestroy {
 
   emitEvent(val: string | undefined) {
     if (val) this.action.emit(val);
-  }
-
-  get isClipboardEmpty() {
-    return this.clipboardValues.length === 0;
-  }
-
-  get clipboardCount() {
-    if (this.clipboardValues.length === 0) return undefined;
-    return this.clipboardValues.length;
   }
 }
 

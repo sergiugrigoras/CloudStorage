@@ -6,6 +6,7 @@
     class="disk-usage-progress-bar"
     mode="determinate"
     [value]="(diskInfo.used * 100) / diskInfo.total"
+    [matTooltip]="diskInfo.usedPercentage"
   ></mat-progress-bar>
 </div>
 <div mat-dialog-actions align="end">

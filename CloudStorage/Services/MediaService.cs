@@ -9,7 +9,7 @@ namespace CloudStorage.Services;
 
 public class MediaService(IMediaUnitOfWork unitOfWork, IConfiguration configuration, IServiceProvider serviceProvider) : IMediaService
 {
-    private string StorageDirectory { get; } = configuration.GetValue<string>("Storage:url");
+    private string StorageDirectory { get; } = configuration.GetValue<string>("Storage:Url");
     private const string MediaRootDirectory = "media";
     private const string SnapshotDirectory = "snapshots";
     private const string MediaFileDirectory = "files";

@@ -31,14 +31,14 @@ namespace CloudStorage.Services
         Task MoveFsoAsync(FileSystemObject fso, FileSystemObject destination);
         Task<FileSystemObject> GetUserRootAsync(Guid userId);
         Task LoadFolderContentAsync(FileSystemObject fso);
-        Task<long> GetFsoSizeByIdAsync(int id);
+        Task<long> GetUsedStorageByUser(Guid userId);
         Task<bool> UniqueName(string name, int parentId, bool isFolder);
         Task<string> GetDistinctNameAsync(string name, int parentId, bool isFolder, uint counter = 0);
     }
     public class FsoService(AppDbContext context, IConfiguration configuration) : IFsoService
     {
         private const string DriveDirName = "drive";
-        private readonly string _storageUrl = configuration.GetValue<string>("Storage:url");
+        private readonly string _storageUrl = configuration.GetValue<string>("Storage:Url");
         private static readonly Dictionary<string, string> Mappings = new(StringComparer.InvariantCultureIgnoreCase) 
         {
         #region mime types
@@ -743,23 +743,13 @@ namespace CloudStorage.Services
             }
         }
         
-        public async Task<long> GetFsoSizeByIdAsync(int id)
+        public async Task<long> GetUsedStorageByUser(Guid userId)
         {
-            long bytesCount = 0;
-            var fso = await context.FileSystemObjects.FindAsync(id);
-            if (fso == null) return 0;
-            if (fso.IsFolder)
-            {
-                var content = await context.FileSystemObjects
-                    .Where(f => f.ParentId == fso.Id)
-                    .ToArrayAsync();
-                foreach (var item in content)
-                    bytesCount += await GetFsoSizeByIdAsync(item.Id);
-            }
-            else
-                bytesCount = fso.FileSize.GetValueOrDefault();
-
-            return bytesCount;
+            var result = await context.FileSystemObjects
+                .Where(x => x.OwnerId == userId && !x.IsFolder && x.FileSize != null)
+                .SumAsync(x => x.FileSize.Value);
+            
+            return result;
         }
 
         public async Task<bool> UniqueName(string name, int parentId, bool isFolder)

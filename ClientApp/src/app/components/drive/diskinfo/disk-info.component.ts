@@ -11,6 +11,7 @@ import {
 import { MatButton } from '@angular/material/button';
 import { MatProgressBar } from '@angular/material/progress-bar';
 import { CdkDrag, CdkDragHandle } from '@angular/cdk/drag-drop';
+import { MatTooltip } from '@angular/material/tooltip';
 
 @Component({
   selector: 'disk-info',
@@ -26,6 +27,7 @@ import { CdkDrag, CdkDragHandle } from '@angular/cdk/drag-drop';
     MatProgressBar,
     CdkDrag,
     CdkDragHandle,
+    MatTooltip,
   ],
 })
 export class DiskInfoComponent {

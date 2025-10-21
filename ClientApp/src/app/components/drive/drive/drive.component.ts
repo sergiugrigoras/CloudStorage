@@ -1,6 +1,6 @@
 import { CompareFsoFn, FsoSortService } from '../../../services/fso-sort.service';
-import { catchError, switchMap, distinctUntilChanged, first } from 'rxjs/operators';
-import { Subscription, EMPTY, Subject, Observable, map, debounceTime, of } from 'rxjs';
+import { catchError, switchMap, distinctUntilChanged, first, tap } from 'rxjs/operators';
+import { Subscription, EMPTY, Subject, Observable, map, debounceTime, of, finalize } from 'rxjs';
 import { HttpErrorResponse, HttpEvent, HttpEventType } from '@angular/common/http';
 import { FsoModel, FsoTouchHelper } from '../../../model/fso.model';
 import { DriveService } from '../../../services/drive.service';
@@ -362,35 +362,66 @@ export class DriveComponent implements OnInit, OnDestroy {
       });
   }
 
+  private buildFileUploadFormData(files: File[], parentId: number) {
+    const formData = new FormData();
+    for (const file of files) {
+      formData.append('files', file, file.name);
+    }
+    formData.append('parentId', parentId.toString());
+    return formData;
+  }
   uploadFile(files: FileList | null) {
     if (!files || this.currentFolder == null) return;
-    const formData = new FormData();
-    Array.from(files).forEach((file) => {
-      formData.append('files', file, file.name);
-    });
-    formData.append('parentId', this.currentFolder.id.toString());
-    this.driveService.upload(formData).subscribe({
-      next: (event) => {
-        if (
-          event.type === HttpEventType.Response &&
-          Array.isArray(event.body) &&
-          Array.isArray(this.currentFolder?.children)
-        ) {
-          const result = event.body.map((x) => new FsoModel(x));
-          result.forEach((x) => (x.isSelected = true));
-          this.currentFolder.children.forEach((x) => (x.isSelected = false));
-          this.currentFolder.children.push(...result);
+    const parentId = this.currentFolder.id;
+    const fileArray = Array.from(files);
+    const totalSize = fileArray.reduce((a, b) => a + b.size, 0);
+
+    this.driveService
+      .getDiskInfo()
+      .pipe(
+        catchError(() => {
+          this._snackBar.open('Unable to get disk status', 'Ok', { duration: 3000 });
+          return EMPTY;
+        }),
+        switchMap((diskInfo) => {
+          if (diskInfo.used + totalSize > diskInfo.total) {
+            throw new Error('Not enough space.');
+          }
+          const formData = this.buildFileUploadFormData(fileArray, parentId);
+          return this.driveService.upload(formData);
+        }),
+        tap((event) => {
+          if (
+            event.type === HttpEventType.Response &&
+            Array.isArray(event.body) &&
+            Array.isArray(this.currentFolder?.children)
+          ) {
+            const result = event.body.map((x) => new FsoModel(x));
+            result.forEach((x) => (x.isSelected = true));
+            this.currentFolder.children.forEach((x) => (x.isSelected = false));
+            this.currentFolder.children.push(...result);
+
+            this.currentFolder.children.sort(this.sortedBy);
+          } else if (event.type === HttpEventType.UploadProgress && event.total) {
+            this.progressBar = Math.round((100 * event.loaded) / event.total);
+          }
+        }),
+        catchError((err) => {
+          let text = 'An error occurred';
+          if (err instanceof HttpErrorResponse && typeof err.error === 'string') {
+            text = err.error;
+          } else if (typeof err.message === 'string') {
+            text = err.message;
+          }
+          this._snackBar.open(text, 'Ok', { duration: 3000 });
+          return EMPTY;
+        }),
+        finalize(() => {
           this.progressBar = 0;
           if (this.inputFiles) this.inputFiles.nativeElement.value = '';
-          this.currentFolder.children.sort(this.sortedBy);
-        } else if (event.type === HttpEventType.UploadProgress && event.total) {
-          this.progressBar = Math.round((100 * event.loaded) / event.total);
-        }
-      },
-      error: () => {
-        this.progressBar = 0;
-      },
-    });
+        })
+      )
+      .subscribe();
   }
 
   private download() {
@@ -515,11 +546,13 @@ export class DriveComponent implements OnInit, OnDestroy {
     }, []);
     if (clipboard == null || clipboard.length === 0) return;
     this._snackBar.open(`Moved to clipboard ${clipboard.length} item(s)`, 'Ok', SNACKBAR_OPTIONS);
-    this.driveService.clipboard$.next(clipboard);
+    //this.driveService.clipboard$.next(clipboard);
+    this.driveService.clipboard.set([...clipboard]);
   }
 
   private moveItems() {
-    const clipboard = this.driveService.clipboard$.getValue();
+    //const clipboard = this.driveService.clipboard$.getValue();
+    const clipboard = this.driveService.clipboard();
     if (
       clipboard.length === 0 ||
       this.currentFolder == null ||
@@ -535,7 +568,8 @@ export class DriveComponent implements OnInit, OnDestroy {
         })
       )
       .subscribe((result) => {
-        this.driveService.clipboard$.next([]);
+        //this.driveService.clipboard$.next([]);
+        this.driveService.clipboard.set([]);
         result.success?.forEach((item) => {
           item.isSelected = true;
         });

@@ -15,7 +15,7 @@ public class FsoController(IConfiguration configuration, IFsoService fsoService,
 {
     private readonly IFsoService _fsoService = fsoService ?? throw new ArgumentNullException(nameof(fsoService));
     private readonly IUserService _userService = userService ?? throw new ArgumentNullException(nameof(userService));
-    private readonly string _storageSize = configuration.GetValue<string>("Storage:size");
+    private readonly long _storageSize = configuration.GetValue<long?>("Storage:DriveSize") ?? 104_857_600; // 100MB
 
     [HttpGet("root")]
     public async Task<IActionResult> GetUserRootContentAsync()
@@ -45,12 +45,9 @@ public class FsoController(IConfiguration configuration, IFsoService fsoService,
     {
         var user = await _userService.GetUserAsync(User);
         if (user == null) return Unauthorized();
-        var root = await _fsoService.GetUserRootAsync(user.Id);
-        if (root == null) return NotFound();
-            
-        var usedBytes = await _fsoService.GetFsoSizeByIdAsync(root.Id);;
-        var totalBytes = long.Parse(_storageSize);
-        return new JsonResult(new DiskInfo(totalBytes, usedBytes));
+        
+        var usedBytes = await _fsoService.GetUsedStorageByUser(user.Id);
+        return new JsonResult(new DiskInfoViewModel(_storageSize, usedBytes));
     }
 
     [HttpGet("full-path/{id:int}")]
@@ -155,27 +152,35 @@ public class FsoController(IConfiguration configuration, IFsoService fsoService,
     }
 
     [HttpPost("upload"), DisableRequestSizeLimit]
-    public async Task<IActionResult> UploadAsync([FromForm] IList<IFormFile> files, [FromForm] string parentId)
+    public async Task<IActionResult> UploadAsync([FromForm] FsoUploadModel uploadModel)
     {
-        var root = await _fsoService.GetByIdAsync(int.Parse(parentId));
         var user = await _userService.GetUserAsync(User);
-        if (root == null) return BadRequest("Invalid parent Id.");
-        if (!root.CheckOwnership(user.Id)) return Forbid();
+        if (user == null) return Unauthorized();
+        if (uploadModel?.Files == null) return BadRequest();
+        var uploadTo = await _fsoService.GetByIdAsync(uploadModel.ParentId);
+        if (uploadTo == null) return BadRequest("Invalid parent Id.");
+        if (!uploadTo.CheckOwnership(user.Id)) return Forbid();
+        
+        // Check storage space.
+        var usedBytes = await _fsoService.GetUsedStorageByUser(user.Id);
+        var uploadSize = uploadModel.Files.Sum(f => f.Length);
+        if (usedBytes + uploadSize > _storageSize)
+            return BadRequest("Not enough storage space.");
         try
         {
             var result = new List<FileSystemObjectViewModel>();
-            foreach (var file in files)
+            foreach (var file in uploadModel.Files)
             {
                 var fileName = await _fsoService.StoreFileAsync(file, user.Id);
                 var name = ContentDispositionHeaderValue.Parse(file.ContentDisposition).FileName;
                 if (name == null) continue;
-                name = await _fsoService.GetDistinctNameAsync(name.Trim('"'), root.Id, false);
+                name = await _fsoService.GetDistinctNameAsync(name.Trim('"'), uploadTo.Id, false);
                 var model = new FileSystemObject
                 {
                     Name = name,
                     IsFolder = false,
                     OwnerId = user.Id,
-                    ParentId = root.Id,
+                    ParentId = uploadTo.Id,
                     FileName = fileName,
                     FileSize = file.Length,
                     Date = DateTime.UtcNow
@@ -185,9 +190,9 @@ public class FsoController(IConfiguration configuration, IFsoService fsoService,
             }
             return new JsonResult(result);
         }
-        catch (Exception ex)
+        catch
         {
-            return StatusCode(500, $"Internal server error : {ex.Message}");
+            return StatusCode(500, $"Internal server error.");
         }
     }
 

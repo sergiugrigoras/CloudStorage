@@ -1,8 +1,8 @@
 import { DiskInfoModel } from '../interfaces/disk.interface';
 import { FsoModel, FsoMoveResultModel } from '../model/fso.model';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { inject, Injectable } from '@angular/core';
-import { Subject, BehaviorSubject } from 'rxjs';
+import { inject, Injectable, signal } from '@angular/core';
+import { Subject } from 'rxjs';
 import { buildUrl } from '../core/url-builder';
 import { API_ENDPOINTS } from '../core/api-endpoints';
 import { HTTP_OPTIONS_CONTENT_JSON } from '../core/constants';
@@ -12,7 +12,7 @@ import { HTTP_OPTIONS_CONTENT_JSON } from '../core/constants';
 })
 export class DriveService {
   openFolder$ = new Subject<number>();
-  clipboard$ = new BehaviorSubject<number[]>([]);
+  clipboard = signal<number[]>([]);
   private readonly http = inject(HttpClient);
   constructor() {}
 
