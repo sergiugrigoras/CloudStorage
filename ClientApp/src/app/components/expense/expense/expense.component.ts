@@ -195,6 +195,7 @@ export class ExpenseComponent implements OnInit, OnDestroy {
         disableClose: true,
         width: '600px',
         data: { mode },
+        autoFocus: false,
       })
       .afterClosed()
       .subscribe(() => {
@@ -347,9 +348,10 @@ export class ExpenseComponent implements OnInit, OnDestroy {
 
   viewChart(type: ExpenseChartType) {
     const ref = this._dialog.open(ExpenseChartComponent, {
-      hasBackdrop: false,
+      hasBackdrop: true,
       disableClose: true,
       width: '1000px',
+      autoFocus: false,
     });
     ref.componentInstance.expenses = this._expenses;
     ref.componentInstance.chartType = type;
@@ -380,6 +382,7 @@ export class ExpenseComponent implements OnInit, OnDestroy {
         disableClose: false,
         width: '500px',
         data: expense.description,
+        autoFocus: false,
       })
       .afterClosed()
       .pipe(

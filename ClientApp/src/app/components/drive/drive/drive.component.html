@@ -56,16 +56,13 @@
   <div mat-dialog-actions>
     <button
       type="button"
-      mat-raised-button
-      color="primary"
+      matButton="filled"
       [mat-dialog-close]="true"
       [disabled]="newFolderControl.invalid || newFolderControl.pending"
     >
       Ok
     </button>
-    <button type="button" mat-raised-button color="accent" [mat-dialog-close]="false">
-      Cancel
-    </button>
+    <button type="button" matButton="outlined" [mat-dialog-close]="false">Cancel</button>
   </div>
 </ng-template>
 
@@ -77,17 +74,15 @@
     <p>Are you sure want to delete {{ selectedCount }} item(s) ?</p>
   </div>
   <div mat-dialog-actions>
-    <button type="button" mat-raised-button color="primary" [mat-dialog-close]="true">Ok</button>
-    <button type="button" mat-raised-button color="accent" [mat-dialog-close]="false">
-      Cancel
-    </button>
+    <button type="button" matButton="filled" [mat-dialog-close]="true">Ok</button>
+    <button type="button" matButton="outlined" [mat-dialog-close]="false">Cancel</button>
   </div>
 </ng-template>
 
 <ng-template #renameDialog>
   <h1 mat-dialog-title cdkDrag cdkDragRootElement=".cdk-overlay-pane" cdkDragHandle>Rename</h1>
   <div mat-dialog-content>
-    <p>Input new name</p>
+    <p></p>
     <div class="dialog-inputs">
       <mat-form-field>
         <mat-label>Name</mat-label>
@@ -99,15 +94,12 @@
   <div mat-dialog-actions>
     <button
       type="button"
-      mat-raised-button
-      color="primary"
+      matButton="filled"
       [mat-dialog-close]="true"
       [disabled]="renameControl.invalid || renameControl.pending"
     >
       Ok
     </button>
-    <button type="button" mat-raised-button color="accent" [mat-dialog-close]="false">
-      Cancel
-    </button>
+    <button type="button" matButton="outlined" [mat-dialog-close]="false">Cancel</button>
   </div>
 </ng-template>

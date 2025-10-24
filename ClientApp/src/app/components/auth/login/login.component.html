@@ -1,4 +1,4 @@
-<div>
+<div class="login-form">
   <h2>Login</h2>
   <form [formGroup]="form" #loginForm (ngSubmit)="login()">
     <div>
@@ -14,12 +14,8 @@
       </mat-form-field>
     </div>
     <div>
-      <button type="submit" mat-raised-button color="primary" [disabled]="form.invalid">
-        Login
-      </button>
-      <button type="button" mat-raised-button color="accent" routerLink="/password/reset">
-        Forgot password
-      </button>
+      <button type="submit" matButton="filled" [disabled]="form.invalid">Login</button>
+      <button type="button" matButton="text" routerLink="/password/reset">Forgot password</button>
     </div>
   </form>
 </div>

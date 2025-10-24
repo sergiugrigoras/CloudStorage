@@ -1,47 +1,115 @@
 @use '@angular/material' as mat;
-@use 'sass:map';
-@include mat.elevation-classes();
-@include mat.app-background();
 
-$angular-primary: mat.m2-define-palette(mat.$m2-indigo-palette, 500, 100, 900);
-$angular-accent: mat.m2-define-palette(mat.$m2-pink-palette, A200, A100, A400);
-$angular-warn: mat.m2-define-palette(mat.$m2-red-palette);
-
-$angular-primary-dark: mat.m2-define-palette(mat.$m2-purple-palette, 500, 100, 900);
-$angular-accent-dark: mat.m2-define-palette(mat.$m2-teal-palette, A200, A100, A400);
-
-$light-theme: mat.m2-define-light-theme(
-  (
-    color: (
-      primary: $angular-primary,
-      accent: $angular-accent,
-      warn: $angular-warn,
-    ),
-    typography: mat.m2-define-typography-config(),
-  )
-);
-
-$dark-theme: mat.m2-define-dark-theme(
-  (
-    color: (
-      primary: $angular-primary-dark,
-      accent: $angular-accent,
-      warn: $angular-warn,
-    ),
-    typography: mat.m2-define-typography-config(),
-  )
-);
-
-@include mat.all-component-themes($light-theme);
-
-.theme-color-border {
-  border-color: mat.m2-get-color-from-palette(mat.$m2-indigo-palette, 500);
+html {
+  color-scheme: light;
+  @include mat.theme(
+    (
+      color: (
+        primary: mat.$azure-palette,
+      ),
+      typography: Roboto,
+      density: 0,
+    )
+  );
 }
 
-.darkMode {
-  @include mat.all-component-colors($dark-theme);
+body {
+  background: var(--mat-sys-surface);
+  color: var(--mat-sys-on-surface);
+  @include mat.dialog-overrides(
+    (
+      container-elevation-shadow: var(--mat-sys-level3),
+      container-color: var(--mat-sys-surface-container-high),
+      container-shape: var(--mat-sys-corner-small),
+    )
+  );
 
-  .theme-color-border {
-    border-color: mat.m2-get-color-from-palette(mat.$m2-purple-palette, 500);
-  }
+  $button-shape: var(--mat-sys-corner-small);
+  @include mat.button-overrides(
+    (
+      text-container-shape: $button-shape,
+      outlined-container-shape: $button-shape,
+      filled-container-shape: $button-shape,
+      tonal-container-shape: $button-shape,
+      protected-container-shape: $button-shape,
+    )
+  );
+}
+
+body.dark-mode {
+  color-scheme: dark;
+}
+
+body.green-theme {
+  @include mat.theme(
+    (
+      color: (
+        primary: mat.$green-palette,
+      ),
+    )
+  );
+}
+
+body.violet-theme {
+  @include mat.theme(
+    (
+      color: (
+        primary: mat.$violet-palette,
+      ),
+    )
+  );
+}
+body.orange-theme {
+  @include mat.theme(
+    (
+      color: (
+        primary: mat.$orange-palette,
+      ),
+    )
+  );
+}
+body.blue-theme {
+  @include mat.theme(
+    (
+      color: (
+        primary: mat.$blue-palette,
+      ),
+    )
+  );
+}
+body.yellow-theme {
+  @include mat.theme(
+    (
+      color: (
+        primary: mat.$yellow-palette,
+      ),
+    )
+  );
+}
+body.cyan-theme {
+  @include mat.theme(
+    (
+      color: (
+        primary: mat.$cyan-palette,
+      ),
+    )
+  );
+}
+body.magenta-theme {
+  @include mat.theme(
+    (
+      color: (
+        primary: mat.$magenta-palette,
+      ),
+    )
+  );
+}
+body.rose-theme {
+  @include mat.theme(
+    (
+      color: (
+        primary: mat.$rose-palette,
+      ),
+    )
+  );
 }

@@ -19,18 +19,13 @@
       </mat-select>
     </mat-form-field>
     <div>
-      <button mat-icon-button color="primary" (click)="getExpenses()" matTooltip="Refresh">
+      <button matIconButton (click)="getExpenses()" matTooltip="Refresh">
         <mat-icon>refresh</mat-icon>
       </button>
-      <button
-        mat-icon-button
-        color="primary"
-        (click)="openExpenseForm('add')"
-        matTooltip="Add Expense"
-      >
+      <button matIconButton (click)="openExpenseForm('add')" matTooltip="Add Expense">
         <mat-icon>add</mat-icon>
       </button>
-      <button mat-icon-button color="primary" [matMenuTriggerFor]="chartMenu" matTooltip="Chart">
+      <button matIconButton [matMenuTriggerFor]="chartMenu" matTooltip="Chart">
         <mat-icon>bar_chart</mat-icon>
       </button>
       <mat-menu #chartMenu="matMenu">
@@ -38,12 +33,7 @@
         <button mat-menu-item (click)="viewChart('day')">Total by Day</button>
         <button mat-menu-item (click)="viewChart('month')">Total by Month</button>
       </mat-menu>
-      <button
-        mat-icon-button
-        color="primary"
-        [matMenuTriggerFor]="settingsMenu"
-        matTooltip="Settings"
-      >
+      <button matIconButton [matMenuTriggerFor]="settingsMenu" matTooltip="Settings">
         <mat-icon>settings</mat-icon>
       </button>
       <mat-menu #settingsMenu="matMenu">
@@ -103,7 +93,7 @@
 <mat-menu #expenseMenu="matMenu">
   <ng-template matMenuContent let-id="id">
     <button mat-menu-item (click)="editExpense(id)">
-      <mat-icon color="primary">edit</mat-icon>
+      <mat-icon>edit</mat-icon>
       <span>Edit</span>
     </button>
     <button mat-menu-item (click)="deleteExpense(id)">
@@ -126,14 +116,12 @@
           #paymentName
         />
         <mat-checkbox
-          color="primary"
           [checked]="paymentMethod.isActive"
           matTooltip="Is active"
           #paymentActive
         ></mat-checkbox>
         <button
-          mat-icon-button
-          color="primary"
+          matIconButton
           matTooltip="Update"
           type="button"
           (click)="updatePaymentMethod(paymentMethod.id, paymentName.value, paymentActive.checked)"
@@ -155,9 +143,8 @@
         <input matInput [(ngModel)]="newPaymentMethodValue" (keyup.enter)="addPaymentMethod()" />
       </mat-form-field>
       <button
-        mat-icon-button
+        matIconButton
         type="button"
-        color="primary"
         matTooltip="Add"
         (click)="addPaymentMethod()"
         [disabled]="!newPaymentMethodValue"
@@ -167,7 +154,7 @@
     </div>
   </div>
   <div mat-dialog-actions align="end">
-    <button mat-raised-button type="button" color="primary" mat-dialog-close>Close</button>
+    <button matButton="outlined" type="button" mat-dialog-close>Close</button>
   </div>
 </ng-template>
 
@@ -186,8 +173,7 @@
         />
         @if (category.userId) {
           <button
-            mat-icon-button
-            color="primary"
+            matIconButton
             matTooltip="Update"
             type="button"
             (click)="updateCategory(category.id, categoryName.value)"
@@ -207,9 +193,8 @@
         <input matInput [(ngModel)]="newCategoryValue" (keyup.enter)="addCustomCategory()" />
       </mat-form-field>
       <button
-        mat-icon-button
+        matIconButton
         type="button"
-        color="primary"
         matTooltip="Add"
         (click)="addCustomCategory()"
         [disabled]="!newCategoryValue"
@@ -219,7 +204,7 @@
     </div>
   </div>
   <div mat-dialog-actions align="end">
-    <button mat-raised-button type="button" color="primary" mat-dialog-close>Close</button>
+    <button matButton="outlined" type="button" mat-dialog-close>Close</button>
   </div>
 </ng-template>
 
@@ -284,16 +269,15 @@
   </div>
   <div mat-dialog-actions>
     <button
-      mat-raised-button
+      matButton="filled"
       type="button"
-      color="primary"
       (click)="submitExpenseForm(data?.mode)"
       [disabled]="getExpenseForm(data?.mode)?.invalid"
     >
       {{ data?.mode | titlecase }}
     </button>
     <span class="spacer"></span>
-    <button mat-raised-button type="button" color="accent" mat-dialog-close>Close</button>
+    <button matButton="outlined" type="button" color="accent" mat-dialog-close>Close</button>
   </div>
 </ng-template>
 
@@ -305,10 +289,9 @@
     </p>
   </div>
   <div mat-dialog-actions align="end">
-    <button mat-raised-button type="button" color="accent" [mat-dialog-close]="true">Delete</button>
-    <span class="spacer"></span>
-    <button mat-raised-button type="button" color="primary" [mat-dialog-close]="false">
-      Cancel
+    <button matButton="filled" type="button" color="accent" [mat-dialog-close]="true">
+      Delete
     </button>
+    <button matButton="outlined" type="button" [mat-dialog-close]="false">Cancel</button>
   </div>
 </ng-template>

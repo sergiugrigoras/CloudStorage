@@ -19,8 +19,7 @@
         @if (selectMode) {
           <ng-container>
             <button
-              mat-icon-button
-              color="primary"
+              matIconButton
               aria-label="Select All"
               matTooltip="Select All"
               (click)="selectAll()"
@@ -28,8 +27,7 @@
               <span class="material-icons-outlined">select_all</span>
             </button>
             <button
-              mat-icon-button
-              color="primary"
+              matIconButton
               aria-label="Deselect All"
               matTooltip="Deselect All"
               (click)="deselectAll()"
@@ -38,8 +36,7 @@
             </button>
             @if (page !== 'trash') {
               <button
-                mat-icon-button
-                color="primary"
+                matIconButton
                 aria-label="Add To Album"
                 matTooltip="Add To Album"
                 (click)="addSelectedToAlbum()"
@@ -49,7 +46,7 @@
               </button>
             }
             <button
-              mat-icon-button
+              matIconButton
               color="accent"
               aria-label="Delete"
               matTooltip="Delete Selected"
@@ -60,7 +57,7 @@
             </button>
             @if (page === 'trash') {
               <button
-                mat-icon-button
+                matIconButton
                 color="accent"
                 aria-label="Restore"
                 matTooltip="Restore media files"
@@ -74,8 +71,7 @@
         } @else {
           <ng-container>
             <button
-              mat-icon-button
-              color="primary"
+              matIconButton
               aria-label="Select Items"
               matTooltip="Select Items"
               (click)="enableSelectMode()"
@@ -83,8 +79,7 @@
               <span class="material-icons-outlined">highlight_alt</span>
             </button>
             <button
-              mat-icon-button
-              color="primary"
+              matIconButton
               aria-label="Albums List"
               matTooltip="All Albums"
               (click)="showAlbumsList()"
@@ -93,8 +88,7 @@
             </button>
             @if (page === 'home') {
               <button
-                mat-icon-button
-                color="primary"
+                matIconButton
                 aria-label="Upload"
                 matTooltip="Upload media files"
                 (click)="inputFiles.click()"
@@ -192,14 +186,14 @@
   </form>
   <div mat-dialog-actions class="media__dialog-actions">
     <button
-      mat-raised-button
-      color="primary"
+      type="button"
+      matButton="filled"
       [mat-dialog-close]="albumNameInput.value"
       [disabled]="newAlbumForm.invalid"
     >
-      Create
+      <mat-icon>create_new_folder</mat-icon>Create
     </button>
-    <button mat-raised-button color="accent" [mat-dialog-close]="false">Cancel</button>
+    <button type="button" matButton="outlined" [mat-dialog-close]="false">Cancel</button>
   </div>
 </ng-template>
 
@@ -227,16 +221,18 @@
   </div>
   <div mat-dialog-actions class="media__dialog-actions">
     <button
-      mat-raised-button
-      color="primary"
+      matButton="filled"
       [mat-dialog-close]="albumSelect.value"
       [disabled]="!albumSelect.value"
     >
+      <mat-icon>add_photo_alternate</mat-icon>
       Add
     </button>
-    <button mat-raised-button color="primary" [mat-dialog-close]="'new'">New Album</button>
+    <button matButton="text" [mat-dialog-close]="'new'">
+      <mat-icon>create_new_folder</mat-icon>New Album
+    </button>
     <span class="spacer"></span>
-    <button mat-raised-button color="accent" [mat-dialog-close]="false">Cancel</button>
+    <button matButton="outlined" [mat-dialog-close]="false">Cancel</button>
   </div>
 </ng-template>
 
@@ -303,14 +299,13 @@
   <div mat-dialog-actions>
     <button
       type="button"
-      mat-raised-button
-      color="primary"
+      matButton="filled"
       [mat-dialog-close]="albumList.selectedOptions.selected[0]?.value"
       [disabled]="!albumList.selectedOptions.hasValue()"
     >
       View
     </button>
-    <button type="button" mat-raised-button color="accent" [mat-dialog-close]="false">Close</button>
+    <button type="button" matButton="outlined" [mat-dialog-close]="false">Close</button>
   </div>
 </ng-template>
 
@@ -328,11 +323,7 @@
     }
   </div>
   <div mat-dialog-actions>
-    <button type="button" mat-raised-button color="primary" [mat-dialog-close]="true">
-      Delete
-    </button>
-    <button type="button" mat-raised-button color="accent" [mat-dialog-close]="false">
-      Cancel
-    </button>
+    <button type="button" matButton="filled" [mat-dialog-close]="true">Delete</button>
+    <button type="button" matButton="outlined" [mat-dialog-close]="false">Cancel</button>
   </div>
 </ng-template>

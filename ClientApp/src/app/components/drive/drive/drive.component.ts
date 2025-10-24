@@ -304,6 +304,7 @@ export class DriveComponent implements OnInit, OnDestroy {
         disableClose: false,
         hasBackdrop: true,
         width: '400px',
+        autoFocus: false,
       })
       .afterClosed()
       .pipe(
@@ -616,6 +617,7 @@ export class DriveComponent implements OnInit, OnDestroy {
             width: '500px',
             hasBackdrop: true,
             data: diskInfoResult,
+            autoFocus: false,
           });
           return dialogRef.afterClosed();
         })

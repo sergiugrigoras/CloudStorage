@@ -1,4 +1,4 @@
-<form [formGroup]="profileForm" (ngSubmit)="changePassword()">
+<form [formGroup]="profileForm" (ngSubmit)="changePassword()" class="profile-form">
   <div formGroupName="profileInfo">
     <h2>Profile</h2>
     <div>
@@ -41,12 +41,10 @@
       </mat-form-field>
     </div>
     <div>
-      <button type="submit" mat-raised-button color="accent" [disabled]="profileForm.invalid">
+      <button type="submit" matButton="filled" [disabled]="profileForm.invalid">
         Change password
       </button>
-      <button type="button" mat-raised-button color="primary" (click)="resetPasswordFields()">
-        Clear
-      </button>
+      <button type="button" matButton="text" (click)="resetPasswordFields()">Clear</button>
     </div>
   </div>
 </form>

@@ -7,7 +7,7 @@
       <mat-error>{{ getInviteControlError() }}</mat-error>
     </mat-form-field>
     <button
-      mat-raised-button
+      matButton="filled"
       color="primary"
       [disabled]="inviteControl.invalid"
       (click)="sendInviteCode()"
@@ -27,11 +27,7 @@
         <div><strong>Last active: </strong>{{ user.lastActive | date: 'short' }}</div>
       </div>
       <div>
-        <button
-          mat-raised-button
-          [color]="user.disabled ? 'primary' : 'accent'"
-          (click)="toggleAccount(user)"
-        >
+        <button [matButton]="user.disabled ? 'filled' : 'tonal'" (click)="toggleAccount(user)">
           {{ user.disabled ? 'Enable' : 'Disable' }}
         </button>
       </div>

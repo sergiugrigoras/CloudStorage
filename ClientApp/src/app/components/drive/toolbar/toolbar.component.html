@@ -2,7 +2,7 @@
   @for (toolbarButton of buttons; track $index) {
     <ng-container>
       <button
-        mat-icon-button
+        matIconButton
         [matTooltip]="toolbarButton.label"
         (click)="emitEvent(toolbarButton.event)"
         [disabled]="toolbarButton.isDisabled()"

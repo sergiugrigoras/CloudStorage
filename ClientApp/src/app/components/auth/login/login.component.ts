@@ -17,7 +17,7 @@ import { MatButton } from '@angular/material/button';
 @Component({
   selector: 'app-login',
   templateUrl: './login.component.html',
-  styleUrls: ['./login.component.css'],
+  styleUrls: ['./login.component.scss'],
   imports: [
     FormsModule,
     ReactiveFormsModule,

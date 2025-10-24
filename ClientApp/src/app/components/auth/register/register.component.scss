@@ -1,13 +1,17 @@
+.register-form {
+  width: 500px;
+  margin: auto;
+  min-width: 0;
+  max-width: 80vw;
+}
 form button {
   margin-right: 0.5rem;
   margin-top: 0.5rem;
 }
 
 form {
-  width: 500px;
-  max-width: 85vw;
   > div {
-    margin-bottom: 1rem;
+    margin-bottom: 0.5rem;
     display: flex;
 
     mat-form-field {

@@ -1,17 +1,12 @@
 @if (notesLoaded()) {
   <ng-container>
     <div class="notes__controls">
-      <button mat-mini-fab color="primary" [matMenuTriggerFor]="noteMenu" #createBtn>
-        <mat-icon>add</mat-icon>
+      <button matButton="text" #createBtnText (click)="createNote(createBtnText, 'text')">
+        <mat-icon>subject</mat-icon>New Text
       </button>
-      <mat-menu #noteMenu="matMenu">
-        <button mat-menu-item (click)="createNote(createBtn, 'text')">
-          <mat-icon>subject</mat-icon>Text
-        </button>
-        <button mat-menu-item (click)="createNote(createBtn, 'list')">
-          <mat-icon>checklist</mat-icon>List
-        </button>
-      </mat-menu>
+      <button matButton="text" #createBtnList (click)="createNote(createBtnList, 'list')">
+        <mat-icon>checklist</mat-icon>New List
+      </button>
     </div>
     <div class="notes__container">
       @if (notes.length === 0) {
@@ -42,10 +37,10 @@
             <mat-divider></mat-divider>
           </mat-card-content>
           <mat-card-actions class="notes__actions">
-            <button mat-icon-button color="primary" (click)="editNote(note)">
+            <button matIconButton (click)="editNote(note)">
               <mat-icon>edit</mat-icon>
             </button>
-            <button mat-icon-button color="accent" (click)="deleteNote(note)">
+            <button matIconButton (click)="deleteNote(note)">
               <mat-icon>clear</mat-icon>
             </button>
           </mat-card-actions>
@@ -94,7 +89,7 @@
           @for (listItem of controls ?? []; let i = $index; track $index) {
             <ng-container [formGroup]="listItem">
               <div class="list-item">
-                <mat-checkbox formControlName="checked" color="primary"></mat-checkbox>
+                <mat-checkbox formControlName="checked"></mat-checkbox>
                 <input
                   matInput
                   type="text"
@@ -103,13 +98,13 @@
                   [id]="'list-item-' + i"
                   (keyup.enter)="addListItem(i + 1)"
                 />
-                <button mat-icon-button color="primary" (click)="deleteListItem(i)">
+                <button mat-icon-button (click)="deleteListItem(i)">
                   <mat-icon>clear</mat-icon>
                 </button>
               </div>
             </ng-container>
           }
-          <button mat-button (click)="addListItem()">
+          <button matButton="text" (click)="addListItem()">
             <mat-icon>add</mat-icon>
             Add item
           </button>
@@ -119,16 +114,13 @@
     <div mat-dialog-actions>
       <button
         type="button"
-        mat-raised-button
-        color="primary"
+        matButton="filled"
         [mat-dialog-close]="true"
         [disabled]="noteForm.invalid"
       >
         Save
       </button>
-      <button type="button" mat-raised-button color="accent" [mat-dialog-close]="false">
-        Cancel
-      </button>
+      <button type="button" matButton="outlined" [mat-dialog-close]="false">Cancel</button>
     </div>
   }
 </ng-template>
@@ -141,11 +133,7 @@
     Are you sure want to delete <strong>{{ data }}</strong> ?
   </div>
   <div mat-dialog-actions>
-    <button type="button" mat-raised-button color="primary" [mat-dialog-close]="true">
-      Delete
-    </button>
-    <button type="button" mat-raised-button color="accent" [mat-dialog-close]="false">
-      Cancel
-    </button>
+    <button type="button" matButton="filled" [mat-dialog-close]="true">Delete</button>
+    <button type="button" matButton="outlined" [mat-dialog-close]="false">Cancel</button>
   </div>
 </ng-template>

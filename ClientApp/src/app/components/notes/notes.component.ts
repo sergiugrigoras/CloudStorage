@@ -18,10 +18,9 @@ import {
   FormsModule,
   ReactiveFormsModule,
 } from '@angular/forms';
-import { MatButton, MatMiniFabButton, MatIconButton } from '@angular/material/button';
+import { MatButton, MatIconButton } from '@angular/material/button';
 import { EMPTY, of } from 'rxjs';
 import { TitleCasePipe, DatePipe } from '@angular/common';
-import { MatMenuTrigger, MatMenu, MatMenuItem } from '@angular/material/menu';
 import { MatIcon } from '@angular/material/icon';
 import {
   MatCard,
@@ -46,11 +45,7 @@ const SNACKBAR_OPTIONS = { duration: 3000 };
   templateUrl: './notes.component.html',
   styleUrls: ['./notes.component.scss'],
   imports: [
-    MatMiniFabButton,
-    MatMenuTrigger,
     MatIcon,
-    MatMenu,
-    MatMenuItem,
     MatCard,
     MatCardHeader,
     MatCardTitle,
@@ -167,7 +162,7 @@ export class NotesComponent implements OnInit {
     this.noteList.removeAt(itemIndex);
   }
 
-  createNote(button: MatMiniFabButton, type: 'text' | 'list') {
+  createNote(button: MatButton, type: 'text' | 'list') {
     if (this.noteDialog == null) return;
     this.createEmptyNoteForm(type);
     const element = button._elementRef.nativeElement;
@@ -216,6 +211,7 @@ export class NotesComponent implements OnInit {
         hasBackdrop: true,
         width: '400px',
         data: note.title,
+        autoFocus: false,
       })
       .afterClosed()
       .pipe(

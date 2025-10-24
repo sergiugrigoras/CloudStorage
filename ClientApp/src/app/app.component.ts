@@ -1,8 +1,8 @@
 import {
   AfterViewInit,
   Component,
+  computed,
   ElementRef,
-  HostBinding,
   HostListener,
   inject,
   OnInit,
@@ -10,14 +10,13 @@ import {
   ViewChild,
 } from '@angular/core';
 import { AuthService } from './services/auth.service';
-import { OverlayContainer } from '@angular/cdk/overlay';
 import { AppRoute } from './interfaces/app-route.interface';
 import { ThemeService } from 'ng2-charts';
 import { ChartOptions } from 'chart.js';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { MatToolbar, MatToolbarRow } from '@angular/material/toolbar';
 import { MatMenu, MatMenuItem, MatMenuTrigger } from '@angular/material/menu';
-import { MatButton, MatMiniFabButton } from '@angular/material/button';
+import { MatButton, MatIconButton, MatMiniFabButton } from '@angular/material/button';
 import { MatTooltip } from '@angular/material/tooltip';
 
 const DARK_THEME_CHART_OVER: ChartOptions = {
@@ -40,6 +39,12 @@ const DARK_THEME_CHART_OVER: ChartOptions = {
   },
 };
 const WHITE_THEME_CHART_OPTIONS: ChartOptions = {};
+type AppPalette = {
+  name: string;
+  cssClass: string;
+  lightColor: string;
+  darkColor: string;
+};
 @Component({
   selector: 'app-root',
   templateUrl: './app.component.html',
@@ -57,30 +62,52 @@ const WHITE_THEME_CHART_OPTIONS: ChartOptions = {};
     MatMiniFabButton,
     MatMenuItem,
     MatTooltip,
+    MatIconButton,
   ],
 })
 export class AppComponent implements OnInit, AfterViewInit {
   private readonly authService = inject(AuthService);
-  private readonly overlay = inject(OverlayContainer);
   private readonly elem = inject(ElementRef);
   private readonly themeService = inject(ThemeService);
-  title = 'scs';
+  readonly title = 'scs';
+  private readonly _darkModeIcon = 'dark_mode';
+  private readonly _lightModeIcon = 'light_mode';
+  private readonly _darkTheme = 'dark_theme';
+  private readonly _lightTheme = 'light_theme';
+  private readonly _darkClassName = 'dark-mode';
+  private readonly _themeKey = 'theme';
+  private readonly _paletteKey = 'palette';
+
   readonly isLoggedIn = this.authService.isUserLoggedIn;
   readonly isLargeDevice = signal(false);
-  readonly themeIcon = signal('');
+  private readonly theme = signal('');
+  readonly themeIcon = computed(() =>
+    this.theme() === this._darkTheme ? this._lightModeIcon : this._darkModeIcon
+  );
   scrHeight = 0;
   scrWidth = 0;
-  readonly darkClassName = 'darkMode';
-  @HostBinding('class') hostClassName = '';
+  //@HostBinding('class') hostClassName = '';
   @ViewChild('intersectionElement', { static: true })
   intersectionDiv: ElementRef<HTMLDivElement> | null = null;
-  year = new Date().getFullYear();
-  routes: AppRoute[] = [
+  readonly year = new Date().getFullYear();
+  protected routes: AppRoute[] = [
     { route: '/drive', displayName: 'Drive' },
     { route: '/media', displayName: 'Media' },
     { route: '/notes', displayName: 'Notes' },
     { route: '/expenses', displayName: 'Expenses' },
   ];
+  readonly palettes: AppPalette[] = [
+    { name: 'Azure', cssClass: '', lightColor: '#005cbb', darkColor: '#abc7ff' },
+    { name: 'Green', cssClass: 'green-theme', lightColor: '#026e00', darkColor: '#02e600' },
+    { name: 'Violet', cssClass: 'violet-theme', lightColor: '#7d00fa', darkColor: '#d5baff' },
+    { name: 'Orange', cssClass: 'orange-theme', lightColor: '#964900', darkColor: '#ffb787' },
+    { name: 'Blue', cssClass: 'blue-theme', lightColor: '#343dff', darkColor: '#bec2ff' },
+    { name: 'Yellow', cssClass: 'yellow-theme', lightColor: '#626200', darkColor: '#cdcd00' },
+    { name: 'Cyan', cssClass: 'cyan-theme', lightColor: '#006a6a', darkColor: '#00dddd' },
+    { name: 'Magenta', cssClass: 'magenta-theme', lightColor: '#a900a9', darkColor: '#ffabf3' },
+    { name: 'Rose', cssClass: 'rose-theme', lightColor: '#ba005c', darkColor: '#ffb1c5' },
+  ];
+
   constructor() {}
   ngAfterViewInit(): void {
     const backTopButton = this.elem.nativeElement.querySelector('.back-top') as HTMLElement;
@@ -108,13 +135,17 @@ export class AppComponent implements OnInit, AfterViewInit {
   ngOnInit(): void {
     this.isLoggedIn.set(this.authService.jwtTokenExists());
 
-    const userSelectedTheme = localStorage.getItem('theme');
+    const userSelectedTheme = localStorage.getItem(this._themeKey);
     const prefersDark =
       window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
 
-    const theme = userSelectedTheme ?? (prefersDark ? 'dark' : 'light');
+    const theme = userSelectedTheme ?? (prefersDark ? this._darkTheme : this._lightTheme);
     this.setTheme(theme, false);
 
+    const userSelectedPalette = localStorage.getItem(this._paletteKey);
+    if (userSelectedPalette) {
+      this.changePalette(userSelectedPalette);
+    }
     this.getScreenSize();
   }
 
@@ -134,26 +165,39 @@ export class AppComponent implements OnInit, AfterViewInit {
   }
 
   toggleTheme() {
-    if (this.hostClassName === this.darkClassName) {
-      this.setTheme('light', true);
-    } else {
-      this.setTheme('dark', true);
-    }
+    const newTheme = this.theme() === this._darkTheme ? this._lightTheme : this._darkTheme;
+    this.setTheme(newTheme, true);
   }
 
   private setTheme(theme: string, save: boolean) {
-    this.themeIcon.set(theme === 'light' ? 'dark_mode' : 'light_mode');
-    if (theme === 'light') {
-      this.hostClassName = '';
-      this.overlay.getContainerElement().classList.remove(this.darkClassName);
-      this.themeService.setColorschemesOptions(WHITE_THEME_CHART_OPTIONS);
-    } else if (theme === 'dark') {
-      this.hostClassName = this.darkClassName;
-      this.overlay.getContainerElement().classList.add(this.darkClassName);
-      this.themeService.setColorschemesOptions(DARK_THEME_CHART_OVER);
+    switch (theme) {
+      case this._lightTheme:
+        document.body.classList.remove(this._darkClassName);
+        //this.overlay.getContainerElement().classList.remove(this._darkClassName);
+        this.themeService.setColorschemesOptions(WHITE_THEME_CHART_OPTIONS);
+        break;
+      case this._darkTheme:
+        document.body.classList.add(this._darkClassName);
+        //this.overlay.getContainerElement().classList.add(this._darkClassName);
+        this.themeService.setColorschemesOptions(DARK_THEME_CHART_OVER);
+        break;
+      default:
+        break;
     }
+    this.theme.set(theme);
     if (save) {
-      localStorage.setItem('theme', theme);
+      localStorage.setItem(this._themeKey, theme);
     }
+  }
+
+  changePalette(name: string) {
+    const palette = this.palettes.find((x) => x.name === name);
+    if (palette === undefined) return;
+    const classesToRemove = this.palettes.map((x) => x.cssClass).filter((x) => !!x);
+    document.body.classList.remove(...classesToRemove);
+    if (palette.cssClass) {
+      document.body.classList.add(palette.cssClass);
+    }
+    localStorage.setItem(this._paletteKey, name);
   }
 }

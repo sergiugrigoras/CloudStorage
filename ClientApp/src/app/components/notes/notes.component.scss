@@ -1,6 +1,9 @@
 .notes__controls {
   padding: 10px;
   display: flex;
+  button {
+    margin-right: 8px;
+  }
 }
 
 .notes__container {

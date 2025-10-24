@@ -15,8 +15,7 @@
     }
     @if (selectMode) {
       <button
-        mat-icon-button
-        color="primary"
+        matIconButton
         class="media-item__snapshot-button-select"
         type="button"
         (click)="item.isSelected = !item.isSelected; $event.stopPropagation()"
@@ -26,8 +25,7 @@
         </span>
       </button>
       <button
-        mat-icon-button
-        color="primary"
+        matIconButton
         class="media-item__snapshot-button-open"
         type="button"
         (click)="openItem(); $event.stopPropagation()"

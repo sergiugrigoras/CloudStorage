@@ -1,12 +1,31 @@
+@use '@angular/material' as mat;
+
 .app-container {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+
+  @include mat.toolbar-overrides(
+    (
+      container-background-color: var(--mat-sys-primary-container),
+      container-text-color: var(--mat-sys-primary),
+    )
+  );
+
+  @include mat.icon-button-overrides(
+    (
+      icon-color: var(--mat-sys-primary),
+    )
+  );
+
+  @include mat.fab-overrides(
+    (
+      small-container-shape: var(--mat-sys-corner-full),
+    )
+  );
 }
 
 .app-nav {
-  // position: sticky;
-  // top: 0;
   z-index: 100;
 
   .container {
@@ -14,10 +33,6 @@
     flex-direction: row;
     align-items: center;
     white-space: nowrap;
-  }
-
-  .selected {
-    background: rgba(0, 0, 0, 0.2);
   }
 }
 
@@ -35,16 +50,7 @@
 }
 
 .app-footer {
-  color: rgba(255, 255, 255, 0.8);
   z-index: 100;
-}
-
-.logo {
-  text-decoration: none;
-  white-space: nowrap;
-  color: white;
-  font-size: 1.5rem;
-  margin-right: 12px;
 }
 
 .spacer {
@@ -67,4 +73,19 @@
 .invisible {
   opacity: 0;
   transition: opacity 400ms 0ms;
+}
+
+.palette-menu-item-text {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.palette-color {
+  display: flex;
+  border-radius: var(--mat-sys-corner-full);
+  //border: solid 1px grey;
+  box-shadow: var(--mat-sys-level1);
+  width: 24px;
+  height: 24px;
+  background: linear-gradient(135deg, var(--color1) 50%, var(--color2) 50%);
 }

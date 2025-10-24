@@ -1,24 +1,29 @@
-<div class="app-container mat-app-background">
-  <mat-toolbar class="app-nav mat-elevation-z6" color="primary">
+<div class="app-container">
+  <mat-toolbar class="app-nav mat-elevation-z6">
     <mat-toolbar-row>
       <div class="container">
-        <a class="logo" routerLink="/">SCS</a>
+        <button matIconButton routerLink="/">
+          <span class="material-icons"> home </span>
+        </button>
         @if (isLargeDevice()) {
           <div>
             @for (route of routes; track route.route) {
-              <button mat-button [routerLink]="route.route" routerLinkActive="selected">
+              <button matButton [routerLink]="route.route" routerLinkActive="selected">
                 {{ route.displayName }}
               </button>
             }
           </div>
         }
         <span class="spacer"></span>
-        <button mat-button (click)="toggleTheme()" matTooltip="Theme">
+        <button matIconButton (click)="toggleTheme()" matTooltip="Theme">
           <span class="material-icons">
             {{ themeIcon() }}
           </span>
         </button>
-        <button mat-button [matMenuTriggerFor]="userMenu" matTooltip="User menu">
+        <button matIconButton [matMenuTriggerFor]="paletteMenu" matTooltip="Palette">
+          <span class="material-icons"> palette </span>
+        </button>
+        <button matButton="text" [matMenuTriggerFor]="userMenu" matTooltip="User menu">
           <span class="material-icons"> person </span>
           @if (isLoggedIn()) {
             <span
@@ -32,7 +37,7 @@
       <mat-toolbar-row class="toolbar-small">
         <div class="container">
           @for (route of routes; track route.route) {
-            <button mat-button [routerLink]="route.route" routerLinkActive="selected">
+            <button matButton="text" [routerLink]="route.route" routerLinkActive="selected">
               {{ route.displayName }}
             </button>
           }
@@ -45,11 +50,11 @@
     <router-outlet></router-outlet>
   </div>
 
-  <mat-toolbar class="app-footer" color="primary">
-    <div class="container">Copyright &copy; {{ year }} - Sergiu Grigoras.</div>
+  <mat-toolbar class="app-footer">
+    <div class="container">&copy; {{ year }} - Sergiu Grigoras</div>
   </mat-toolbar>
   <div class="back-top">
-    <button mat-mini-fab color="primary" (click)="scrollTop()">
+    <button matMiniFab (click)="scrollTop()">
       <span class="material-icons"> arrow_upward </span>
     </button>
   </div>
@@ -67,4 +72,21 @@
       <button mat-menu-item routerLink="/register">Register</button>
     </div>
   }
+</mat-menu>
+
+<mat-menu #paletteMenu>
+  <div>
+    @for (palette of palettes; track $index) {
+      <button mat-menu-item (click)="changePalette(palette.name)">
+        <span class="palette-menu-item-text">
+          <span>{{ palette.name }}</span>
+          <span
+            class="palette-color"
+            [style.--color1]="palette.lightColor"
+            [style.--color2]="palette.darkColor"
+          ></span>
+        </span>
+      </button>
+    }
+  </div>
 </mat-menu>

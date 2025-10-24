@@ -1,18 +1,17 @@
-.profile-form {
+.login-form {
   width: 500px;
   margin: auto;
   min-width: 0;
   max-width: 80vw;
 }
 
-form button {
-  margin-right: 0.5rem;
-}
-
-div > div {
+form > div {
   display: flex;
-
   mat-form-field {
     flex: 1;
   }
+}
+
+button {
+  margin-right: 0.5rem;
 }

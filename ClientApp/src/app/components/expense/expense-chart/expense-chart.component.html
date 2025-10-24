@@ -16,7 +16,7 @@
     </canvas>
   </div>
   <div mat-dialog-actions align="end">
-    <button mat-raised-button type="button" color="primary" mat-dialog-close>Close</button>
+    <button matButton="outlined" type="button" mat-dialog-close>Close</button>
   </div>
 </ng-template>
 
@@ -37,13 +37,13 @@
       </canvas>
     </div>
     <div>
-      <mat-slide-toggle color="primary" (change)="splitByCategory($event.checked, 'day')"
+      <mat-slide-toggle (change)="splitByCategory($event.checked, 'day')"
         >Split by Category</mat-slide-toggle
       >
     </div>
   </div>
   <div mat-dialog-actions align="end">
-    <button mat-raised-button type="button" color="primary" mat-dialog-close>Close</button>
+    <button matButton="outlined" type="button" mat-dialog-close>Close</button>
   </div>
 </ng-template>
 
@@ -64,12 +64,12 @@
       </canvas>
     </div>
     <div>
-      <mat-slide-toggle color="primary" (change)="splitByCategory($event.checked, 'month')"
+      <mat-slide-toggle (change)="splitByCategory($event.checked, 'month')"
         >Split by Category</mat-slide-toggle
       >
     </div>
   </div>
   <div mat-dialog-actions align="end">
-    <button mat-raised-button type="button" color="primary" mat-dialog-close>Close</button>
+    <button matButton="outlined" type="button" mat-dialog-close>Close</button>
   </div>
 </ng-template>
