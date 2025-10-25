@@ -1,4 +1,4 @@
-import { DiskInfoModel } from '../../../interfaces/disk.interface';
+import { IStorageInfo } from '../../../interfaces/disk.interface';
 import { Component, inject } from '@angular/core';
 import { ReadableBytesPipe } from '../../../pipes/readable-bytes.pipe';
 import {
@@ -12,11 +12,12 @@ import { MatButton } from '@angular/material/button';
 import { MatProgressBar } from '@angular/material/progress-bar';
 import { CdkDrag, CdkDragHandle } from '@angular/cdk/drag-drop';
 import { MatTooltip } from '@angular/material/tooltip';
+import { NgClass } from '@angular/common';
 
 @Component({
   selector: 'disk-info',
-  templateUrl: './disk-info.component.html',
-  styleUrls: ['./disk-info.component.scss'],
+  templateUrl: './storage-info.component.html',
+  styleUrls: ['./storage-info.component.scss'],
   imports: [
     ReadableBytesPipe,
     MatDialogTitle,
@@ -28,12 +29,13 @@ import { MatTooltip } from '@angular/material/tooltip';
     CdkDrag,
     CdkDragHandle,
     MatTooltip,
+    NgClass,
   ],
 })
-export class DiskInfoComponent {
+export class StorageInfoComponent {
   protected readonly data = inject(MAT_DIALOG_DATA);
-  readonly diskInfo: DiskInfoModel;
+  readonly storageInfo: IStorageInfo;
   constructor() {
-    this.diskInfo = this.data;
+    this.storageInfo = this.data;
   }
 }

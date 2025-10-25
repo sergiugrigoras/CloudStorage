@@ -6,6 +6,7 @@ import { MediaAlbum } from '../model/media-album.model';
 import { buildUrl } from '../core/url-builder';
 import { API_ENDPOINTS } from '../core/api-endpoints';
 import { HTTP_OPTIONS_CONTENT_JSON } from '../core/constants';
+import { IStorageInfo } from '../interfaces/disk.interface';
 
 @Injectable({
   providedIn: 'root',
@@ -107,5 +108,10 @@ export class MediaService {
     const url = buildUrl(API_ENDPOINTS.MEDIA.BASE, API_ENDPOINTS.MEDIA.RESTORE);
     const body = { ids: id };
     return this.http.post<string[]>(url, body, HTTP_OPTIONS_CONTENT_JSON);
+  }
+
+  getStorageInfo() {
+    const url = buildUrl(API_ENDPOINTS.STORAGE.BASE, API_ENDPOINTS.STORAGE.INFO);
+    return this.http.get<IStorageInfo>(url);
   }
 }

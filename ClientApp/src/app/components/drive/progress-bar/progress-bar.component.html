@@ -1,7 +1,0 @@
-@if (progressBar.inProgress) {
-  <div>
-    <div class="bar-box"></div>
-    <div class="used-bytes">{{ progressBar.loaded | readableBytes: 2 }}</div>
-    <div class="total-bytes">{{ progressBar.total | readableBytes: 2 }}</div>
-  </div>
-}

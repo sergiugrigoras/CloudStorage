@@ -1,5 +1,7 @@
-export interface DiskInfoModel {
-  used: number;
-  total: number;
-  usedPercentage: string;
+export interface IStorageInfo {
+  mediaFilesSize: number;
+  driveFilesSize: number;
+  totalUsed: number;
+  storageSize: number;
+  percentageUsed: number;
 }

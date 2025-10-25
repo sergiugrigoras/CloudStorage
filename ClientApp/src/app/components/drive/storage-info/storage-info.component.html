@@ -1,0 +1,15 @@
+<div mat-dialog-title cdkDrag cdkDragRootElement=".cdk-overlay-pane" cdkDragHandle>Disk Info</div>
+<div mat-dialog-content class="disk-info-container">
+  <div class="used-bytes">{{ storageInfo.totalUsed | readableBytes: 2 }}</div>
+  <div class="total-bytes">{{ storageInfo.storageSize | readableBytes: 1 }}</div>
+  <mat-progress-bar
+    class="disk-info__progress-bar"
+    [ngClass]="{ 'disk-info__progress-bar--red': storageInfo.percentageUsed }"
+    mode="determinate"
+    [value]="storageInfo.percentageUsed"
+    [matTooltip]="storageInfo.percentageUsed + '%'"
+  ></mat-progress-bar>
+</div>
+<div mat-dialog-actions align="end">
+  <button type="button" matButton="outlined" mat-dialog-close>Close</button>
+</div>

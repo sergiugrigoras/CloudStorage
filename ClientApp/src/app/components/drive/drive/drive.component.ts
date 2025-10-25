@@ -41,7 +41,7 @@ import { MatProgressSpinner } from '@angular/material/progress-spinner';
 import { CdkDrag, CdkDragHandle } from '@angular/cdk/drag-drop';
 import { MatFormField, MatLabel, MatInput, MatError } from '@angular/material/input';
 import { MatButton } from '@angular/material/button';
-import { DiskInfoComponent } from '../diskinfo/disk-info.component';
+import { StorageInfoComponent } from '../storage-info/storage-info.component';
 
 const SNACKBAR_OPTIONS = { duration: 3000 };
 const DOUBLE_CLICK_THRESHOLD = 300;
@@ -375,17 +375,20 @@ export class DriveComponent implements OnInit, OnDestroy {
     if (!files || this.currentFolder == null) return;
     const parentId = this.currentFolder.id;
     const fileArray = Array.from(files);
-    const totalSize = fileArray.reduce((a, b) => a + b.size, 0);
+    const totalUploadSize = fileArray.reduce((a, b) => a + b.size, 0);
 
     this.driveService
-      .getDiskInfo()
+      .getStorageInfo()
       .pipe(
         catchError(() => {
           this._snackBar.open('Unable to get disk status', 'Ok', { duration: 3000 });
           return EMPTY;
         }),
-        switchMap((diskInfo) => {
-          if (diskInfo.used + totalSize > diskInfo.total) {
+        switchMap((storageInfo) => {
+          if (
+            storageInfo == null ||
+            storageInfo.totalUsed + totalUploadSize > storageInfo.storageSize
+          ) {
             throw new Error('Not enough space.');
           }
           const formData = this.buildFileUploadFormData(fileArray, parentId);
@@ -493,7 +496,7 @@ export class DriveComponent implements OnInit, OnDestroy {
         break;
       }
       case 'disk-info': {
-        this.showDiskInfo();
+        this.showStorageInfo();
         break;
       }
       default: {
@@ -608,18 +611,17 @@ export class DriveComponent implements OnInit, OnDestroy {
     return '';
   }
 
-  private showDiskInfo() {
+  private showStorageInfo() {
     this.driveService
-      .getDiskInfo()
+      .getStorageInfo()
       .pipe(
-        switchMap((diskInfoResult) => {
-          const dialogRef = this._dialog.open(DiskInfoComponent, {
+        tap((storageInfo) => {
+          this._dialog.open(StorageInfoComponent, {
             width: '500px',
             hasBackdrop: true,
-            data: diskInfoResult,
+            data: storageInfo,
             autoFocus: false,
           });
-          return dialogRef.afterClosed();
         })
       )
       .subscribe();

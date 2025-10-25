@@ -72,8 +72,8 @@ export class ToolbarComponent {
       event: 'paste',
     },
     {
-      label: 'Disk Info',
-      icon: 'hard_disk',
+      label: 'Storage Info',
+      icon: 'hard_drive',
       class: 'material-symbols-outlined',
       isDisabled: () => false,
       event: 'disk-info',

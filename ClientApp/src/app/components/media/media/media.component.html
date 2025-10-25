@@ -86,6 +86,14 @@
             >
               <span class="material-icons-outlined">format_list_bulleted</span>
             </button>
+            <button
+              matIconButton
+              aria-label="Storage Info"
+              matTooltip="Storage Info"
+              (click)="getStorageInfo()"
+            >
+              <span class="material-symbols-outlined">hard_drive</span>
+            </button>
             @if (page === 'home') {
               <button
                 matIconButton

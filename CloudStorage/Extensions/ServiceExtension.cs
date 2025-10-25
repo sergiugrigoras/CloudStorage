@@ -27,6 +27,7 @@ public static class ServiceExtension
         services.AddScoped<IMediaAlbumRepository, MediaAlbumRepository>();
         services.AddScoped<IMediaUnitOfWork, MediaUnitOfWork>();
         services.AddScoped<IMediaService, MediaService>();
+        services.AddScoped<IStorageService, StorageService>();
 
         services.AddHttpClient<GeminiService>();
         services.AddScoped<IGeminiService, GeminiService>();

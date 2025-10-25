@@ -28,6 +28,8 @@ public class MediaObject
 
     public Guid OwnerId { get; set; }
 
+    public long? FileSize { get; set; }
+
     public virtual User Owner { get; set; }
     public virtual ICollection<MediaAlbum> MediaAlbums { get; set; } = new List<MediaAlbum>();
 

@@ -109,7 +109,14 @@ public class MediaController(
     {
         var user = await userService.GetUserAsync(User);
         if (user == null) return Unauthorized();
-        await mediaService.UploadMediaFilesAsync(files, user.Id);
+        try
+        {
+            await mediaService.UploadMediaFilesAsync(files, user.Id);
+        }
+        catch (Exception e)
+        {
+            return StatusCode(500, "Unable to process data.");
+        }
         return Ok();
     }
 

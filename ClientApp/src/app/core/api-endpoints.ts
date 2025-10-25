@@ -50,7 +50,6 @@ export const API_ENDPOINTS = {
     BASE: 'fso',
     ROOT: 'root',
     FOLDER: 'folder',
-    DRIVE_INFO: 'drive-info',
     FULL_PATH: 'full-path',
     ADD_FOLDER: 'add-folder',
     RENAME: 'rename',
@@ -59,5 +58,9 @@ export const API_ENDPOINTS = {
     UPLOAD: 'upload',
     DOWNLOAD: 'download',
     UNIQUE: 'unique',
+  },
+  STORAGE: {
+    BASE: 'storage',
+    INFO: 'info',
   },
 };

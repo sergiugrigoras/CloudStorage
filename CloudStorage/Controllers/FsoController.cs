@@ -10,12 +10,12 @@ namespace CloudStorage.Controllers;
 [Authorize]
 [Route("api/[controller]")]
 [ApiController]
-public class FsoController(IConfiguration configuration, IFsoService fsoService, IUserService userService)
+public class FsoController(IFsoService fsoService, IUserService userService, IStorageService storageService)
     : ControllerBase
 {
     private readonly IFsoService _fsoService = fsoService ?? throw new ArgumentNullException(nameof(fsoService));
     private readonly IUserService _userService = userService ?? throw new ArgumentNullException(nameof(userService));
-    private readonly long _storageSize = configuration.GetValue<long?>("Storage:DriveSize") ?? 104_857_600; // 100MB
+    private readonly IStorageService _storageService = storageService ?? throw new ArgumentNullException(nameof(storageService));
 
     [HttpGet("root")]
     public async Task<IActionResult> GetUserRootContentAsync()
@@ -39,17 +39,7 @@ public class FsoController(IConfiguration configuration, IFsoService fsoService,
         await _fsoService.LoadFolderContentAsync(fso);
         return new JsonResult(new FileSystemObjectViewModel(fso));
     }
-
-    [HttpGet("drive-info")]
-    public async Task<IActionResult> GetUserDiskInfo()
-    {
-        var user = await _userService.GetUserAsync(User);
-        if (user == null) return Unauthorized();
-        
-        var usedBytes = await _fsoService.GetUsedStorageByUser(user.Id);
-        return new JsonResult(new DiskInfoViewModel(_storageSize, usedBytes));
-    }
-
+    
     [HttpGet("full-path/{id:int}")]
     public async Task<IActionResult> GetFsoFullPathAsync(int id)
     {
@@ -162,9 +152,12 @@ public class FsoController(IConfiguration configuration, IFsoService fsoService,
         if (!uploadTo.CheckOwnership(user.Id)) return Forbid();
         
         // Check storage space.
-        var usedBytes = await _fsoService.GetUsedStorageByUser(user.Id);
+        var storageInfo = await _storageService.GetUsedStorageByUser(user.Id);
+        if (storageInfo == null) 
+            return StatusCode(500, "Unable to retrieve storage info.");
+        
         var uploadSize = uploadModel.Files.Sum(f => f.Length);
-        if (usedBytes + uploadSize > _storageSize)
+        if (!storageInfo.HasSpace(uploadSize))
             return BadRequest("Not enough storage space.");
         try
         {

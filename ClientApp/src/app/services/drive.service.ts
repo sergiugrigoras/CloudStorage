@@ -1,4 +1,4 @@
-import { DiskInfoModel } from '../interfaces/disk.interface';
+import { IStorageInfo } from '../interfaces/disk.interface';
 import { FsoModel, FsoMoveResultModel } from '../model/fso.model';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable, signal } from '@angular/core';
@@ -31,9 +31,9 @@ export class DriveService {
     return this.http.get<FsoModel[]>(url);
   }
 
-  getDiskInfo() {
-    const url = buildUrl(API_ENDPOINTS.FSO.BASE, API_ENDPOINTS.FSO.DRIVE_INFO);
-    return this.http.get<DiskInfoModel>(url);
+  getStorageInfo() {
+    const url = buildUrl(API_ENDPOINTS.STORAGE.BASE, API_ENDPOINTS.STORAGE.INFO);
+    return this.http.get<IStorageInfo>(url);
   }
 
   addFolder(name: string, parentId: number) {

@@ -71,6 +71,7 @@ import { MatSelect, MatOption } from '@angular/material/select';
 import { MatSelectSearchComponent } from 'ngx-mat-select-search';
 import { MatIcon } from '@angular/material/icon';
 import { MatCheckbox } from '@angular/material/checkbox';
+import { StorageInfoComponent } from '../../drive/storage-info/storage-info.component';
 
 const KEY_UPDATE_INTERVAL = 60000; // 1 minute
 const SNACKBAR_OPTIONS = { duration: 3000 };
@@ -365,46 +366,72 @@ export class MediaComponent implements OnInit, OnDestroy {
   }
 
   uploadFiles(input: HTMLInputElement) {
-    if (input instanceof HTMLInputElement && input.files && input.files.length > 0) {
-      this.uploading = true;
-      const formData = new FormData();
-      for (let i = 0; i != input.files.length; i++) {
-        formData.append('files', input.files[i]);
-      }
-      this.mediaService
-        .upload(formData)
-        .pipe(
-          tap((event) => {
-            if (event.type === HttpEventType.UploadProgress && event.total) {
-              this.uploadProgress = Math.floor((event.loaded / event.total) * 100);
-            }
-          }),
-          switchMap((event) => {
-            if (event.type === HttpEventType.Response) {
-              return this.snackBar
-                .open(`Upload complete.`, 'Ok', SNACKBAR_OPTIONS)
-                .afterDismissed()
-                .pipe(map(() => true));
-            } else {
-              return of(false);
-            }
-          }),
-          finalize(() => {
-            this.uploading = false;
-            this.uploadProgress = 0;
-          })
-        )
-        .subscribe({
-          next: (result) => {
-            if (result) {
-              window.location.reload();
-            }
-          },
-          error: (error: HttpErrorResponse) => {
-            console.error(error.error);
-          },
-        });
+    if (!(input instanceof HTMLInputElement) || input.files == null || input.files.length === 0)
+      return;
+    const fileArray = Array.from(input.files);
+    const totalUploadSize = fileArray.reduce((a, b) => a + b.size, 0);
+    this.uploading = true;
+    const formData = new FormData();
+    for (let i = 0; i != input.files.length; i++) {
+      formData.append('files', input.files[i]);
     }
+    this.mediaService
+      .getStorageInfo()
+      .pipe(
+        catchError(() => {
+          this.snackBar.open('Unable to get disk status', 'Ok', { duration: 3000 });
+          return EMPTY;
+        }),
+        switchMap((storageInfo) => {
+          if (
+            storageInfo == null ||
+            storageInfo.totalUsed + totalUploadSize > storageInfo.storageSize
+          ) {
+            throw new Error('Not enough space.');
+          }
+          const formData = new FormData();
+          for (const file of fileArray) {
+            formData.append('files', file, file.name);
+          }
+          return this.mediaService.upload(formData);
+        }),
+        tap((event) => {
+          if (event.type === HttpEventType.UploadProgress && event.total) {
+            this.uploadProgress = Math.floor((event.loaded / event.total) * 100);
+          }
+        }),
+        switchMap((event) => {
+          if (event.type === HttpEventType.Response) {
+            return this.snackBar
+              .open(`Upload complete. Page will reload soon`, 'Ok', SNACKBAR_OPTIONS)
+              .afterDismissed()
+              .pipe(map(() => true));
+          } else {
+            return of(false);
+          }
+        }),
+        tap((result) => {
+          if (result) {
+            window.location.reload();
+          }
+        }),
+        catchError((err) => {
+          let text = 'An error occurred';
+          if (err instanceof HttpErrorResponse && typeof err.error === 'string') {
+            text = err.error;
+          } else if (typeof err.message === 'string') {
+            text = err.message;
+          }
+          this.snackBar.open(text, 'Ok');
+          return EMPTY;
+        }),
+        finalize(() => {
+          this.uploading = false;
+          this.uploadProgress = 0;
+          input.value = '';
+        })
+      )
+      .subscribe();
   }
 
   createAlbum() {
@@ -620,6 +647,22 @@ export class MediaComponent implements OnInit, OnDestroy {
   buildContentUrl(id: string | undefined) {
     if (id) return buildUrl(API_ENDPOINTS.CONTENT.BASE, id);
     return undefined;
+  }
+
+  getStorageInfo() {
+    this.mediaService
+      .getStorageInfo()
+      .pipe(
+        tap((storageInfo) => {
+          this.dialog.open(StorageInfoComponent, {
+            width: '500px',
+            hasBackdrop: true,
+            data: storageInfo,
+            autoFocus: false,
+          });
+        })
+      )
+      .subscribe();
   }
 }
 
