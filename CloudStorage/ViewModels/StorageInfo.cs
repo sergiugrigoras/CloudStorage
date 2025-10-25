@@ -7,6 +7,8 @@ public class StorageInfo(long mediaFileSize, long driveFilesSize, long storageSi
     public long TotalUsed => DriveFilesSize + MediaFilesSize;
     public long StorageSize { get; } = storageSize;
     public int PercentageUsed => StorageSize == 0 ? 0 : (int)Math.Round(TotalUsed * 100.0 / StorageSize);
+    public int MediaFilesPercentage => TotalUsed == 0 ? 0 : (int)Math.Round(MediaFilesSize * 100.0 / TotalUsed);
+    public int DriveFilesPercentage => TotalUsed == 0 ? 0 : (int)Math.Round(DriveFilesSize * 100.0 / TotalUsed);
     
     public bool HasSpace(long size) => TotalUsed + size <= StorageSize;
 }

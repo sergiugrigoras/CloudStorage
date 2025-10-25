@@ -1,6 +1,12 @@
 @use '@angular/material' as mat;
 
-.disk-info__progress-bar {
+.storage-info__labels {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.storage-info__progress-bar {
   @include mat.progress-bar-overrides(
     (
       active-indicator-height: 16px,
@@ -12,11 +18,6 @@
   }
 }
 
-.used-bytes {
-  float: left;
-}
-
-.total-bytes {
-  float: right;
-  text-align: right;
+section {
+  margin-bottom: 2rem;
 }

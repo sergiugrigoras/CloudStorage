@@ -1,14 +1,48 @@
 <div mat-dialog-title cdkDrag cdkDragRootElement=".cdk-overlay-pane" cdkDragHandle>Disk Info</div>
-<div mat-dialog-content class="disk-info-container">
-  <div class="used-bytes">{{ storageInfo.totalUsed | readableBytes: 2 }}</div>
-  <div class="total-bytes">{{ storageInfo.storageSize | readableBytes: 1 }}</div>
-  <mat-progress-bar
-    class="disk-info__progress-bar"
-    [ngClass]="{ 'disk-info__progress-bar--red': storageInfo.percentageUsed }"
-    mode="determinate"
-    [value]="storageInfo.percentageUsed"
-    [matTooltip]="storageInfo.percentageUsed + '%'"
-  ></mat-progress-bar>
+<div mat-dialog-content>
+  <section>
+    <div class="storage-info__labels">
+      <span>
+        {{ storageInfo.totalUsed | readableBytes: 2 }}
+      </span>
+      <span>
+        {{ storageInfo.storageSize | readableBytes: 1 }}
+      </span>
+    </div>
+    <mat-progress-bar
+      class="storage-info__progress-bar"
+      [ngClass]="{ 'storage-info__progress-bar--red': storageInfo.percentageUsed > 80 }"
+      mode="determinate"
+      [value]="storageInfo.percentageUsed"
+      [matTooltip]="storageInfo.percentageUsed + '%'"
+    ></mat-progress-bar>
+  </section>
+  <section>
+    <div class="storage-info__labels">
+      <span> Drive </span>
+      <span>
+        {{ storageInfo.driveFilesSize | readableBytes: 2 }}
+      </span>
+    </div>
+    <mat-progress-bar
+      mode="determinate"
+      [value]="storageInfo.driveFilesPercentage"
+      [matTooltip]="storageInfo.driveFilesPercentage + '%'"
+    ></mat-progress-bar>
+  </section>
+  <section>
+    <div class="storage-info__labels">
+      <span> Media </span>
+      <span>
+        {{ storageInfo.mediaFilesSize | readableBytes: 2 }}
+      </span>
+    </div>
+    <mat-progress-bar
+      mode="determinate"
+      [value]="storageInfo.mediaFilesPercentage"
+      [matTooltip]="storageInfo.mediaFilesPercentage + '%'"
+    ></mat-progress-bar>
+  </section>
 </div>
 <div mat-dialog-actions align="end">
   <button type="button" matButton="outlined" mat-dialog-close>Close</button>
