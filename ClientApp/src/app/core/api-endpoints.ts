@@ -62,5 +62,6 @@ export const API_ENDPOINTS = {
   STORAGE: {
     BASE: 'storage',
     INFO: 'info',
+    USER_INFO: 'user-info',
   },
 };

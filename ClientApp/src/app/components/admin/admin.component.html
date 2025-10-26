@@ -20,15 +20,27 @@
 <h3>Users</h3>
 @if (usersReady()) {
   @for (user of users; track user.id) {
-    <div class="admin_user-item">
+    <div
+      class="admin__user-item"
+      [ngClass]="user.disabled ? 'admin__user-item--disabled' : 'admin__user-item--enabled'"
+    >
       <div>
         <div><strong>Name: </strong>{{ user.username }}</div>
         <div><strong>Email: </strong>{{ user.email }}</div>
         <div><strong>Last active: </strong>{{ user.lastActive | date: 'short' }}</div>
       </div>
       <div>
-        <button [matButton]="user.disabled ? 'filled' : 'tonal'" (click)="toggleAccount(user)">
-          {{ user.disabled ? 'Enable' : 'Disable' }}
+        <button matIconButton (click)="getStorageInfo(user)" matTooltip="Storage Info">
+          <span class="material-symbols-outlined">hard_drive</span>
+        </button>
+        <button
+          matIconButton
+          (click)="toggleAccount(user)"
+          [matTooltip]="user.disabled ? 'Enable Account' : 'Disable Account'"
+        >
+          <span class="material-symbols-outlined">
+            {{ user.disabled ? 'account_circle' : 'account_circle_off' }}
+          </span>
         </button>
       </div>
     </div>

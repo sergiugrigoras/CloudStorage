@@ -48,7 +48,7 @@ public class AdminController(IUserService userService, IMailService mailService)
             var emailBody = EmailHelper.GenerateInviteEmailBody(inviteCode, registerLink, email);
             const string subject = EmailHelper.InviteSubject;
             await _mailService.SendEmailAsync(new MailAddress(email), subject, emailBody);
-            return new JsonResult(inviteCode);
+            return Ok();
         }
         catch (Exception e)
         {

@@ -8,9 +8,11 @@ import { catchError, EMPTY, finalize, tap } from 'rxjs';
 import { HttpErrorResponse } from '@angular/common/http';
 import { FormControl, Validators, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { MatFormField, MatLabel, MatInput, MatError } from '@angular/material/input';
-import { MatButton } from '@angular/material/button';
+import { MatButton, MatIconButton } from '@angular/material/button';
 import { MatDivider } from '@angular/material/list';
-import { DatePipe } from '@angular/common';
+import { DatePipe, NgClass } from '@angular/common';
+import { MatTooltip } from '@angular/material/tooltip';
+import { StorageInfoComponent } from '../drive/storage-info/storage-info.component';
 
 @Component({
   selector: 'app-admin',
@@ -26,6 +28,9 @@ import { DatePipe } from '@angular/common';
     MatButton,
     MatDivider,
     DatePipe,
+    MatIconButton,
+    MatTooltip,
+    NgClass,
   ],
 })
 export class AdminComponent implements OnInit {
@@ -121,7 +126,26 @@ export class AdminComponent implements OnInit {
           return EMPTY;
         }),
         tap(() => {
-          this.inviteControl.reset();
+          const value = (this.inviteControl?.value || '').trim();
+          this.inviteControl?.reset();
+          if (value) this._snackBar.open(`Invite sent to ${value}`, 'Ok', { duration: 3000 });
+        })
+      )
+      .subscribe();
+  }
+
+  getStorageInfo(user: User) {
+    if (user == null) return;
+    this._adminService
+      .getStorageInfo(user.id)
+      .pipe(
+        tap((storageInfo) => {
+          this._dialog.open(StorageInfoComponent, {
+            width: '500px',
+            hasBackdrop: true,
+            data: storageInfo,
+            autoFocus: false,
+          });
         })
       )
       .subscribe();

@@ -1,8 +1,37 @@
-.admin_user-item {
+@use '@angular/material' as mat;
+
+.admin__user-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin: 8px 0;
+  padding: 8px;
+  margin: 4px 0;
+  border-radius: var(--mat-sys-corner-small);
+
+  &--disabled {
+    $color: var(--mat-sys-on-error);
+    background: var(--mat-sys-error);
+    color: $color;
+
+    @include mat.icon-button-overrides(
+      (
+        icon-color: $color,
+      )
+    );
+  }
+
+  &--enabled {
+    /*    $color: var(--mat-sys-on-primary-container);
+    background: var(--mat-sys-primary-container);*/
+    $color: var(--mat-sys-on-primary);
+    background: var(--mat-sys-primary);
+    color: $color;
+    @include mat.icon-button-overrides(
+      (
+        icon-color: $color,
+      )
+    );
+  }
 }
 
 .admin__invite-form {

@@ -4,6 +4,7 @@ import { User } from '../model/user.model';
 import { buildUrl } from '../core/url-builder';
 import { API_ENDPOINTS } from '../core/api-endpoints';
 import { HTTP_OPTIONS_CONTENT_JSON } from '../core/constants';
+import { IStorageInfo } from '../interfaces/disk.interface';
 
 @Injectable({
   providedIn: 'root',
@@ -28,5 +29,14 @@ export class AdminService {
       params: new HttpParams().set('email', email),
     };
     return this.http.post(url, null, options);
+  }
+
+  getStorageInfo(id: string) {
+    const url = buildUrl(API_ENDPOINTS.STORAGE.BASE, API_ENDPOINTS.STORAGE.USER_INFO);
+    const options = {
+      headers: HTTP_OPTIONS_CONTENT_JSON.headers,
+      params: new HttpParams().set('id', id),
+    };
+    return this.http.get<IStorageInfo>(url, options);
   }
 }

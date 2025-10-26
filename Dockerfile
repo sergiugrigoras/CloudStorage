@@ -31,5 +31,7 @@ ENV ASPNETCORE_URLS=http://+:5000
 WORKDIR /app
 COPY --from=base /app/publish .
 COPY --from=node /app/dist ./wwwroot
+# no appsettings files
+RUN rm -f ./appsettings*.json
 EXPOSE 5000
 ENTRYPOINT [ "dotnet", "CloudStorage.dll" ]
