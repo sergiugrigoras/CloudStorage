@@ -1,13 +1,34 @@
 .media-item__snapshot {
   position: relative;
-  margin-bottom: 0.5rem;
   cursor: pointer;
   box-sizing: border-box;
+  margin: 4px;
+
+  &-content {
+    @media (max-width: 768px) {
+      width: 80px;
+    }
+
+    @media (min-width: 768px) {
+      width: 140px;
+    }
+
+    @media (min-width: 992px) {
+      width: 180px;
+    }
+
+    @media (min-width: 1200px) {
+      width: 225px;
+    }
+
+    aspect-ratio: 1 / 1;
+  }
 
   img {
-    width: 100%;
-    vertical-align: middle;
+    object-fit: cover;
+    object-position: center;
     border-radius: 4px;
+    display: block;
   }
 
   &-placeholder {

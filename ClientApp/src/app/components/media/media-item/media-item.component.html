@@ -4,16 +4,18 @@
       <span class="media-item__snapshot-duration">{{ item.videoLength }}</span>
     }
     @if (item.isLoading) {
-      <div
-        class="media-item__snapshot-placeholder"
-        [ngStyle]="{ 'aspect-ratio': item.width / item.height }"
-      >
+      <div class="media-item__snapshot-placeholder media-item__snapshot-content">
         <mat-progress-bar mode="indeterminate"></mat-progress-bar>
       </div>
     } @else {
-      <img [src]="(item.snapshot$ | async) ?? ''" (click)="itemTouched()" alt="snapshot" />
+      <img
+        [src]="(item.snapshot$ | async) ?? ''"
+        (click)="itemTouched()"
+        alt="snapshot"
+        class="media-item__snapshot-content"
+      />
     }
-    @if (selectMode) {
+    @if (selectMode()) {
       <button
         matIconButton
         class="media-item__snapshot-button-select"

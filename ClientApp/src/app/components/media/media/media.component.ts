@@ -1,4 +1,3 @@
-import { BreakpointObserver, BreakpointState } from '@angular/cdk/layout';
 import { HttpErrorResponse, HttpEventType } from '@angular/common/http';
 import {
   Component,
@@ -6,6 +5,7 @@ import {
   inject,
   OnDestroy,
   OnInit,
+  signal,
   TemplateRef,
   ViewChild,
 } from '@angular/core';
@@ -44,6 +44,7 @@ import {
   takeUntil,
   of,
   finalize,
+  filter,
 } from 'rxjs';
 import { MediaAlbum } from '../../../model/media-album.model';
 import { MediaObject } from '../../../model/media-object.model';
@@ -72,11 +73,10 @@ import { MatSelectSearchComponent } from 'ngx-mat-select-search';
 import { MatIcon } from '@angular/material/icon';
 import { MatCheckbox } from '@angular/material/checkbox';
 import { StorageInfoComponent } from '../../drive/storage-info/storage-info.component';
+import { MatPaginator, PageEvent } from '@angular/material/paginator';
 
 const KEY_UPDATE_INTERVAL = 60000; // 1 minute
 const SNACKBAR_OPTIONS = { duration: 3000 };
-const LOAD_BY_DEFAULT_COUNT = 1;
-type ColumnViewType = 'one-column' | 'two-columns' | 'three-columns';
 @Component({
   selector: 'app-media',
   templateUrl: './media.component.html',
@@ -112,33 +112,29 @@ type ColumnViewType = 'one-column' | 'two-columns' | 'three-columns';
     MatCheckbox,
     AsyncPipe,
     DatePipe,
+    MatPaginator,
   ],
 })
 export class MediaComponent implements OnInit, OnDestroy {
   private mediaService = inject(MediaService);
-  public readonly breakpointObserver = inject(BreakpointObserver);
   private readonly dialog = inject(MatDialog);
   private readonly overlay = inject(OverlayContainer);
   private readonly snackBar = inject(MatSnackBar);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
 
-  private allMediaObjects: MediaObject[] = [];
-  displayedMediaObjects: MediaObject[] = [];
-  mediaReady = false;
-  columnView: ColumnViewType | null = null;
-  twoColumns: MultipleColumnsCollection | null = null;
-  threeColumns: MultipleColumnsCollection | null = null;
+  protected allMediaObjects: MediaObject[] = [];
+  mediaReady = signal(false);
   activeMediaObject: MediaObject | null = null;
-  activeIndex = -1;
-  selectMode = false;
+  activeIndex = signal(-1);
+  protected readonly selectMode = this.mediaService.selectMode;
   private allAlbumDialogRef: MatDialogRef<unknown> | null = null;
   get maxScrollIndex() {
     return this.allMediaObjects.length - 1;
   }
   updateAccessKeyIntervalId?: number;
-  uploading = false;
-  uploadProgress = 0;
+  protected readonly uploading = signal(false);
+  uploadProgress = signal(0);
   @ViewChild('newAlbum', { static: true }) newAlbumDialog: TemplateRef<unknown> | null = null;
   @ViewChild('addToAlbum', { static: true }) addToAlbumDialog: TemplateRef<unknown> | null = null;
   @ViewChild('mediaViewDialog', { static: true }) mediaViewDialog: TemplateRef<unknown> | null =
@@ -170,18 +166,11 @@ export class MediaComponent implements OnInit, OnDestroy {
   };
   dialogRef: MatDialogRef<unknown> | null = null;
   private readonly destroy$ = new Subject<void>();
-  itemsLoaded = 0;
-  intersectionObserver = new IntersectionObserver(
-    (entries: IntersectionObserverEntry[]) => {
-      const visible = entries.filter((x) => x.isIntersecting);
-      this.loadItemsToView(visible.length);
-      visible.forEach((x) => this.intersectionObserver.unobserve(x.target));
-    },
-    { threshold: 0 }
-  );
   page: 'home' | 'album' | 'favorites' | 'trash' | null = null;
   albumName = '';
   deletePermanently = false;
+  displayObjects = signal<MediaObject[]>([]);
+  protected readonly defaultPageSize = 50;
 
   constructor() {}
 
@@ -212,15 +201,12 @@ export class MediaComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    this.mediaService.selectMode$.pipe(takeUntil(this.destroy$)).subscribe((selectMode) => {
-      this.selectMode = selectMode;
-    });
     location.hash = '';
     this.route.paramMap
       .pipe(
         takeUntil(this.destroy$),
         switchMap((params) => {
-          this.mediaService.disableSelectMode();
+          this.selectMode.set(false);
           const page = params.get('page');
           const id = params.get('id');
           if (page === 'album' && id) {
@@ -243,40 +229,28 @@ export class MediaComponent implements OnInit, OnDestroy {
           return EMPTY;
         }),
         tap((mediaObjects: MediaObject[]) => {
-          this.allMediaObjects = mediaObjects.map((x) => new MediaObject(x));
-          this.displayedMediaObjects = [];
-          this.twoColumns = new MultipleColumnsCollection(2);
-          this.threeColumns = new MultipleColumnsCollection(3);
-          this.itemsLoaded = 0;
-          this.loadItemsToView(LOAD_BY_DEFAULT_COUNT);
+          const result = mediaObjects.map((x) => new MediaObject(x));
+          this.allMediaObjects.push(...result);
+          this.displayObjects.set(this.allMediaObjects.slice(0, this.defaultPageSize));
         }),
         tap(() => {
-          this.mediaReady = true;
+          this.mediaReady.set(true);
         })
       )
       .subscribe();
 
-    fromEvent(document, 'mousewheel')
-      .pipe(takeUntil(this.destroy$), throttleTime(150))
+    fromEvent(document, 'wheel')
+      .pipe(
+        takeUntil(this.destroy$),
+        throttleTime(150),
+        filter(() => this.activeMediaObject != null)
+      )
       .subscribe((event: Event) => {
         const wheelEvent = event as WheelEvent;
         if (wheelEvent.deltaY > 0) {
           this.scrollMediaBack();
         } else {
           this.scrollMediaForward();
-        }
-      });
-
-    this.breakpointObserver
-      .observe(['(min-width: 1200px)', '(max-width: 768px)'])
-      .pipe(takeUntil(this.destroy$))
-      .subscribe((state: BreakpointState) => {
-        if (!state.matches) {
-          this.columnView = 'two-columns';
-        } else if (state.matches && state.breakpoints['(max-width: 768px)']) {
-          this.columnView = 'one-column';
-        } else if (state.matches && state.breakpoints['(min-width: 1200px)']) {
-          this.columnView = 'three-columns';
         }
       });
 
@@ -296,9 +270,6 @@ export class MediaComponent implements OnInit, OnDestroy {
     );
   }
 
-  get totalItems() {
-    return this.allMediaObjects?.length;
-  }
   get totalSelected() {
     return this.allMediaObjects.reduce(
       (sum: number, current: MediaObject) => (current.isSelected ? ++sum : sum),
@@ -306,14 +277,6 @@ export class MediaComponent implements OnInit, OnDestroy {
     );
   }
 
-  loadItemsToView(count: number) {
-    if (count === 0) return;
-    const newItems = this.allMediaObjects.slice(this.itemsLoaded, this.itemsLoaded + count);
-    this.displayedMediaObjects.push(...newItems);
-    this.twoColumns?.addItems(...newItems);
-    this.threeColumns?.addItems(...newItems);
-    this.itemsLoaded = this.itemsLoaded + newItems.length;
-  }
   openMedia(id: string) {
     location.hash = 'view';
     this.overlay.getContainerElement().classList.add('media');
@@ -321,9 +284,16 @@ export class MediaComponent implements OnInit, OnDestroy {
       .addContentAccessKeyCookie()
       .pipe(
         switchMap(() => {
-          this.activeMediaObject = this.getMediaObjectById(id);
-          if (this.activeMediaObject == null) return EMPTY;
-          this.activeIndex = this.displayedMediaObjects.indexOf(this.activeMediaObject);
+          const index = this.allMediaObjects.findIndex((x) => x.id === id);
+          if (index === -1) {
+            return EMPTY;
+          }
+          this.activeIndex.set(index);
+          this.activeMediaObject = this.allMediaObjects[this.activeIndex()];
+          if (this.activeMediaObject == null) {
+            return EMPTY;
+          }
+
           this.updateAccessKey();
           if (this.mediaViewDialog) {
             this.dialogRef = this.dialog.open(this.mediaViewDialog, this.viewDialogConfig);
@@ -337,6 +307,7 @@ export class MediaComponent implements OnInit, OnDestroy {
           }
           window.clearTimeout(this.updateAccessKeyIntervalId);
           this.activeMediaObject = null;
+          this.activeIndex.set(-1);
           this.overlay.getContainerElement().classList.remove('media');
           return this.mediaService.removeContentAccessKey();
         })
@@ -370,7 +341,7 @@ export class MediaComponent implements OnInit, OnDestroy {
       return;
     const fileArray = Array.from(input.files);
     const totalUploadSize = fileArray.reduce((a, b) => a + b.size, 0);
-    this.uploading = true;
+    this.uploading.set(true);
     const formData = new FormData();
     for (let i = 0; i != input.files.length; i++) {
       formData.append('files', input.files[i]);
@@ -397,7 +368,7 @@ export class MediaComponent implements OnInit, OnDestroy {
         }),
         tap((event) => {
           if (event.type === HttpEventType.UploadProgress && event.total) {
-            this.uploadProgress = Math.floor((event.loaded / event.total) * 100);
+            this.uploadProgress.set(Math.floor((event.loaded / event.total) * 100));
           }
         }),
         switchMap((event) => {
@@ -426,8 +397,8 @@ export class MediaComponent implements OnInit, OnDestroy {
           return EMPTY;
         }),
         finalize(() => {
-          this.uploading = false;
-          this.uploadProgress = 0;
+          this.uploading.set(false);
+          this.uploadProgress.set(0);
           input.value = '';
         })
       )
@@ -452,7 +423,7 @@ export class MediaComponent implements OnInit, OnDestroy {
   addSelectedToAlbum() {
     const addToAlbumObserver = {
       next: () => {
-        this.displayedMediaObjects.forEach((x) => (x.isSelected = false));
+        this.allMediaObjects.forEach((x) => (x.isSelected = false));
         this.snackBar.open(`Success.`, 'Ok', SNACKBAR_OPTIONS);
       },
       error: (error: unknown) => {
@@ -477,7 +448,7 @@ export class MediaComponent implements OnInit, OnDestroy {
         }),
         switchMap((dialogResult: unknown) => {
           if (Array.isArray(dialogResult) && dialogResult.length > 0) {
-            const mediaObjectsIds = this.displayedMediaObjects
+            const mediaObjectsIds = this.allMediaObjects
               .filter((x) => x.isSelected)
               .map((x) => x.id);
             const albumsIds = dialogResult.map((x: MediaAlbum) => x.id);
@@ -553,24 +524,19 @@ export class MediaComponent implements OnInit, OnDestroy {
   }
 
   private scrollMediaForward() {
-    if (this.activeIndex >= this.maxScrollIndex) {
+    if (this.activeIndex() >= this.maxScrollIndex) {
       return;
     }
-    if (this.activeIndex === this.displayedMediaObjects.length - 1) {
-      this.loadItemsToView(LOAD_BY_DEFAULT_COUNT);
-    }
-    this.activeMediaObject = this.displayedMediaObjects[++this.activeIndex];
+    this.activeIndex.update((value) => value + 1);
+    this.activeMediaObject = this.allMediaObjects[this.activeIndex()];
   }
 
   private scrollMediaBack() {
-    if (this.activeIndex === 0) {
+    if (this.activeIndex() === 0) {
       return;
     }
-    this.activeMediaObject = this.displayedMediaObjects[--this.activeIndex];
-  }
-
-  private getMediaObjectById(id: string) {
-    return this.allMediaObjects.find((m) => m.id === id) ?? null;
+    this.activeIndex.update((value) => value - 1);
+    this.activeMediaObject = this.allMediaObjects[this.activeIndex()];
   }
 
   newAlbumErrorMessage() {
@@ -622,11 +588,11 @@ export class MediaComponent implements OnInit, OnDestroy {
 
   deselectAll() {
     this.allMediaObjects.forEach((x) => (x.isSelected = false));
-    this.mediaService.disableSelectMode();
+    this.selectMode.set(false);
   }
 
   enableSelectMode() {
-    this.mediaService.enableSelectMode();
+    this.selectMode.set(true);
   }
 
   getPageName() {
@@ -664,33 +630,10 @@ export class MediaComponent implements OnInit, OnDestroy {
       )
       .subscribe();
   }
-}
 
-export class MultipleColumnsCollection {
-  private readonly numberOfColumns: number;
-  private readonly columns: Array<Array<MediaObject>>;
-  private readonly offsets: number[];
-
-  constructor(numberOfColumns: number) {
-    this.numberOfColumns = numberOfColumns;
-    this.columns = Array.from({ length: numberOfColumns }, (): MediaObject[] => []);
-    this.offsets = Array(numberOfColumns).fill(0);
-  }
-
-  addItems(...items: MediaObject[]) {
-    for (const item of items) {
-      const index = this.smallestColumnIndex();
-      this.columns[index].push(item);
-      this.offsets[index] = this.offsets[index] + item.height / item.width;
-    }
-  }
-
-  getColumn(index: number) {
-    if (index >= this.numberOfColumns) return undefined;
-    return this.columns[index];
-  }
-
-  private smallestColumnIndex(): number {
-    return this.offsets.indexOf(Math.min(...this.offsets));
+  loadItems($event: PageEvent) {
+    const from = $event.pageIndex * $event.pageSize;
+    const to = from + $event.pageSize;
+    this.displayObjects.set(this.allMediaObjects.slice(from, to));
   }
 }

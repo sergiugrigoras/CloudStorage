@@ -1,5 +1,4 @@
 import {
-  AfterViewInit,
   Component,
   ElementRef,
   EventEmitter,
@@ -12,9 +11,9 @@ import {
 } from '@angular/core';
 import { MediaObject } from '../../../model/media-object.model';
 import { MediaService } from '../../../services/media.service';
-import { catchError, EMPTY, retry, Subject, takeUntil, tap } from 'rxjs';
+import { catchError, EMPTY, retry, Subject, tap } from 'rxjs';
 import { DomSanitizer } from '@angular/platform-browser';
-import { NgStyle, AsyncPipe } from '@angular/common';
+import { AsyncPipe } from '@angular/common';
 import { MatProgressBar } from '@angular/material/progress-bar';
 import { MatIconButton } from '@angular/material/button';
 
@@ -22,9 +21,9 @@ import { MatIconButton } from '@angular/material/button';
   selector: 'app-media-item',
   templateUrl: './media-item.component.html',
   styleUrls: ['./media-item.component.scss'],
-  imports: [NgStyle, MatProgressBar, MatIconButton, AsyncPipe],
+  imports: [MatProgressBar, MatIconButton, AsyncPipe],
 })
-export class MediaItemComponent implements OnInit, OnDestroy, AfterViewInit {
+export class MediaItemComponent implements OnInit, OnDestroy {
   private mediaService = inject(MediaService);
   private sanitizer = inject(DomSanitizer);
   private el = inject(ElementRef);
@@ -33,12 +32,12 @@ export class MediaItemComponent implements OnInit, OnDestroy, AfterViewInit {
   url: string | null = null;
   @Output() open = new EventEmitter<string>();
   private readonly destroy$ = new Subject<void>();
-  selectMode = false;
+  protected readonly selectMode = this.mediaService.selectMode;
   constructor() {}
 
   itemTouched() {
     if (this.item == null) return;
-    if (this.selectMode) {
+    if (this.selectMode()) {
       this.item.isSelected = !this.item.isSelected;
     } else {
       this.open.emit(this.item.id);
@@ -54,18 +53,14 @@ export class MediaItemComponent implements OnInit, OnDestroy, AfterViewInit {
     if (this.item == null) return;
     $event.preventDefault();
     this.item.isSelected = !this.item.isSelected;
-    this.mediaService.enableSelectMode();
+    this.mediaService.selectMode.set(true);
   }
 
   ngOnInit(): void {
-    if (this.item == null) return;
-    this.mediaService.selectMode$.pipe(takeUntil(this.destroy$)).subscribe((selectMode) => {
-      this.selectMode = selectMode;
-    });
+    if (this.item == null || !this.item.isLoading) return;
     this.mediaService
       .getSnapshotFile(this.item.id)
       .pipe(
-        takeUntil(this.destroy$),
         retry(3),
         catchError(() => {
           return EMPTY;
@@ -86,13 +81,5 @@ export class MediaItemComponent implements OnInit, OnDestroy, AfterViewInit {
   ngOnDestroy() {
     this.destroy$.next();
     this.destroy$.complete();
-    // URL.revokeObjectURL(this.url);
-  }
-
-  ngAfterViewInit(): void {
-    const element = this.el?.nativeElement;
-    if (element && this.xObserver) {
-      this.xObserver.observe(element);
-    }
   }
 }

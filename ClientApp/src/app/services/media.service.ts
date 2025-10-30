@@ -1,7 +1,7 @@
 import { HttpClient, HttpEvent, HttpParams } from '@angular/common/http';
-import { inject, Injectable } from '@angular/core';
+import { inject, Injectable, signal } from '@angular/core';
 import { MediaObject, MediaObjectFilter } from '../model/media-object.model';
-import { Observable, map, BehaviorSubject } from 'rxjs';
+import { Observable, map } from 'rxjs';
 import { MediaAlbum } from '../model/media-album.model';
 import { buildUrl } from '../core/url-builder';
 import { API_ENDPOINTS } from '../core/api-endpoints';
@@ -13,16 +13,9 @@ import { IStorageInfo } from '../interfaces/disk.interface';
 })
 export class MediaService {
   private readonly http = inject(HttpClient);
-  private _selectMode = new BehaviorSubject<boolean>(false);
-  selectMode$ = this._selectMode.asObservable();
+  public readonly selectMode = signal(false);
   constructor() {}
 
-  enableSelectMode() {
-    this._selectMode.next(true);
-  }
-  disableSelectMode() {
-    this._selectMode.next(false);
-  }
   getMediaFile(id: string) {
     const url = buildUrl(API_ENDPOINTS.MEDIA.BASE, id);
     return this.http.get(url, { observe: 'response', responseType: 'blob' });
