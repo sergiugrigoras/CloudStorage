@@ -45,6 +45,8 @@ import {
   of,
   finalize,
   filter,
+  timer,
+  concatWith,
 } from 'rxjs';
 import { MediaAlbum } from '../../../model/media-album.model';
 import { MediaObject } from '../../../model/media-object.model';
@@ -132,7 +134,6 @@ export class MediaComponent implements OnInit, OnDestroy {
   get maxScrollIndex() {
     return this.allMediaObjects.length - 1;
   }
-  updateAccessKeyIntervalId?: number;
   protected readonly uploading = signal(false);
   uploadProgress = signal(0);
   @ViewChild('newAlbum', { static: true }) newAlbumDialog: TemplateRef<unknown> | null = null;
@@ -278,47 +279,57 @@ export class MediaComponent implements OnInit, OnDestroy {
   }
 
   openMedia(id: string) {
-    location.hash = 'view';
-    this.overlay.getContainerElement().classList.add('media');
+    if (!this.tryPrepareViewDialog(id)) {
+      return;
+    }
+
     this.mediaService
       .addContentAccessKeyCookie()
       .pipe(
         switchMap(() => {
-          const index = this.allMediaObjects.findIndex((x) => x.id === id);
-          if (index === -1) {
-            return EMPTY;
-          }
-          this.activeIndex.set(index);
-          this.activeMediaObject = this.allMediaObjects[this.activeIndex()];
-          if (this.activeMediaObject == null) {
-            return EMPTY;
-          }
-
-          this.updateAccessKey();
-          if (this.mediaViewDialog) {
-            this.dialogRef = this.dialog.open(this.mediaViewDialog, this.viewDialogConfig);
-            return this.dialogRef.afterClosed();
-          }
-          return EMPTY;
+          if (!this.mediaViewDialog) return EMPTY;
+          this.dialogRef = this.dialog.open(this.mediaViewDialog, this.viewDialogConfig);
+          return this.updateAccessKey(this.dialogRef.afterClosed());
         }),
-        switchMap(() => {
-          if (location.hash === '#view') {
-            history.back();
-          }
-          window.clearTimeout(this.updateAccessKeyIntervalId);
-          this.activeMediaObject = null;
-          this.activeIndex.set(-1);
-          this.overlay.getContainerElement().classList.remove('media');
-          return this.mediaService.removeContentAccessKey();
+        finalize(() => {
+          this.destroyViewDialog();
         })
       )
       .subscribe();
   }
 
-  private updateAccessKey() {
-    this.updateAccessKeyIntervalId = window.setInterval(() => {
-      this.mediaService.addContentAccessKeyCookie().subscribe();
-    }, KEY_UPDATE_INTERVAL);
+  private updateAccessKey(stop$: Observable<unknown>) {
+    return timer(KEY_UPDATE_INTERVAL, KEY_UPDATE_INTERVAL).pipe(
+      takeUntil(stop$),
+      switchMap(() => this.mediaService.addContentAccessKeyCookie()),
+      concatWith(this.mediaService.removeContentAccessKey())
+    );
+  }
+
+  private tryPrepareViewDialog(mediaObjectId: string): boolean {
+    const index = this.allMediaObjects.findIndex((x) => x.id === mediaObjectId);
+    if (index === -1) {
+      return false;
+    }
+    this.activeIndex.set(index);
+    this.activeMediaObject = this.allMediaObjects[index];
+    if (this.activeMediaObject == null) {
+      this.activeIndex.set(-1);
+      return false;
+    }
+
+    location.hash = 'view';
+    this.overlay.getContainerElement().classList.add('media');
+    return true;
+  }
+
+  private destroyViewDialog() {
+    if (location.hash === '#view') {
+      history.back();
+    }
+    this.activeMediaObject = null;
+    this.activeIndex.set(-1);
+    this.overlay.getContainerElement().classList.remove('media');
   }
 
   closeDialog($event?: MouseEvent) {
