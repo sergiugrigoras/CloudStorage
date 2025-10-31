@@ -164,6 +164,7 @@ export class MediaComponent implements OnInit, OnDestroy {
     maxHeight: '98vh',
     hasBackdrop: true,
     disableClose: true,
+    closeOnNavigation: true,
   };
   dialogRef: MatDialogRef<unknown> | null = null;
   private readonly destroy$ = new Subject<void>();
@@ -202,7 +203,6 @@ export class MediaComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    location.hash = '';
     this.route.paramMap
       .pipe(
         takeUntil(this.destroy$),
@@ -288,6 +288,9 @@ export class MediaComponent implements OnInit, OnDestroy {
       .pipe(
         switchMap(() => {
           if (!this.mediaViewDialog) return EMPTY;
+          if (!history.state?.mediaView) {
+            history.pushState({ mediaView: true }, '', window.location.href);
+          }
           this.dialogRef = this.dialog.open(this.mediaViewDialog, this.viewDialogConfig);
           return this.updateAccessKey(this.dialogRef.afterClosed());
         }),
@@ -318,15 +321,11 @@ export class MediaComponent implements OnInit, OnDestroy {
       return false;
     }
 
-    location.hash = 'view';
     this.overlay.getContainerElement().classList.add('media');
     return true;
   }
 
   private destroyViewDialog() {
-    if (location.hash === '#view') {
-      history.back();
-    }
     this.activeMediaObject = null;
     this.activeIndex.set(-1);
     this.overlay.getContainerElement().classList.remove('media');
