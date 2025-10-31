@@ -1,5 +1,6 @@
 import { HttpErrorResponse, HttpEventType } from '@angular/common/http';
 import {
+  AfterViewInit,
   Component,
   HostListener,
   inject,
@@ -47,6 +48,7 @@ import {
   filter,
   timer,
   concatWith,
+  Subscription,
 } from 'rxjs';
 import { MediaAlbum } from '../../../model/media-album.model';
 import { MediaObject } from '../../../model/media-object.model';
@@ -76,6 +78,7 @@ import { MatIcon } from '@angular/material/icon';
 import { MatCheckbox } from '@angular/material/checkbox';
 import { StorageInfoComponent } from '../../drive/storage-info/storage-info.component';
 import { MatPaginator, PageEvent } from '@angular/material/paginator';
+import { take } from 'rxjs/operators';
 
 const KEY_UPDATE_INTERVAL = 60000; // 1 minute
 const SNACKBAR_OPTIONS = { duration: 3000 };
@@ -117,7 +120,7 @@ const SNACKBAR_OPTIONS = { duration: 3000 };
     MatPaginator,
   ],
 })
-export class MediaComponent implements OnInit, OnDestroy {
+export class MediaComponent implements OnInit, OnDestroy, AfterViewInit {
   private mediaService = inject(MediaService);
   private readonly dialog = inject(MatDialog);
   private readonly overlay = inject(OverlayContainer);
@@ -131,6 +134,7 @@ export class MediaComponent implements OnInit, OnDestroy {
   activeIndex = signal(-1);
   protected readonly selectMode = this.mediaService.selectMode;
   private allAlbumDialogRef: MatDialogRef<unknown> | null = null;
+  private touchEventSubscription?: Subscription;
   get maxScrollIndex() {
     return this.allMediaObjects.length - 1;
   }
@@ -175,6 +179,59 @@ export class MediaComponent implements OnInit, OnDestroy {
   protected readonly defaultPageSize = 50;
 
   constructor() {}
+  ngAfterViewInit(): void {
+    this.enableTouchEvents();
+  }
+
+  private enableTouchEvents() {
+    const overlayContainer = this.overlay.getContainerElement();
+    if (overlayContainer === null) return;
+
+    const touchStart$ = fromEvent<TouchEvent>(overlayContainer, 'touchstart').pipe(
+      takeUntil(this.destroy$),
+      filter(() => this.activeIndex() >= 0)
+    );
+
+    const touchEnd$ = fromEvent<TouchEvent>(overlayContainer, 'touchend').pipe(
+      takeUntil(this.destroy$),
+      filter(() => this.activeIndex() >= 0)
+    );
+
+    this.touchEventSubscription = touchStart$
+      .pipe(
+        switchMap((start) =>
+          touchEnd$.pipe(
+            take(1),
+            map((end) => [start, end])
+          )
+        )
+      )
+      .subscribe(([start, end]) => {
+        const startTouch = start.touches[0];
+        const endTouch = end.changedTouches[0];
+        const dx = endTouch.clientX - startTouch.clientX;
+        const dy = endTouch.clientY - startTouch.clientY;
+        const HORIZONTAL_THRESHOLD = 50;
+        const VERTICAL_THRESHOLD = 100;
+        const swipeLeft = dx < 0;
+        const swipeRight = dx > 0;
+        const swipeDown = dy > 0;
+        const horizontalGesture =
+          Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > HORIZONTAL_THRESHOLD;
+        const verticalGesture = Math.abs(dy) > Math.abs(dx) && Math.abs(dy) > VERTICAL_THRESHOLD;
+        if (horizontalGesture) {
+          if (swipeLeft) {
+            this.scrollMediaForward();
+          } else if (swipeRight) {
+            this.scrollMediaBack();
+          }
+        } else if (verticalGesture) {
+          if (swipeDown) {
+            this.closeDialog();
+          }
+        }
+      });
+  }
 
   @HostListener('document:keydown', ['$event'])
   private keyListener(event: KeyboardEvent) {
@@ -200,6 +257,7 @@ export class MediaComponent implements OnInit, OnDestroy {
     this.overlay.getContainerElement().classList.remove('media');
     this.destroy$.next();
     this.destroy$.complete();
+    this.touchEventSubscription?.unsubscribe();
   }
 
   ngOnInit(): void {
