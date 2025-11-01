@@ -13,11 +13,14 @@ import { AuthService } from './services/auth.service';
 import { AppRoute } from './interfaces/app-route.interface';
 import { ThemeService } from 'ng2-charts';
 import { ChartOptions } from 'chart.js';
-import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { RouterLink, RouterOutlet } from '@angular/router';
 import { MatToolbar, MatToolbarRow } from '@angular/material/toolbar';
 import { MatMenu, MatMenuItem, MatMenuTrigger } from '@angular/material/menu';
 import { MatButton, MatIconButton, MatMiniFabButton } from '@angular/material/button';
 import { MatTooltip } from '@angular/material/tooltip';
+import { NgTemplateOutlet } from '@angular/common';
+import { MatIcon } from '@angular/material/icon';
+import { MatDivider } from '@angular/material/divider';
 
 const DARK_THEME_CHART_OVER: ChartOptions = {
   plugins: {
@@ -56,13 +59,15 @@ type AppPalette = {
     MatToolbarRow,
     RouterLink,
     MatButton,
-    RouterLinkActive,
     MatTooltip,
     MatMenuTrigger,
     MatMiniFabButton,
     MatMenuItem,
     MatTooltip,
     MatIconButton,
+    NgTemplateOutlet,
+    MatIcon,
+    MatDivider,
   ],
 })
 export class AppComponent implements OnInit, AfterViewInit {
@@ -86,16 +91,22 @@ export class AppComponent implements OnInit, AfterViewInit {
   );
   scrHeight = 0;
   scrWidth = 0;
-  //@HostBinding('class') hostClassName = '';
   @ViewChild('intersectionElement', { static: true })
   intersectionDiv: ElementRef<HTMLDivElement> | null = null;
   readonly year = new Date().getFullYear();
-  protected routes: AppRoute[] = [
-    { route: '/drive', displayName: 'Drive' },
-    { route: '/media', displayName: 'Media' },
-    { route: '/notes', displayName: 'Notes' },
-    { route: '/expenses', displayName: 'Expenses' },
+  protected readonly routes: AppRoute[] = [
+    { route: '/drive', displayName: 'Drive', icon: 'backup' },
+    { route: '/media', displayName: 'Media', icon: 'image' },
+    { route: '/notes', displayName: 'Notes', icon: 'edit_note' },
+    { route: '/expenses', displayName: 'Expenses', icon: 'paid' },
   ];
+
+  private readonly _adminRoute: AppRoute = {
+    route: '/admin',
+    displayName: 'Admin',
+    icon: 'settings',
+  };
+
   readonly palettes: AppPalette[] = [
     { name: 'Azure', cssClass: '', lightColor: '#005cbb', darkColor: '#abc7ff' },
     { name: 'Green', cssClass: 'green-theme', lightColor: '#026e00', darkColor: '#02e600' },
@@ -134,7 +145,6 @@ export class AppComponent implements OnInit, AfterViewInit {
 
   ngOnInit(): void {
     this.isLoggedIn.set(this.authService.jwtTokenExists());
-
     const userSelectedTheme = localStorage.getItem(this._themeKey);
     const prefersDark =
       window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
