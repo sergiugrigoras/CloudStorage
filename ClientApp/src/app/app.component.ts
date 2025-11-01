@@ -10,7 +10,6 @@ import {
   ViewChild,
 } from '@angular/core';
 import { AuthService } from './services/auth.service';
-import { AppRoute } from './interfaces/app-route.interface';
 import { ThemeService } from 'ng2-charts';
 import { ChartOptions } from 'chart.js';
 import { RouterLink, RouterOutlet } from '@angular/router';
@@ -94,18 +93,6 @@ export class AppComponent implements OnInit, AfterViewInit {
   @ViewChild('intersectionElement', { static: true })
   intersectionDiv: ElementRef<HTMLDivElement> | null = null;
   readonly year = new Date().getFullYear();
-  protected readonly routes: AppRoute[] = [
-    { route: '/drive', displayName: 'Drive', icon: 'backup' },
-    { route: '/media', displayName: 'Media', icon: 'image' },
-    { route: '/notes', displayName: 'Notes', icon: 'edit_note' },
-    { route: '/expenses', displayName: 'Expenses', icon: 'paid' },
-  ];
-
-  private readonly _adminRoute: AppRoute = {
-    route: '/admin',
-    displayName: 'Admin',
-    icon: 'settings',
-  };
 
   readonly palettes: AppPalette[] = [
     { name: 'Azure', cssClass: '', lightColor: '#005cbb', darkColor: '#abc7ff' },
@@ -118,6 +105,7 @@ export class AppComponent implements OnInit, AfterViewInit {
     { name: 'Magenta', cssClass: 'magenta-theme', lightColor: '#a900a9', darkColor: '#ffabf3' },
     { name: 'Rose', cssClass: 'rose-theme', lightColor: '#ba005c', darkColor: '#ffb1c5' },
   ];
+  protected readonly appRoutes = this.authService.appRoutes;
 
   constructor() {}
   ngAfterViewInit(): void {

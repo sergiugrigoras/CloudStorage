@@ -1,14 +1,14 @@
 <h1>Welcome to SCS</h1>
 @if (isLoggedIn()) {
   <div class="items-box">
-    @for (card of cards; track $index) {
+    @for (route of appRoutes(); track route.route) {
       <ng-container>
-        <mat-card class="card" [routerLink]="card.link">
+        <mat-card class="card" [routerLink]="route.route">
           <mat-card-content class="card-content">
             <span class="material-icons icon-big">
-              {{ card.icon }}
+              {{ route.icon }}
             </span>
-            <span class="card-label">{{ card.label }}</span>
+            <span class="card-label">{{ route.displayName }}</span>
           </mat-card-content>
         </mat-card>
       </ng-container>

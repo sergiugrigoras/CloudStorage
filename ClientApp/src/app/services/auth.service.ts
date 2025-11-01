@@ -1,6 +1,6 @@
 import { AccessToken } from '../interfaces/token.interface';
 import { UserModel } from '../interfaces/user.interface';
-import { inject, Injectable, signal } from '@angular/core';
+import { computed, inject, Injectable, signal } from '@angular/core';
 import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { finalize, Observable, of, throwError } from 'rxjs';
 import { catchError, map, tap } from 'rxjs/operators';
@@ -10,6 +10,7 @@ import { API_ENDPOINTS } from '../core/api-endpoints';
 import { buildUrl } from '../core/url-builder';
 import { HTTP_OPTIONS_CONTENT_JSON } from '../core/constants';
 import { JWT_KEY } from '../../main';
+import { AppRoute } from '../interfaces/app-route.interface';
 
 @Injectable({
   providedIn: 'root',
@@ -19,6 +20,23 @@ export class AuthService {
   private readonly jwtHelper = inject(JwtHelperService);
   private readonly router = inject(Router);
   isUserLoggedIn = signal(false);
+  isAdmin = computed(() => (this.isUserLoggedIn() ? this.tokenHasAdminRole() : false));
+  appRoutes = computed(() =>
+    this.isAdmin() ? [...this._defaultRoutes, this._adminRoute] : this._defaultRoutes
+  );
+
+  private readonly _defaultRoutes: readonly AppRoute[] = [
+    { route: '/drive', displayName: 'Drive', icon: 'backup' },
+    { route: '/media', displayName: 'Media', icon: 'image' },
+    { route: '/notes', displayName: 'Notes', icon: 'edit_note' },
+    { route: '/expenses', displayName: 'Expenses', icon: 'paid' },
+  ];
+
+  private readonly _adminRoute: AppRoute = {
+    route: '/admin',
+    displayName: 'Admin',
+    icon: 'settings',
+  };
   private readonly _adminRole = 'Admin';
   constructor() {}
 
@@ -134,7 +152,7 @@ export class AuthService {
     else return '';
   }
 
-  isAdmin(): boolean {
+  private tokenHasAdminRole(): boolean {
     const token = this.getJwtToken();
     if (token) {
       const roles = this.jwtHelper.decodeToken(token).role;
@@ -159,8 +177,8 @@ export class AuthService {
   }
 
   private doLoginUser(tokens: AccessToken) {
-    this.isUserLoggedIn.set(true);
     this.storeToken(tokens);
+    this.isUserLoggedIn.set(true);
   }
 
   private doLogoutUser() {
