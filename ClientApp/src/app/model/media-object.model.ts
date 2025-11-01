@@ -1,5 +1,7 @@
 import { SafeValue } from '@angular/platform-browser';
-import { AsyncSubject } from 'rxjs';
+import { buildUrl } from '../core/url-builder';
+import { API_ENDPOINTS } from '../core/api-endpoints';
+import { signal, WritableSignal } from '@angular/core';
 
 export class MediaObject {
   id: string;
@@ -12,11 +14,13 @@ export class MediaObject {
   videoLength: string;
   favorite: boolean;
   ownerId: string;
-  snapshot$: AsyncSubject<SafeValue>;
-  isLoading = true;
+  snapshot: WritableSignal<SafeValue | null> = signal(null);
   isSelected = false;
   isVideo: boolean;
   markedForDeletion: boolean;
+  contentUrl: string;
+  content: SafeValue | null = null;
+
   constructor(mediaObject: MediaObject) {
     this.id = mediaObject.id;
     this.uploadFileName = mediaObject.uploadFileName;
@@ -27,10 +31,10 @@ export class MediaObject {
     this.duration = mediaObject.duration;
     this.favorite = mediaObject.favorite;
     this.ownerId = mediaObject.ownerId;
-    this.snapshot$ = new AsyncSubject();
     this.videoLength = this.getVideoLength();
     this.isVideo = this.contentType.startsWith('video');
     this.markedForDeletion = mediaObject.markedForDeletion;
+    this.contentUrl = buildUrl(API_ENDPOINTS.CONTENT.BASE, this.id);
   }
 
   private getVideoLength() {

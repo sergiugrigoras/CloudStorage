@@ -13,7 +13,6 @@ import { MediaObject } from '../../../model/media-object.model';
 import { MediaService } from '../../../services/media.service';
 import { catchError, EMPTY, retry, Subject, tap } from 'rxjs';
 import { DomSanitizer } from '@angular/platform-browser';
-import { AsyncPipe } from '@angular/common';
 import { MatProgressBar } from '@angular/material/progress-bar';
 import { MatIconButton } from '@angular/material/button';
 
@@ -21,7 +20,7 @@ import { MatIconButton } from '@angular/material/button';
   selector: 'app-media-item',
   templateUrl: './media-item.component.html',
   styleUrls: ['./media-item.component.scss'],
-  imports: [MatProgressBar, MatIconButton, AsyncPipe],
+  imports: [MatProgressBar, MatIconButton],
 })
 export class MediaItemComponent implements OnInit, OnDestroy {
   private mediaService = inject(MediaService);
@@ -57,7 +56,7 @@ export class MediaItemComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    if (this.item == null || !this.item.isLoading) return;
+    if (this.item == null || this.item.snapshot()) return;
     this.mediaService
       .getSnapshotFile(this.item.id)
       .pipe(
@@ -68,10 +67,7 @@ export class MediaItemComponent implements OnInit, OnDestroy {
         tap((response) => {
           if (response?.body && this.item) {
             this.url = URL.createObjectURL(response.body);
-            const safeUrl = this.sanitizer.bypassSecurityTrustUrl(this.url);
-            this.item.snapshot$.next(safeUrl);
-            this.item.snapshot$.complete();
-            this.item.isLoading = false;
+            this.item.snapshot.set(this.sanitizer.bypassSecurityTrustUrl(this.url));
           }
         })
       )

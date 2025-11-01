@@ -217,35 +217,36 @@
 
 <ng-template #mediaViewDialog>
   <div class="media-item__view">
-    @let media = activeMediaObject;
-    @let url = buildContentUrl(media?.id);
-    @if (media && url) {
-      @if (media.isVideo) {
-        <video muted autoplay loop controls [src]="url"></video>
+    @let active = activeMediaObject();
+    @if (active) {
+      @if (active.isVideo) {
+        <video muted autoplay loop controls [src]="active.contentUrl"></video>
       } @else {
-        <img [src]="url" alt="media" />
+        <img [src]="active.content ? active.content : active.contentUrl" alt="IMG" />
       }
+      <span class="material-icons control control__close" (click)="closeDialog($event)">
+        close
+      </span>
+      <span
+        class="material-icons control control__favorite"
+        [ngClass]="active.favorite ? 'control--pink' : ''"
+        (click)="favoriteToggle($event)"
+      >
+        {{ active.favorite ? 'favorite' : 'favorite_border' }}
+      </span>
+      <span
+        class="material-icons control control__left"
+        [ngClass]="activeIndex() === 0 ? 'control--disabled' : ''"
+        (click)="scrollBack($event)"
+        >navigate_before</span
+      >
+      <span
+        class="material-icons control control__right"
+        [ngClass]="activeIndex() === maxScrollIndex ? 'control--disabled' : ''"
+        (click)="scrollForward($event)"
+        >navigate_next</span
+      >
     }
-    <span class="material-icons control control__close" (click)="closeDialog($event)"> close </span>
-    <span
-      class="material-icons control control__favorite"
-      [ngClass]="activeMediaObject?.favorite ? 'control--pink' : ''"
-      (click)="favoriteToggle($event)"
-    >
-      {{ activeMediaObject?.favorite ? 'favorite' : 'favorite_border' }}
-    </span>
-    <span
-      class="material-icons control control__left"
-      [ngClass]="activeIndex() === 0 ? 'control--disabled' : ''"
-      (click)="scrollBack($event)"
-      >navigate_before</span
-    >
-    <span
-      class="material-icons control control__right"
-      [ngClass]="activeIndex() === maxScrollIndex ? 'control--disabled' : ''"
-      (click)="scrollForward($event)"
-      >navigate_next</span
-    >
   </div>
 </ng-template>
 

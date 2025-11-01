@@ -1,5 +1,5 @@
 .media__controls {
-  padding: 0.8rem 0;
+  padding: 0.8rem 5px;
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;
@@ -79,7 +79,8 @@ div.media-item__view {
   img,
   video {
     width: 100%;
-    max-height: 96vh;
+    max-width: 98vw;
+    max-height: 98vh;
     vertical-align: middle;
   }
 }

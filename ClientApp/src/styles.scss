@@ -22,15 +22,15 @@ body {
 }
 
 .container {
-  padding-right: 15px;
-  padding-left: 15px;
-  margin-right: auto;
-  margin-left: auto;
+  padding: 0 15px;
+  margin: 0 auto;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 767px) {
   .container {
-    width: 85vw;
+    width: 96vw;
+    padding: 0 8px;
+    box-sizing: border-box;
   }
 }
 
@@ -42,13 +42,19 @@ body {
 
 @media (min-width: 992px) {
   .container {
-    width: 970px;
+    width: 960px;
   }
 }
 
 @media (min-width: 1200px) {
   .container {
-    width: 1170px;
+    width: 1140px;
+  }
+}
+
+@media (min-width: 1400px) {
+  .container {
+    width: 1320px;
   }
 }
 

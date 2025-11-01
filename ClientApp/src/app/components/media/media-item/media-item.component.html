@@ -1,15 +1,16 @@
 <div class="media-item__snapshot">
   @if (item) {
+    @let snapshot = item.snapshot();
     @if (item.isVideo) {
       <span class="media-item__snapshot-duration">{{ item.videoLength }}</span>
     }
-    @if (item.isLoading) {
+    @if (!snapshot) {
       <div class="media-item__snapshot-placeholder media-item__snapshot-content">
         <mat-progress-bar mode="indeterminate"></mat-progress-bar>
       </div>
     } @else {
       <img
-        [src]="(item.snapshot$ | async) ?? ''"
+        [src]="snapshot"
         (click)="itemTouched()"
         alt="snapshot"
         class="media-item__snapshot-content"

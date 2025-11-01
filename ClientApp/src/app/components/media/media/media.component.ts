@@ -9,6 +9,7 @@ import {
   signal,
   TemplateRef,
   ViewChild,
+  WritableSignal,
 } from '@angular/core';
 import {
   AbstractControl,
@@ -79,9 +80,11 @@ import { MatCheckbox } from '@angular/material/checkbox';
 import { StorageInfoComponent } from '../../drive/storage-info/storage-info.component';
 import { MatPaginator, PageEvent } from '@angular/material/paginator';
 import { take } from 'rxjs/operators';
+import { DomSanitizer } from '@angular/platform-browser';
 
 const KEY_UPDATE_INTERVAL = 60000; // 1 minute
 const SNACKBAR_OPTIONS = { duration: 3000 };
+const PREFETCH_COUNT = 4;
 @Component({
   selector: 'app-media',
   templateUrl: './media.component.html',
@@ -127,10 +130,11 @@ export class MediaComponent implements OnInit, OnDestroy, AfterViewInit {
   private readonly snackBar = inject(MatSnackBar);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  private sanitizer = inject(DomSanitizer);
 
   protected allMediaObjects: MediaObject[] = [];
   mediaReady = signal(false);
-  activeMediaObject: MediaObject | null = null;
+  activeMediaObject: WritableSignal<MediaObject | null> = signal(null);
   activeIndex = signal(-1);
   protected readonly selectMode = this.mediaService.selectMode;
   private allAlbumDialogRef: MatDialogRef<unknown> | null = null;
@@ -177,7 +181,7 @@ export class MediaComponent implements OnInit, OnDestroy, AfterViewInit {
   deletePermanently = false;
   displayObjects = signal<MediaObject[]>([]);
   protected readonly defaultPageSize = 50;
-
+  private readonly mediaObjectUrls: string[] = [];
   constructor() {}
   ngAfterViewInit(): void {
     this.enableTouchEvents();
@@ -215,7 +219,7 @@ export class MediaComponent implements OnInit, OnDestroy, AfterViewInit {
         const VERTICAL_THRESHOLD = 100;
         const swipeLeft = dx < 0;
         const swipeRight = dx > 0;
-        const swipeDown = dy > 0;
+        const swipeUp = dy < 0;
         const horizontalGesture =
           Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > HORIZONTAL_THRESHOLD;
         const verticalGesture = Math.abs(dy) > Math.abs(dx) && Math.abs(dy) > VERTICAL_THRESHOLD;
@@ -226,7 +230,7 @@ export class MediaComponent implements OnInit, OnDestroy, AfterViewInit {
             this.scrollMediaBack();
           }
         } else if (verticalGesture) {
-          if (swipeDown) {
+          if (swipeUp) {
             this.closeDialog();
           }
         }
@@ -258,6 +262,9 @@ export class MediaComponent implements OnInit, OnDestroy, AfterViewInit {
     this.destroy$.next();
     this.destroy$.complete();
     this.touchEventSubscription?.unsubscribe();
+    this.mediaObjectUrls.forEach((url: string) => {
+      URL.revokeObjectURL(url);
+    });
   }
 
   ngOnInit(): void {
@@ -302,7 +309,7 @@ export class MediaComponent implements OnInit, OnDestroy, AfterViewInit {
       .pipe(
         takeUntil(this.destroy$),
         throttleTime(150),
-        filter(() => this.activeMediaObject != null)
+        filter(() => this.activeMediaObject() != null)
       )
       .subscribe((event: Event) => {
         const wheelEvent = event as WheelEvent;
@@ -372,19 +379,51 @@ export class MediaComponent implements OnInit, OnDestroy, AfterViewInit {
     if (index === -1) {
       return false;
     }
+    const mediaObject = this.allMediaObjects[index];
+    if (mediaObject == null) return false;
+
     this.activeIndex.set(index);
-    this.activeMediaObject = this.allMediaObjects[index];
-    if (this.activeMediaObject == null) {
-      this.activeIndex.set(-1);
-      return false;
-    }
+    this.activeMediaObject.set(mediaObject);
 
     this.overlay.getContainerElement().classList.add('media');
+
+    this.tryLoadContent(index, Math.floor(PREFETCH_COUNT / 2), Math.floor(PREFETCH_COUNT / 2));
+
     return true;
   }
 
+  private tryLoadContent(index: number, leftRange: number, rightRange: number) {
+    const start = Math.max(0, index - leftRange);
+    const end = Math.min(this.maxScrollIndex, index + rightRange);
+
+    for (let i = start; i <= end; i++) {
+      if (i === index) continue;
+      this.loadMediaObjectContent(this.allMediaObjects[i]);
+    }
+  }
+
+  private loadMediaObjectContent(mediaObject: MediaObject) {
+    if (mediaObject.content || mediaObject.isVideo) return;
+    this.mediaService
+      .getMediaFile(mediaObject.id)
+      .pipe(
+        retry(3),
+        catchError(() => {
+          return EMPTY;
+        }),
+        tap((response) => {
+          if (response?.body) {
+            const url = URL.createObjectURL(response.body);
+            this.mediaObjectUrls.push(url);
+            mediaObject.content = this.sanitizer.bypassSecurityTrustUrl(url);
+          }
+        })
+      )
+      .subscribe();
+  }
+
   private destroyViewDialog() {
-    this.activeMediaObject = null;
+    this.activeMediaObject.set(null);
     this.activeIndex.set(-1);
     this.overlay.getContainerElement().classList.remove('media');
   }
@@ -396,11 +435,11 @@ export class MediaComponent implements OnInit, OnDestroy, AfterViewInit {
 
   favoriteToggle($event: MouseEvent) {
     $event.stopPropagation();
-    if (this.activeMediaObject == null) return;
-    this.mediaService.toggleFavorite(this.activeMediaObject.id).subscribe((result) => {
-      if (this.activeMediaObject) {
-        this.activeMediaObject.favorite = result;
-      }
+    const active = this.activeMediaObject();
+    if (active == null) return;
+
+    this.mediaService.toggleFavorite(active.id).subscribe((result) => {
+      active.favorite = result;
     });
   }
 
@@ -596,7 +635,8 @@ export class MediaComponent implements OnInit, OnDestroy, AfterViewInit {
       return;
     }
     this.activeIndex.update((value) => value + 1);
-    this.activeMediaObject = this.allMediaObjects[this.activeIndex()];
+    this.activeMediaObject.set(this.allMediaObjects[this.activeIndex()]);
+    this.tryLoadContent(this.activeIndex(), 0, PREFETCH_COUNT);
   }
 
   private scrollMediaBack() {
@@ -604,7 +644,8 @@ export class MediaComponent implements OnInit, OnDestroy, AfterViewInit {
       return;
     }
     this.activeIndex.update((value) => value - 1);
-    this.activeMediaObject = this.allMediaObjects[this.activeIndex()];
+    this.activeMediaObject.set(this.allMediaObjects[this.activeIndex()]);
+    this.tryLoadContent(this.activeIndex(), PREFETCH_COUNT, 0);
   }
 
   newAlbumErrorMessage() {
