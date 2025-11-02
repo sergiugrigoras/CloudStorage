@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using System.Text;
 using CloudStorage.Models;
 using FFMpegCore;
 
@@ -6,16 +7,16 @@ namespace CloudStorage.Services;
 
 public static class MediaHelper
 {
-    public static async Task CreateSnapshotAsync(string mediaFile, string snapshotFile, SemaphoreSlim semaphore, IMediaAnalysis mediaAnalysis = null)
+    public static async Task CreateSnapshotAsync(string fromMediaFile, string toSnapshotFile, SemaphoreSlim semaphore, IMediaAnalysis mediaAnalysis = null)
     {
         try
         {
-            if (!File.Exists(mediaFile)) return;
+            if (!File.Exists(fromMediaFile)) return;
             await semaphore.WaitAsync();
-            mediaAnalysis ??= await FFProbe.AnalyseAsync(mediaFile);
+            mediaAnalysis ??= await FFProbe.AnalyseAsync(fromMediaFile);
             await FFMpegArguments
-                .FromFileInput(mediaFile)
-                .OutputToFile(snapshotFile, true, options => options
+                .FromFileInput(fromMediaFile)
+                .OutputToFile(toSnapshotFile, true, options => options
                     .Seek(TimeSpan.FromSeconds(mediaAnalysis.Duration.TotalSeconds / 4))
                     .WithVideoFilters(filterOptions => filterOptions
                         .Scale(300, -1))
@@ -43,6 +44,31 @@ public static class MediaHelper
         return BitConverter.ToString(hash).Replace("-", "").ToLowerInvariant();
     }
     
+    public static async Task<string> ComputeSha256Async(string filePath)
+    {
+        using var sha256 = SHA256.Create();
+        await using var stream = File.OpenRead(filePath);
+        var hashBytes = await sha256.ComputeHashAsync(stream);
+        return BytesToHexString(hashBytes);
+    }
+    
+    public static async Task<string> ComputeSha256Async(IFormFile file)
+    {
+        using var sha256 = SHA256.Create();
+        await using var stream = file.OpenReadStream();
+        var hashBytes = await sha256.ComputeHashAsync(stream);
+        return BytesToHexString(hashBytes);
+    }
+
+    private static string BytesToHexString(byte[] bytes)
+    {
+        var sb = new StringBuilder(bytes.Length * 2);
+        foreach (var b in bytes)
+            sb.Append(b.ToString("x2"));
+
+        return sb.ToString();
+    }
+
     public static void DeleteFile(string fileName)
     {
         try
@@ -53,16 +79,6 @@ public static class MediaHelper
         {
             Console.WriteLine(e.Message);
         }
-    }
-    
-    public static string EnsureUniqueFileName(string filePath)
-    {
-        if (!File.Exists(filePath)) return filePath;
-        var fileNameWithoutExtension = Path.GetFileNameWithoutExtension(filePath);
-        var extension = Path.GetExtension(filePath);
-        filePath = Path.Combine(Path.GetDirectoryName(filePath)!,
-            $"{fileNameWithoutExtension}_{Guid.NewGuid()}{extension}");
-        return filePath;
     }
     
     public static void CreateDirectoryIfNotExists(string path)

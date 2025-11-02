@@ -1,13 +1,15 @@
+.media__toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background-color: var(--mat-sys-surface);
+}
 .media__controls {
   padding: 0.8rem 5px;
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
-  position: sticky;
-  top: 0;
-  z-index: 10;
-  background-color: var(--mat-sys-surface);
 
   &-title {
     margin-right: 8px;
@@ -47,7 +49,7 @@
 }
 
 .media_upload-progress {
-  margin-bottom: 1rem;
+  // margin-bottom: 1rem;
 }
 
 .media__items-container {

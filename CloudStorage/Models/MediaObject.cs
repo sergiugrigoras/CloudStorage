@@ -33,5 +33,8 @@ public class MediaObject
     public virtual User Owner { get; set; }
     public virtual ICollection<MediaAlbum> MediaAlbums { get; set; } = new List<MediaAlbum>();
 
-    public string SnapshotFileName => Hash + SnapshotExtension;
+    [NotMapped]
+    public string SnapshotFile => Hash + SnapshotExtension;
+    [NotMapped]
+    public string MediaFile => Hash;
 }

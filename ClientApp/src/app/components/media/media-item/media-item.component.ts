@@ -37,7 +37,7 @@ export class MediaItemComponent implements OnInit, OnDestroy {
   itemTouched() {
     if (this.item == null) return;
     if (this.selectMode()) {
-      this.item.isSelected = !this.item.isSelected;
+      this.item.toggleSelected();
     } else {
       this.open.emit(this.item.id);
     }
@@ -51,7 +51,7 @@ export class MediaItemComponent implements OnInit, OnDestroy {
   onRightClick($event: Event) {
     if (this.item == null) return;
     $event.preventDefault();
-    this.item.isSelected = !this.item.isSelected;
+    this.item.toggleSelected();
     this.mediaService.selectMode.set(true);
   }
 
@@ -66,8 +66,9 @@ export class MediaItemComponent implements OnInit, OnDestroy {
         }),
         tap((response) => {
           if (response?.body && this.item) {
-            this.url = URL.createObjectURL(response.body);
-            this.item.snapshot.set(this.sanitizer.bypassSecurityTrustUrl(this.url));
+            const url = URL.createObjectURL(response.body);
+            this.item.snapshot.set(this.sanitizer.bypassSecurityTrustUrl(url));
+            this.item.snapshotObjectUrl = url;
           }
         })
       )

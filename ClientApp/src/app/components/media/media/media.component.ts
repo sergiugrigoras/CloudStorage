@@ -2,6 +2,7 @@ import { HttpErrorResponse, HttpEventType } from '@angular/common/http';
 import {
   AfterViewInit,
   Component,
+  computed,
   HostListener,
   inject,
   OnDestroy,
@@ -44,21 +45,19 @@ import {
   throttleTime,
   Subject,
   takeUntil,
-  of,
   finalize,
   filter,
   timer,
   concatWith,
   Subscription,
+  combineLatest,
 } from 'rxjs';
 import { MediaAlbum } from '../../../model/media-album.model';
-import { MediaObject } from '../../../model/media-object.model';
+import { MediaObject, MediaObjectFilter } from '../../../model/media-object.model';
 import { MediaService } from '../../../services/media.service';
 import { ActivatedRoute, Router } from '@angular/router';
 import { OverlayContainer } from '@angular/cdk/overlay';
-import { buildUrl } from '../../../core/url-builder';
-import { API_ENDPOINTS } from '../../../core/api-endpoints';
-import { NgClass, AsyncPipe, DatePipe } from '@angular/common';
+import { NgClass, AsyncPipe, DatePipe, TitleCasePipe } from '@angular/common';
 import { MatTooltip } from '@angular/material/tooltip';
 import { MatIconButton, MatButton } from '@angular/material/button';
 import {
@@ -78,13 +77,15 @@ import { MatSelectSearchComponent } from 'ngx-mat-select-search';
 import { MatIcon } from '@angular/material/icon';
 import { MatCheckbox } from '@angular/material/checkbox';
 import { StorageInfoComponent } from '../../drive/storage-info/storage-info.component';
-import { MatPaginator, PageEvent } from '@angular/material/paginator';
+import { MatPaginator } from '@angular/material/paginator';
 import { take } from 'rxjs/operators';
 import { DomSanitizer } from '@angular/platform-browser';
 
 const KEY_UPDATE_INTERVAL = 60000; // 1 minute
 const SNACKBAR_OPTIONS = { duration: 3000 };
 const PREFETCH_COUNT = 4;
+const DEFAULT_PAGE_SIZE = 50;
+type MediaPage = 'home' | 'album' | 'favorites' | 'trash';
 @Component({
   selector: 'app-media',
   templateUrl: './media.component.html',
@@ -121,6 +122,7 @@ const PREFETCH_COUNT = 4;
     AsyncPipe,
     DatePipe,
     MatPaginator,
+    TitleCasePipe,
   ],
 })
 export class MediaComponent implements OnInit, OnDestroy, AfterViewInit {
@@ -132,18 +134,23 @@ export class MediaComponent implements OnInit, OnDestroy, AfterViewInit {
   private readonly router = inject(Router);
   private sanitizer = inject(DomSanitizer);
 
-  protected allMediaObjects: MediaObject[] = [];
-  mediaReady = signal(false);
-  activeMediaObject: WritableSignal<MediaObject | null> = signal(null);
-  activeIndex = signal(-1);
+  protected readonly allMediaObjects: WritableSignal<MediaObject[]> = signal([]);
+  protected readonly selectedItems = computed(() => [
+    ...this.allMediaObjects().filter((x) => x.isSelected()),
+  ]);
+
+  protected readonly mediaReady = signal(false);
+  protected readonly activeMediaObject: WritableSignal<MediaObject | null> = signal(null);
+  protected readonly activeIndex = signal(-1);
   protected readonly selectMode = this.mediaService.selectMode;
+
   private allAlbumDialogRef: MatDialogRef<unknown> | null = null;
   private touchEventSubscription?: Subscription;
-  get maxScrollIndex() {
-    return this.allMediaObjects.length - 1;
-  }
+  protected readonly maxScrollIndex = computed(() =>
+    Math.max(0, this.allMediaObjects().length - 1)
+  );
   protected readonly uploading = signal(false);
-  uploadProgress = signal(0);
+  protected readonly uploadProgress = signal(0);
   @ViewChild('newAlbum', { static: true }) newAlbumDialog: TemplateRef<unknown> | null = null;
   @ViewChild('addToAlbum', { static: true }) addToAlbumDialog: TemplateRef<unknown> | null = null;
   @ViewChild('mediaViewDialog', { static: true }) mediaViewDialog: TemplateRef<unknown> | null =
@@ -176,12 +183,13 @@ export class MediaComponent implements OnInit, OnDestroy, AfterViewInit {
   };
   dialogRef: MatDialogRef<unknown> | null = null;
   private readonly destroy$ = new Subject<void>();
-  page: 'home' | 'album' | 'favorites' | 'trash' | null = null;
-  albumName = '';
+  protected readonly mediaPage: WritableSignal<MediaPage | null> = signal(null);
+  protected readonly albumName = signal('');
   deletePermanently = false;
-  displayObjects = signal<MediaObject[]>([]);
-  protected readonly defaultPageSize = 50;
-  private readonly mediaObjectUrls: string[] = [];
+  protected readonly defaultPageSize = DEFAULT_PAGE_SIZE;
+  protected readonly paginatorPage = new Subject<number>();
+  protected readonly refreshPageContent = new Subject<void>();
+  protected readonly displayObjects: WritableSignal<MediaObject[]> = signal([]);
   constructor() {}
   ngAfterViewInit(): void {
     this.enableTouchEvents();
@@ -262,33 +270,48 @@ export class MediaComponent implements OnInit, OnDestroy, AfterViewInit {
     this.destroy$.next();
     this.destroy$.complete();
     this.touchEventSubscription?.unsubscribe();
-    this.mediaObjectUrls.forEach((url: string) => {
-      URL.revokeObjectURL(url);
-    });
+    for (const { contentObjectUrl, snapshotObjectUrl } of this.allMediaObjects()) {
+      if (contentObjectUrl) URL.revokeObjectURL(contentObjectUrl);
+      if (snapshotObjectUrl) URL.revokeObjectURL(snapshotObjectUrl);
+    }
   }
 
   ngOnInit(): void {
+    const pageFiltersMap: Record<string, MediaObjectFilter> = {
+      favorites: { favorite: true, deleted: false },
+      trash: { deleted: true },
+      home: { deleted: false },
+    };
+
+    combineLatest([this.paginatorPage, this.refreshPageContent])
+      .pipe(
+        takeUntil(this.destroy$),
+        tap(([pageNumber]) => {
+          const from = pageNumber * DEFAULT_PAGE_SIZE;
+          const to = from + DEFAULT_PAGE_SIZE;
+          this.displayObjects.set(this.allMediaObjects().slice(from, to));
+        })
+      )
+      .subscribe();
+
     this.route.paramMap
       .pipe(
         takeUntil(this.destroy$),
         switchMap((params) => {
           this.selectMode.set(false);
-          const page = params.get('page');
+
+          const page = (params.get('page') as MediaPage | null) ?? 'home';
           const id = params.get('id');
-          if (page === 'album' && id) {
-            this.page = page;
-            this.albumName = id;
-            return this.mediaService.getAlbumContent(id);
-          } else if (page === 'favorites') {
-            this.page = page;
-            return this.mediaService.getMediaFiles({ favorite: true, deleted: false });
-          } else if (page === 'trash') {
-            this.page = page;
-            return this.mediaService.getMediaFiles({ deleted: true });
-          } else {
-            this.page = 'home';
-            return this.mediaService.getMediaFiles({ deleted: false });
+          if (id) {
+            this.albumName.set(id);
           }
+          this.mediaPage.set(page);
+
+          if (page === 'album' && id) {
+            return this.mediaService.getAlbumContent(id);
+          }
+
+          return this.mediaService.getMediaFiles(pageFiltersMap[page] ?? { deleted: false });
         }),
         catchError((error) => {
           console.error(error);
@@ -296,8 +319,9 @@ export class MediaComponent implements OnInit, OnDestroy, AfterViewInit {
         }),
         tap((mediaObjects: MediaObject[]) => {
           const result = mediaObjects.map((x) => new MediaObject(x));
-          this.allMediaObjects.push(...result);
-          this.displayObjects.set(this.allMediaObjects.slice(0, this.defaultPageSize));
+          this.allMediaObjects.set([...result]);
+          this.paginatorPage.next(0);
+          this.refreshPageContent.next();
         }),
         tap(() => {
           this.mediaReady.set(true);
@@ -336,13 +360,6 @@ export class MediaComponent implements OnInit, OnDestroy, AfterViewInit {
     );
   }
 
-  get totalSelected() {
-    return this.allMediaObjects.reduce(
-      (sum: number, current: MediaObject) => (current.isSelected ? ++sum : sum),
-      0
-    );
-  }
-
   openMedia(id: string) {
     if (!this.tryPrepareViewDialog(id)) {
       return;
@@ -375,11 +392,11 @@ export class MediaComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   private tryPrepareViewDialog(mediaObjectId: string): boolean {
-    const index = this.allMediaObjects.findIndex((x) => x.id === mediaObjectId);
+    const index = this.allMediaObjects().findIndex((x) => x.id === mediaObjectId);
     if (index === -1) {
       return false;
     }
-    const mediaObject = this.allMediaObjects[index];
+    const mediaObject = this.allMediaObjects()[index];
     if (mediaObject == null) return false;
 
     this.activeIndex.set(index);
@@ -394,16 +411,16 @@ export class MediaComponent implements OnInit, OnDestroy, AfterViewInit {
 
   private tryLoadContent(index: number, leftRange: number, rightRange: number) {
     const start = Math.max(0, index - leftRange);
-    const end = Math.min(this.maxScrollIndex, index + rightRange);
+    const end = Math.min(this.maxScrollIndex(), index + rightRange);
 
     for (let i = start; i <= end; i++) {
       if (i === index) continue;
-      this.loadMediaObjectContent(this.allMediaObjects[i]);
+      this.loadMediaObjectContent(this.allMediaObjects()[i]);
     }
   }
 
   private loadMediaObjectContent(mediaObject: MediaObject) {
-    if (mediaObject.content || mediaObject.isVideo) return;
+    if (mediaObject.contentSafeValue || mediaObject.isVideo) return;
     this.mediaService
       .getMediaFile(mediaObject.id)
       .pipe(
@@ -414,8 +431,8 @@ export class MediaComponent implements OnInit, OnDestroy, AfterViewInit {
         tap((response) => {
           if (response?.body) {
             const url = URL.createObjectURL(response.body);
-            this.mediaObjectUrls.push(url);
-            mediaObject.content = this.sanitizer.bypassSecurityTrustUrl(url);
+            mediaObject.contentSafeValue = this.sanitizer.bypassSecurityTrustUrl(url);
+            mediaObject.contentObjectUrl = url;
           }
         })
       )
@@ -444,7 +461,12 @@ export class MediaComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   uploadFiles(input: HTMLInputElement) {
-    if (!(input instanceof HTMLInputElement) || input.files == null || input.files.length === 0)
+    if (
+      !(input instanceof HTMLInputElement) ||
+      input.files == null ||
+      input.files.length === 0 ||
+      this.mediaPage() !== 'home'
+    )
       return;
     const fileArray = Array.from(input.files);
     const totalUploadSize = fileArray.reduce((a, b) => a + b.size, 0);
@@ -476,27 +498,19 @@ export class MediaComponent implements OnInit, OnDestroy, AfterViewInit {
         tap((event) => {
           if (event.type === HttpEventType.UploadProgress && event.total) {
             this.uploadProgress.set(Math.floor((event.loaded / event.total) * 100));
-          }
-        }),
-        switchMap((event) => {
-          if (event.type === HttpEventType.Response) {
-            return this.snackBar
-              .open(`Upload complete. Page will reload soon`, 'Ok', SNACKBAR_OPTIONS)
-              .afterDismissed()
-              .pipe(map(() => true));
-          } else {
-            return of(false);
-          }
-        }),
-        tap((result) => {
-          if (result) {
-            window.location.reload();
+          } else if (event.type === HttpEventType.Response) {
+            const uploadResult = event.body ?? [];
+            const newItems = this.pushMediaObjects(uploadResult);
+            const message = `Upload completed. Added ${newItems} item${newItems !== 1 ? 's' : ''}.`;
+            this.snackBar.open(message, 'Ok', SNACKBAR_OPTIONS);
+
+            this.refreshPageContent.next();
           }
         }),
         catchError((err) => {
           let text = 'An error occurred';
           if (err instanceof HttpErrorResponse && typeof err.error === 'string') {
-            text = err.error;
+            text = err.status === 413 ? 'Request entity too large.' : err.error;
           } else if (typeof err.message === 'string') {
             text = err.message;
           }
@@ -510,6 +524,24 @@ export class MediaComponent implements OnInit, OnDestroy, AfterViewInit {
         })
       )
       .subscribe();
+  }
+
+  private pushMediaObjects(mediaObjects: MediaObject[]): number {
+    let newItems = 0;
+    const currentValuesMap = new Map(
+      this.allMediaObjects().map((mediaObject) => {
+        return [mediaObject.id, mediaObject];
+      })
+    );
+
+    for (const newMediaObject of mediaObjects) {
+      if (currentValuesMap.has(newMediaObject.id)) continue;
+      currentValuesMap.set(newMediaObject.id, new MediaObject(newMediaObject));
+      newItems++;
+    }
+
+    this.allMediaObjects.set([...currentValuesMap.values()]);
+    return newItems;
   }
 
   createAlbum() {
@@ -530,7 +562,7 @@ export class MediaComponent implements OnInit, OnDestroy, AfterViewInit {
   addSelectedToAlbum() {
     const addToAlbumObserver = {
       next: () => {
-        this.allMediaObjects.forEach((x) => (x.isSelected = false));
+        this.allMediaObjects().forEach((x) => x.isSelected.set(false));
         this.snackBar.open(`Success.`, 'Ok', SNACKBAR_OPTIONS);
       },
       error: (error: unknown) => {
@@ -555,8 +587,8 @@ export class MediaComponent implements OnInit, OnDestroy, AfterViewInit {
         }),
         switchMap((dialogResult: unknown) => {
           if (Array.isArray(dialogResult) && dialogResult.length > 0) {
-            const mediaObjectsIds = this.allMediaObjects
-              .filter((x) => x.isSelected)
+            const mediaObjectsIds = this.allMediaObjects()
+              .filter((x) => x.isSelected())
               .map((x) => x.id);
             const albumsIds = dialogResult.map((x: MediaAlbum) => x.id);
             return this.mediaService.addToAlbum({ albumsIds, mediaObjectsIds });
@@ -571,17 +603,9 @@ export class MediaComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   deleteSelected() {
-    const ids = this.selectedItemsIds();
+    const ids = this.selectedItems().map((x) => x.id);
     if (ids.length === 0) return;
-    const deleteObserver = {
-      next: () => {
-        window.location.reload();
-      },
-      error: (error: HttpErrorResponse) => {
-        console.error(error);
-        this.snackBar.open(`An error occurred.`, 'Ok', SNACKBAR_OPTIONS);
-      },
-    };
+
     if (this.deleteDialog == null) return;
     this.dialog
       .open(this.deleteDialog, this.dialogConfig)
@@ -591,19 +615,29 @@ export class MediaComponent implements OnInit, OnDestroy, AfterViewInit {
           if (dialogResult) {
             return this.mediaService.deleteMediaObjects(
               ids,
-              this.page === 'trash' || this.deletePermanently
+              this.mediaPage() === 'trash' || this.deletePermanently
             );
           }
           this.deletePermanently = false;
           return EMPTY;
+        }),
+        catchError((error: unknown) => {
+          if (error instanceof HttpErrorResponse && typeof error.error === 'string') {
+            console.error(error);
+          }
+          this.snackBar.open(`An error occurred.`, 'Ok', SNACKBAR_OPTIONS);
+          return EMPTY;
+        }),
+        tap((result) => {
+          this.allMediaObjects.update((value) => [...value.filter((x) => !result.includes(x.id))]);
+          this.refreshPageContent.next();
         })
       )
-      .subscribe(deleteObserver);
+      .subscribe();
   }
 
   restoreSelected() {
-    const ids = this.selectedItemsIds();
-    if (ids.length === 0) return;
+    if (this.selectedItems().length === 0) return;
     const restoreObserver = {
       next: () => {
         window.location.reload();
@@ -613,11 +647,9 @@ export class MediaComponent implements OnInit, OnDestroy, AfterViewInit {
         this.snackBar.open(`An error occurred.`, 'Ok', SNACKBAR_OPTIONS);
       },
     };
-    this.mediaService.restoreMediaObjects(ids).subscribe(restoreObserver);
-  }
-
-  private selectedItemsIds() {
-    return this.allMediaObjects.filter((x) => x.isSelected).map((x) => x.id);
+    this.mediaService
+      .restoreMediaObjects(this.selectedItems().map((x) => x.id))
+      .subscribe(restoreObserver);
   }
 
   scrollBack($event: MouseEvent) {
@@ -631,11 +663,11 @@ export class MediaComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   private scrollMediaForward() {
-    if (this.activeIndex() >= this.maxScrollIndex) {
+    if (this.activeIndex() >= this.maxScrollIndex()) {
       return;
     }
     this.activeIndex.update((value) => value + 1);
-    this.activeMediaObject.set(this.allMediaObjects[this.activeIndex()]);
+    this.activeMediaObject.set(this.allMediaObjects()[this.activeIndex()]);
     this.tryLoadContent(this.activeIndex(), 0, PREFETCH_COUNT);
   }
 
@@ -644,7 +676,7 @@ export class MediaComponent implements OnInit, OnDestroy, AfterViewInit {
       return;
     }
     this.activeIndex.update((value) => value - 1);
-    this.activeMediaObject.set(this.allMediaObjects[this.activeIndex()]);
+    this.activeMediaObject.set(this.allMediaObjects()[this.activeIndex()]);
     this.tryLoadContent(this.activeIndex(), PREFETCH_COUNT, 0);
   }
 
@@ -692,36 +724,12 @@ export class MediaComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   selectAll() {
-    this.allMediaObjects.forEach((x) => (x.isSelected = true));
+    this.allMediaObjects().forEach((x) => x.isSelected.set(true));
   }
 
   deselectAll() {
-    this.allMediaObjects.forEach((x) => (x.isSelected = false));
+    this.allMediaObjects().forEach((x) => x.isSelected.set(false));
     this.selectMode.set(false);
-  }
-
-  enableSelectMode() {
-    this.selectMode.set(true);
-  }
-
-  getPageName() {
-    switch (this.page) {
-      case 'home':
-        return 'Home';
-      case 'favorites':
-        return 'Favorite';
-      case 'trash':
-        return 'Trash';
-      case 'album':
-        return this.albumName;
-      default:
-        return '';
-    }
-  }
-
-  buildContentUrl(id: string | undefined) {
-    if (id) return buildUrl(API_ENDPOINTS.CONTENT.BASE, id);
-    return undefined;
   }
 
   getStorageInfo() {
@@ -738,11 +746,5 @@ export class MediaComponent implements OnInit, OnDestroy, AfterViewInit {
         })
       )
       .subscribe();
-  }
-
-  loadItems($event: PageEvent) {
-    const from = $event.pageIndex * $event.pageSize;
-    const to = from + $event.pageSize;
-    this.displayObjects.set(this.allMediaObjects.slice(from, to));
   }
 }

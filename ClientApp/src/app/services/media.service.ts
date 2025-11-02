@@ -46,9 +46,9 @@ export class MediaService {
     return this.http.post<boolean>(url, { id }, HTTP_OPTIONS_CONTENT_JSON);
   }
 
-  upload(formData: FormData): Observable<HttpEvent<object>> {
+  upload(formData: FormData): Observable<HttpEvent<MediaObject[]>> {
     const url = buildUrl(API_ENDPOINTS.MEDIA.BASE, API_ENDPOINTS.MEDIA.UPLOAD);
-    return this.http.post(url, formData, {
+    return this.http.post<MediaObject[]>(url, formData, {
       observe: 'events',
       reportProgress: true,
     });
@@ -94,7 +94,7 @@ export class MediaService {
       body: { ids: id },
       headers: HTTP_OPTIONS_CONTENT_JSON.headers,
     };
-    return this.http.delete(url, options);
+    return this.http.delete<string[]>(url, options);
   }
 
   restoreMediaObjects(id: string[]) {

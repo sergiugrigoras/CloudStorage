@@ -31,21 +31,21 @@ public class MediaService(IMediaUnitOfWork unitOfWork, IConfiguration configurat
         var snapshotFolder = GetUserSnapshotsDirectory(mediaObject.OwnerId);
 
         var provider = new PhysicalFileProvider(snapshotFolder);
-        var fileInfo = provider.GetFileInfo(mediaObject.SnapshotFileName);
+        var fileInfo = provider.GetFileInfo(mediaObject.SnapshotFile);
         if (fileInfo.Exists)
             return fileInfo.CreateReadStream();
 
         // Try to create a new snapshot if the file doesn't exist.
         var mediaFileFolder = GetUserMediaFilesDirectory(mediaObject.OwnerId);
-        var mediaFile = Path.Combine(mediaFileFolder, mediaObject.UploadFileName);
+        var mediaFile = Path.GetFullPath(Path.Combine(mediaFileFolder, mediaObject.MediaFile));
         if (!File.Exists(mediaFile)) 
             return null;
         
         try
         {
-            var snapshotFile = Path.Combine(snapshotFolder, mediaObject.SnapshotFileName);
+            var snapshotFile = Path.GetFullPath(Path.Combine(snapshotFolder, mediaObject.SnapshotFile));
             await MediaHelper.CreateSnapshotAsync(mediaFile, snapshotFile, SnapshotSemaphore);
-            fileInfo = provider.GetFileInfo(mediaObject.SnapshotFileName);
+            fileInfo = provider.GetFileInfo(mediaObject.SnapshotFile);
             return fileInfo.Exists ? fileInfo.CreateReadStream() : null;
         }
         catch (Exception e)
@@ -61,7 +61,7 @@ public class MediaService(IMediaUnitOfWork unitOfWork, IConfiguration configurat
         if (mediaObject == null) return null;
         var mediaFileFolder = GetUserMediaFilesDirectory(mediaObject.OwnerId);
         var provider = new PhysicalFileProvider(mediaFileFolder);
-        var fileInfo = provider.GetFileInfo(mediaObject.UploadFileName);
+        var fileInfo = provider.GetFileInfo(mediaObject.MediaFile);
         return fileInfo.Exists ? fileInfo.CreateReadStream() : null;
     }
     
@@ -75,26 +75,25 @@ public class MediaService(IMediaUnitOfWork unitOfWork, IConfiguration configurat
         return mediaObject.Favorite;
     }
 
-    public async Task UploadMediaFilesAsync(IEnumerable<IFormFile> files, Guid userId)
+    public async Task<List<MediaObject>> UploadMediaFilesAsync(IEnumerable<IFormFile> files, Guid userId)
     {
         var uploadedFiles = await StoreFilesAsync(files.ToList(), userId);
-        await ProcessMediaFilesAsync(uploadedFiles, userId);
+        return await ProcessMediaFilesAsync(uploadedFiles, userId);
     }
     
     private async Task<IEnumerable<UploadFile>> StoreFilesAsync(IEnumerable<IFormFile> formFiles, Guid userId)
     {
-        var uploadedFilesInfo = new List<UploadFile>();
+        var uploadedFilesInfo = new Dictionary<string, UploadFile>();
         var userMediaFolder = GetUserMediaFilesDirectory(userId);
 
-        foreach (var file in formFiles)
+        foreach (var formFile in formFiles)
         {
-            if (file == null || file.Length == 0) continue;
+            if (formFile == null || formFile.Length == 0) continue;
             
-            var combinedPath = Path.Combine(userMediaFolder, file.FileName);
-            var fullPath = Path.GetFullPath(combinedPath);
+            var hash = await MediaHelper.ComputeSha256Async(formFile);
+            if (uploadedFilesInfo.ContainsKey(hash)) continue;
+            var fullPath = Path.GetFullPath(Path.Combine(userMediaFolder, hash));
             
-            // Ensure unique file names
-            fullPath = MediaHelper.EnsureUniqueFileName(fullPath);
             if (!fullPath.StartsWith(userMediaFolder))
                 continue;
             
@@ -102,9 +101,16 @@ public class MediaService(IMediaUnitOfWork unitOfWork, IConfiguration configurat
             {
                 // Save file to disk
                 await using var stream = File.Create(fullPath);
-                await file.CopyToAsync(stream);
+                await formFile.CopyToAsync(stream);
                 stream.Close();
-                uploadedFilesInfo.Add(new UploadFile{ FileName = Path.GetFileName(fullPath), FullPath = fullPath, FileSize = file.Length});
+                var fileInfo = new UploadFile
+                {
+                    OriginalFileName = formFile.FileName,
+                    FullPath = fullPath,
+                    FileSize = formFile.Length,
+                    Hash = hash,
+                };
+                uploadedFilesInfo.TryAdd(hash, fileInfo);
             }
             catch (Exception e)
             {
@@ -112,101 +118,105 @@ public class MediaService(IMediaUnitOfWork unitOfWork, IConfiguration configurat
             }
         }
 
-        return uploadedFilesInfo;
+        return uploadedFilesInfo.Values;
     }
     
-    private async Task ProcessMediaFilesAsync(IEnumerable<UploadFile> uploadFiles, Guid userId)
+    private async Task<List<MediaObject>> ProcessMediaFilesAsync(IEnumerable<UploadFile> uploadFiles, Guid userId)
     {
-        var mediaFolder = GetUserMediaFilesDirectory(userId);
         var snapshotFolder = GetUserSnapshotsDirectory(userId);
-
+        var result = new List<MediaObject>();
         foreach (var uploadFile in uploadFiles)
         {
             if (uploadFile == null) continue;
-            var checksum = await MediaHelper.ComputeMd5Async(uploadFile.FullPath);
-            var dbEntry = await UnitOfWork.MediaObjects.Query(x => x.OwnerId == userId && x.Hash == checksum)
+            
+            var dbEntry = await UnitOfWork.MediaObjects.Query(x => x.OwnerId == userId && x.Hash == uploadFile.Hash)
                 .FirstOrDefaultAsync();
-
-            if (dbEntry == null)
+            
+            try
             {
-                await AddNewMediaObjectAsync(uploadFile, checksum, userId, snapshotFolder);
+                var mediaObject = await AddOrUpdateMediaObjectAsync(dbEntry, uploadFile, userId, snapshotFolder);
+                result.Add(mediaObject);
             }
-            else
+            catch (Exception e)
             {
-                await HandleExistingMediaFileAsync(dbEntry, uploadFile, checksum, mediaFolder, snapshotFolder);
+                Console.WriteLine(e);
             }
         }
 
         await UnitOfWork.SaveAsync();
         await Task.WhenAll(SnapshotTasks);
+        SnapshotTasks.Clear();
+        return result;
     }
 
-    private async Task AddNewMediaObjectAsync(UploadFile uploadFile, string checksum, Guid userId,
-        string snapshotFolder)
+    private async Task<MediaObject> AddOrUpdateMediaObjectAsync(MediaObject dbEntry, UploadFile uploadFile, Guid userId, string snapshotFolder)
     {
-        if (string.IsNullOrWhiteSpace(uploadFile?.FullPath)) return;
-        var contentType = MimeTypes.GetType(Path.GetExtension(uploadFile.FileName));
+        if (string.IsNullOrWhiteSpace(uploadFile?.FullPath)) throw new ArgumentNullException(nameof(uploadFile));
+        if (userId == Guid.Empty) throw new ArgumentNullException(nameof(userId));
+        
+        var contentType = MimeTypes.GetType(Path.GetExtension(uploadFile.OriginalFileName));
         var mediaAnalysis = await FFProbe.AnalyseAsync(uploadFile.FullPath);
 
-        var mediaObject = new MediaObject
+        MediaObject mediaObject;
+
+        if (dbEntry == null)
         {
-            Id = Guid.NewGuid(),
-            ContentType = contentType,
-            Favorite = false,
-            Hash = checksum,
-            Width = mediaAnalysis.PrimaryVideoStream?.Width,
-            Height = mediaAnalysis.PrimaryVideoStream?.Height,
-            Duration = Convert.ToInt32(mediaAnalysis.PrimaryVideoStream?.Duration.TotalMilliseconds),
-            OwnerId = userId,
-            UploadFileName = uploadFile.FileName,
-            MarkedForDeletion = false,
-            FileSize = uploadFile.FileSize,
-        };
-
-        await UnitOfWork.MediaObjects.AddAsync(mediaObject);
-        var createSnapshotTask = MediaHelper.CreateSnapshotAsync(uploadFile.FullPath, Path.Combine(snapshotFolder, mediaObject.SnapshotFileName), SnapshotSemaphore, mediaAnalysis);
-        SnapshotTasks.Add(createSnapshotTask);
-    }
-
-    private async Task HandleExistingMediaFileAsync(MediaObject dbEntry, UploadFile uploadFile, string checksum,
-        string mediaFolder, string snapshotFolder)
-    {
-        var existingFile = Path.Combine(mediaFolder, dbEntry.UploadFileName);
-
-        if (dbEntry.UploadFileName != uploadFile.FileName)
-        {
-            var existingFileChecksum = await MediaHelper.ComputeMd5Async(existingFile);
-
-            if (existingFileChecksum != checksum)
+            mediaObject = new MediaObject
             {
-                MediaHelper.DeleteFile(existingFile);
-                dbEntry.UploadFileName = uploadFile.FileName;
-                dbEntry.FileSize = uploadFile.FileSize;
-            }
-            else
-            {
-                MediaHelper.DeleteFile(uploadFile.FullPath);
-            }
+                Id = Guid.NewGuid(),
+                ContentType = contentType,
+                Favorite = false,
+                Hash = uploadFile.Hash,
+                Width = mediaAnalysis.PrimaryVideoStream?.Width,
+                Height = mediaAnalysis.PrimaryVideoStream?.Height,
+                Duration = Convert.ToInt32(mediaAnalysis.PrimaryVideoStream?.Duration.TotalMilliseconds),
+                OwnerId = userId,
+                UploadFileName = uploadFile.OriginalFileName,
+                MarkedForDeletion = false,
+                FileSize = uploadFile.FileSize,
+            };
+            
+            await UnitOfWork.MediaObjects.AddAsync(mediaObject);
         }
+        else
+        {
+            dbEntry.ContentType = contentType;
+            dbEntry.Hash = uploadFile.Hash;
+            dbEntry.Width = mediaAnalysis.PrimaryVideoStream?.Width;
+            dbEntry.Height = mediaAnalysis.PrimaryVideoStream?.Height;
+            dbEntry.Duration = Convert.ToInt32(mediaAnalysis.PrimaryVideoStream?.Duration.TotalMilliseconds);
+            dbEntry.UploadFileName = uploadFile.OriginalFileName;
+            dbEntry.MarkedForDeletion = false;
+            dbEntry.FileSize = uploadFile.FileSize;
 
-        dbEntry.MarkedForDeletion = false;
-        var createSnapshotTask = MediaHelper.CreateSnapshotAsync(uploadFile.FullPath,
-            Path.Combine(snapshotFolder, dbEntry.SnapshotFileName), SnapshotSemaphore);
+            mediaObject = dbEntry;
+        }
+        
+        var snapshotFullPath = Path.GetFullPath(Path.Combine(snapshotFolder, mediaObject.SnapshotFile));
+        var createSnapshotTask = MediaHelper.CreateSnapshotAsync(
+            uploadFile.FullPath,
+            snapshotFullPath,
+            SnapshotSemaphore,
+            mediaAnalysis
+        );
         SnapshotTasks.Add(createSnapshotTask);
+
+        return mediaObject;
     }
 
-    private string GetUserMediaRootDirectory(Guid userId) => Path.Combine(StorageDirectory, userId.ToString(), MediaRootDirectory);
+    private string GetUserMediaRootDirectory(Guid userId) =>
+        Path.GetFullPath(Path.Combine(StorageDirectory, userId.ToString(), MediaRootDirectory));
     
     private string GetUserMediaFilesDirectory(Guid userId)
     {
-        var mediaFilesFolder = Path.Combine(GetUserMediaRootDirectory(userId), MediaFileDirectory);
+        var mediaFilesFolder = Path.GetFullPath(Path.Combine(GetUserMediaRootDirectory(userId), MediaFileDirectory));
         MediaHelper.CreateDirectoryIfNotExists(mediaFilesFolder);
         return mediaFilesFolder;
     }
 
     private string GetUserSnapshotsDirectory(Guid userId)
     {
-        var snapshotsFolder = Path.Combine(GetUserMediaRootDirectory(userId), SnapshotDirectory);
+        var snapshotsFolder = Path.GetFullPath(Path.Combine(GetUserMediaRootDirectory(userId), SnapshotDirectory));
         MediaHelper.CreateDirectoryIfNotExists(snapshotsFolder);
         return snapshotsFolder;
     }
@@ -265,7 +275,7 @@ public class MediaService(IMediaUnitOfWork unitOfWork, IConfiguration configurat
         return album == null ? [] : album.MediaObjects.Where(x => !x.MarkedForDeletion);
     }
 
-    public async Task DeleteMediaObjectsAsync(Guid userId, MediaObjectFilter filter, bool permanent)
+    public async Task<List<Guid>> DeleteMediaObjectsAsync(Guid userId, MediaObjectFilter filter, bool permanent)
     {
         var expression = filter.ToExpression();
         var mediaObjects = await UnitOfWork.MediaObjects.Query(expression).ToListAsync();
@@ -275,8 +285,8 @@ public class MediaService(IMediaUnitOfWork unitOfWork, IConfiguration configurat
             var snapshotsFolder = GetUserSnapshotsDirectory(userId);
             foreach (var mediaObject in mediaObjects)
             {
-                MediaHelper.DeleteFile(Path.Combine(mediaFilesFolder, mediaObject.UploadFileName));
-                MediaHelper.DeleteFile(Path.Combine(snapshotsFolder, mediaObject.SnapshotFileName));
+                MediaHelper.DeleteFile(Path.GetFullPath(Path.Combine(mediaFilesFolder, mediaObject.MediaFile)));
+                MediaHelper.DeleteFile(Path.GetFullPath(Path.Combine(snapshotsFolder, mediaObject.SnapshotFile)));
             }
 
             UnitOfWork.MediaObjects.DeleteMany(mediaObjects);
@@ -287,6 +297,7 @@ public class MediaService(IMediaUnitOfWork unitOfWork, IConfiguration configurat
                 media.MarkedForDeletion = true;
         }
         await UnitOfWork.SaveAsync();
+        return mediaObjects.Select(x => x.Id).ToList();
     }
 
     public async Task RestoreMediaObjectsAsync(MediaObjectFilter filter)
@@ -300,8 +311,9 @@ public class MediaService(IMediaUnitOfWork unitOfWork, IConfiguration configurat
 
     private class UploadFile
     {
-        public string FileName { get; set; }
+        public string OriginalFileName { get; set; }
         public string FullPath { get; set; }
         public long FileSize { get; set; }
+        public string Hash { get; set; }
     }
 }

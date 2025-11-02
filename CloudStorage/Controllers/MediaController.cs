@@ -111,13 +111,17 @@ public class MediaController(
         if (user == null) return Unauthorized();
         try
         {
-            await mediaService.UploadMediaFilesAsync(files, user.Id);
+            var mediaObjects = await mediaService.UploadMediaFilesAsync(files, user.Id);
+            if (mediaObjects == null)
+                throw new Exception("Unable to upload files.");
+            
+            return new JsonResult(mediaObjects.Select(x => new MediaObjectViewModel(x)));
         }
         catch (Exception e)
         {
+            Console.WriteLine(e.Message);
             return StatusCode(500, "Unable to process data.");
         }
-        return Ok();
     }
 
     [HttpPost("new-album")]
@@ -175,8 +179,8 @@ public class MediaController(
         var user = await userService.GetUserAsync(User);
         if (user == null) return Unauthorized();
         filter.UserId = user.Id;
-        await mediaService.DeleteMediaObjectsAsync(user.Id, filter, permanent);
-        return Ok();
+        var deleteResult = await mediaService.DeleteMediaObjectsAsync(user.Id, filter, permanent);
+        return new JsonResult(deleteResult);
     }
 
     [HttpPost("restore")]

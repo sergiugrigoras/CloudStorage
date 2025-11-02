@@ -1,147 +1,150 @@
 @if (mediaReady()) {
   <div class="media__container">
-    <div class="media__controls">
-      <span class="media__controls-title">
-        {{ getPageName() }}
-        @if (allMediaObjects.length <= 0) {
-          <span> - No content.</span>
-        }
-      </span>
-      @if (selectMode()) {
-        <span [matTooltip]="'Selected'" class="media__controls-numbers">
-          <span class="material-icons-outlined"> check_box </span>
-          <span>&nbsp;{{ totalSelected }}</span>
+    <div class="media__toolbar">
+      <div class="media__controls">
+        <span class="media__controls-title">
+          @if (mediaPage() === 'album') {
+            {{ albumName() }}
+          } @else {
+            {{ mediaPage() | titlecase }}
+          }
+          @if (allMediaObjects().length <= 0) {
+            <span> - No content.</span>
+          }
         </span>
-      }
-
-      <div class="media__controls-tasks">
-        <input
-          type="file"
-          #inputFiles
-          placeholder="Choose file"
-          (change)="uploadFiles(inputFiles)"
-          style="display: none"
-          multiple
-        />
         @if (selectMode()) {
-          <ng-container>
-            <button
-              matIconButton
-              aria-label="Select All"
-              matTooltip="Select All"
-              (click)="selectAll()"
-            >
-              <span class="material-icons-outlined">select_all</span>
-            </button>
-            <button
-              matIconButton
-              aria-label="Deselect All"
-              matTooltip="Deselect All"
-              (click)="deselectAll()"
-            >
-              <span class="material-icons-outlined">deselect</span>
-            </button>
-            @if (page !== 'trash') {
+          <span [matTooltip]="'Selected'" class="media__controls-numbers">
+            <span class="material-icons-outlined"> check_box </span>
+            <span>&nbsp;{{ selectedItems().length }}</span>
+          </span>
+        }
+
+        <div class="media__controls-tasks">
+          <input
+            type="file"
+            #inputFiles
+            placeholder="Choose file"
+            (change)="uploadFiles(inputFiles)"
+            style="display: none"
+            multiple
+          />
+          @if (selectMode()) {
+            <ng-container>
               <button
                 matIconButton
-                aria-label="Add To Album"
-                matTooltip="Add To Album"
-                (click)="addSelectedToAlbum()"
-                [disabled]="totalSelected < 1"
+                aria-label="Select All"
+                matTooltip="Select All"
+                (click)="selectAll()"
               >
-                <span class="material-icons-outlined">collections</span>
+                <span class="material-icons-outlined">select_all</span>
               </button>
-            }
-            <button
-              matIconButton
-              color="accent"
-              aria-label="Delete"
-              matTooltip="Delete Selected"
-              (click)="deleteSelected()"
-              [disabled]="totalSelected < 1"
-            >
-              <span class="material-icons-outlined">delete</span>
-            </button>
-            @if (page === 'trash') {
+              <button
+                matIconButton
+                aria-label="Deselect All"
+                matTooltip="Deselect All"
+                (click)="deselectAll()"
+              >
+                <span class="material-icons-outlined">deselect</span>
+              </button>
+              @if (mediaPage() !== 'trash') {
+                <button
+                  matIconButton
+                  aria-label="Add To Album"
+                  matTooltip="Add To Album"
+                  (click)="addSelectedToAlbum()"
+                  [disabled]="selectedItems().length < 1"
+                >
+                  <span class="material-icons-outlined">collections</span>
+                </button>
+              }
               <button
                 matIconButton
                 color="accent"
-                aria-label="Restore"
-                matTooltip="Restore media files"
-                (click)="restoreSelected()"
-                [disabled]="totalSelected < 1"
+                aria-label="Delete"
+                matTooltip="Delete Selected"
+                (click)="deleteSelected()"
+                [disabled]="selectedItems().length < 1"
               >
-                <span class="material-icons-outlined">settings_backup_restore</span>
+                <span class="material-icons-outlined">delete</span>
               </button>
-            }
-          </ng-container>
-        } @else {
-          <ng-container>
-            <button
-              matIconButton
-              aria-label="Select Items"
-              matTooltip="Select Items"
-              (click)="enableSelectMode()"
-            >
-              <span class="material-icons-outlined">highlight_alt</span>
-            </button>
-            <button
-              matIconButton
-              aria-label="Albums List"
-              matTooltip="All Albums"
-              (click)="showAlbumsList()"
-            >
-              <span class="material-icons-outlined">format_list_bulleted</span>
-            </button>
-            <button
-              matIconButton
-              aria-label="Storage Info"
-              matTooltip="Storage Info"
-              (click)="getStorageInfo()"
-            >
-              <span class="material-symbols-outlined">hard_drive</span>
-            </button>
-            @if (page === 'home') {
+              @if (mediaPage() === 'trash') {
+                <button
+                  matIconButton
+                  color="accent"
+                  aria-label="Restore"
+                  matTooltip="Restore media files"
+                  (click)="restoreSelected()"
+                  [disabled]="selectedItems().length < 1"
+                >
+                  <span class="material-icons-outlined">settings_backup_restore</span>
+                </button>
+              }
+            </ng-container>
+          } @else {
+            <ng-container>
               <button
                 matIconButton
-                aria-label="Upload"
-                matTooltip="Upload media files"
-                (click)="inputFiles.click()"
+                aria-label="Select Items"
+                matTooltip="Select Items"
+                (click)="selectMode.set(true)"
               >
-                <span class="material-icons-outlined">cloud_upload</span>
+                <span class="material-icons-outlined">highlight_alt</span>
               </button>
-            }
-          </ng-container>
-        }
+              <button
+                matIconButton
+                aria-label="Albums List"
+                matTooltip="All Albums"
+                (click)="showAlbumsList()"
+              >
+                <span class="material-icons-outlined">format_list_bulleted</span>
+              </button>
+              <button
+                matIconButton
+                aria-label="Storage Info"
+                matTooltip="Storage Info"
+                (click)="getStorageInfo()"
+              >
+                <span class="material-symbols-outlined">hard_drive</span>
+              </button>
+              @if (mediaPage() === 'home') {
+                <button
+                  matIconButton
+                  aria-label="Upload"
+                  matTooltip="Upload media files"
+                  (click)="inputFiles.click()"
+                >
+                  <span class="material-icons-outlined">cloud_upload</span>
+                </button>
+              }
+            </ng-container>
+          }
+        </div>
       </div>
+      @if (uploading()) {
+        <div class="media_upload-progress">
+          <mat-progress-bar mode="determinate" [value]="uploadProgress()"></mat-progress-bar>
+        </div>
+      }
+      <mat-divider class="media__divider"></mat-divider>
     </div>
-    <mat-divider class="media__divider"></mat-divider>
-    @if (uploading()) {
-      <div class="media_upload-progress">
-        <mat-progress-bar mode="determinate" [value]="uploadProgress()"></mat-progress-bar>
-      </div>
-    }
-
-    @if (mediaReady()) {
-      <div class="media__items-container">
-        @for (item of displayObjects(); track item.id) {
-          <ng-container>
-            <app-media-item
-              [item]="item"
-              (open)="openMedia($event)"
-              [id]="'media-' + item.id"
-            ></app-media-item>
-          </ng-container>
-        }
-      </div>
-    }
+    <div class="media__items-container">
+      @for (item of displayObjects(); track item.id) {
+        <ng-container>
+          <app-media-item
+            [item]="item"
+            (open)="openMedia($event)"
+            [id]="'media-' + item.id"
+          ></app-media-item>
+        </ng-container>
+      }
+    </div>
     <div class="spacer"></div>
     <mat-paginator
-      [length]="allMediaObjects.length"
+      [length]="allMediaObjects().length"
       [pageSize]="defaultPageSize"
       [hidePageSize]="true"
       [showFirstLastButtons]="true"
-      (page)="loadItems($event)"
+      (page)="paginatorPage.next($event.pageIndex)"
       aria-label="Select page"
       class="media__paginator"
     >
@@ -220,9 +223,12 @@
     @let active = activeMediaObject();
     @if (active) {
       @if (active.isVideo) {
-        <video muted autoplay loop controls [src]="active.contentUrl"></video>
+        <video muted autoplay loop controls [src]="active.contentSourceUrl"></video>
       } @else {
-        <img [src]="active.content ? active.content : active.contentUrl" alt="IMG" />
+        <img
+          [src]="active.contentSafeValue ? active.contentSafeValue : active.contentSourceUrl"
+          alt="IMG"
+        />
       }
       <span class="material-icons control control__close" (click)="closeDialog($event)">
         close
@@ -242,7 +248,7 @@
       >
       <span
         class="material-icons control control__right"
-        [ngClass]="activeIndex() === maxScrollIndex ? 'control--disabled' : ''"
+        [ngClass]="activeIndex() === maxScrollIndex() ? 'control--disabled' : ''"
         (click)="scrollForward($event)"
         >navigate_next</span
       >
@@ -293,10 +299,11 @@
   <div mat-dialog-title>Delete Confirmation</div>
   <div mat-dialog-content>
     <div>
-      Are you sure want to {{ page === 'trash' || deletePermanently ? 'permanently' : '' }} delete
-      {{ totalSelected }} items(s) ?
+      Are you sure want to
+      {{ mediaPage() === 'trash' || deletePermanently ? 'permanently' : '' }} delete
+      {{ selectedItems().length }} items(s) ?
     </div>
-    @if (page !== 'trash') {
+    @if (mediaPage() !== 'trash') {
       <div>
         <mat-checkbox [(ngModel)]="deletePermanently">Permanently Delete</mat-checkbox>
       </div>

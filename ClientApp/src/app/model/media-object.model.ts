@@ -15,11 +15,13 @@ export class MediaObject {
   favorite: boolean;
   ownerId: string;
   snapshot: WritableSignal<SafeValue | null> = signal(null);
-  isSelected = false;
+  snapshotObjectUrl: string | null = null;
+  isSelected = signal(false);
   isVideo: boolean;
   markedForDeletion: boolean;
-  contentUrl: string;
-  content: SafeValue | null = null;
+  contentSourceUrl: string;
+  contentSafeValue: SafeValue | null = null;
+  contentObjectUrl: string | null = null;
 
   constructor(mediaObject: MediaObject) {
     this.id = mediaObject.id;
@@ -34,7 +36,7 @@ export class MediaObject {
     this.videoLength = this.getVideoLength();
     this.isVideo = this.contentType.startsWith('video');
     this.markedForDeletion = mediaObject.markedForDeletion;
-    this.contentUrl = buildUrl(API_ENDPOINTS.CONTENT.BASE, this.id);
+    this.contentSourceUrl = buildUrl(API_ENDPOINTS.CONTENT.BASE, this.id);
   }
 
   private getVideoLength() {
@@ -43,6 +45,10 @@ export class MediaObject {
     return seconds == 60
       ? minutes + 1 + ':00'
       : minutes + ':' + (seconds < 10 ? '0' : '') + seconds;
+  }
+
+  public toggleSelected() {
+    this.isSelected.update((value) => !value);
   }
 }
 
