@@ -14,6 +14,7 @@ import { IStorageInfo } from '../interfaces/disk.interface';
 export class MediaService {
   private readonly http = inject(HttpClient);
   public readonly selectMode = signal(false);
+  public readonly largeGridSize = signal(false);
   constructor() {}
 
   getMediaFile(id: string) {

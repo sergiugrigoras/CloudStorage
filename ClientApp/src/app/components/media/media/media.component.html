@@ -84,6 +84,14 @@
             <ng-container>
               <button
                 matIconButton
+                aria-label="Grid size"
+                matTooltip="Grid size"
+                (click)="toggleGridSize()"
+              >
+                <span class="material-symbols-outlined">gallery_thumbnail</span>
+              </button>
+              <button
+                matIconButton
                 aria-label="Select Items"
                 matTooltip="Select Items"
                 (click)="selectMode.set(true)"

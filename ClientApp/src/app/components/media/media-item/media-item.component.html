@@ -5,7 +5,10 @@
       <span class="media-item__snapshot-duration">{{ item.videoLength }}</span>
     }
     @if (!snapshot) {
-      <div class="media-item__snapshot-placeholder media-item__snapshot-content">
+      <div
+        class="media-item__snapshot-placeholder media-item__snapshot-content"
+        [ngClass]="{ 'media-item__snapshot-content--large': largeGridSize() }"
+      >
         <mat-progress-bar mode="indeterminate"></mat-progress-bar>
       </div>
     } @else {
@@ -14,6 +17,7 @@
         (click)="itemTouched()"
         alt="snapshot"
         class="media-item__snapshot-content"
+        [ngClass]="{ 'media-item__snapshot-content--large': largeGridSize() }"
       />
     }
     @if (selectMode()) {

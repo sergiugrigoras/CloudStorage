@@ -7,20 +7,40 @@
   &-content {
     aspect-ratio: 1 / 1;
 
+    // Default snapshots
     @media (max-width: 767px) {
-      width: 80px;
+      width: var(--snapshot-normal-sm);
     }
-
     @media (min-width: 768px) {
-      width: 140px;
+      width: var(--snapshot-normal-md);
     }
-
     @media (min-width: 992px) {
-      width: 180px;
+      width: var(--snapshot-normal-lg);
+    }
+    @media (min-width: 1200px) {
+      width: var(--snapshot-normal-xl);
+    }
+    @media (min-width: 1400px) {
+      width: var(--snapshot-normal-xxl);
     }
 
-    @media (min-width: 1200px) {
-      width: 225px;
+    // Large snapshots
+    &--large {
+      @media (max-width: 767px) {
+        width: var(--snapshot-large-sm);
+      }
+      @media (min-width: 768px) {
+        width: var(--snapshot-large-md);
+      }
+      @media (min-width: 992px) {
+        width: var(--snapshot-large-lg);
+      }
+      @media (min-width: 1200px) {
+        width: var(--snapshot-large-xl);
+      }
+      @media (min-width: 1400px) {
+        width: var(--snapshot-large-xxl);
+      }
     }
   }
 

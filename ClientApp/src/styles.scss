@@ -6,6 +6,20 @@
 
 @import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined');
 
+:root {
+  --snapshot-normal-sm: 80px;
+  --snapshot-normal-md: 140px;
+  --snapshot-normal-lg: 180px;
+  --snapshot-normal-xl: 218px;
+  --snapshot-normal-xxl: 255px;
+
+  --snapshot-large-sm: 110px;
+  --snapshot-large-md: 178px;
+  --snapshot-large-lg: 228px;
+  --snapshot-large-xl: 275px;
+  --snapshot-large-xxl: 320px;
+}
+
 html {
   font-size: 14px;
 }

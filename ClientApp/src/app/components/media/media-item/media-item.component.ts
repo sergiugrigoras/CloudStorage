@@ -15,12 +15,13 @@ import { catchError, EMPTY, retry, Subject, tap } from 'rxjs';
 import { DomSanitizer } from '@angular/platform-browser';
 import { MatProgressBar } from '@angular/material/progress-bar';
 import { MatIconButton } from '@angular/material/button';
+import { NgClass } from '@angular/common';
 
 @Component({
   selector: 'app-media-item',
   templateUrl: './media-item.component.html',
   styleUrls: ['./media-item.component.scss'],
-  imports: [MatProgressBar, MatIconButton],
+  imports: [MatProgressBar, MatIconButton, NgClass],
 })
 export class MediaItemComponent implements OnInit, OnDestroy {
   private mediaService = inject(MediaService);
@@ -32,6 +33,7 @@ export class MediaItemComponent implements OnInit, OnDestroy {
   @Output() open = new EventEmitter<string>();
   private readonly destroy$ = new Subject<void>();
   protected readonly selectMode = this.mediaService.selectMode;
+  protected readonly largeGridSize = this.mediaService.largeGridSize;
   constructor() {}
 
   itemTouched() {

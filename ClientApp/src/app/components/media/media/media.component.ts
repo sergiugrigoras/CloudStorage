@@ -190,6 +190,7 @@ export class MediaComponent implements OnInit, OnDestroy, AfterViewInit {
   protected readonly paginatorPage = new Subject<number>();
   protected readonly refreshPageContent = new Subject<void>();
   protected readonly displayObjects: WritableSignal<MediaObject[]> = signal([]);
+  private readonly _gridSizeKey = 'grid-size';
   constructor() {}
   ngAfterViewInit(): void {
     this.enableTouchEvents();
@@ -277,6 +278,8 @@ export class MediaComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   ngOnInit(): void {
+    const snapshotSize = localStorage.getItem(this._gridSizeKey);
+    this.mediaService.largeGridSize.set(snapshotSize === 'large');
     const pageFiltersMap: Record<string, MediaObjectFilter> = {
       favorites: { favorite: true, deleted: false },
       trash: { deleted: true },
@@ -746,5 +749,10 @@ export class MediaComponent implements OnInit, OnDestroy, AfterViewInit {
         })
       )
       .subscribe();
+  }
+
+  toggleGridSize() {
+    this.mediaService.largeGridSize.update((value) => !value);
+    localStorage.setItem(this._gridSizeKey, this.mediaService.largeGridSize() ? 'large' : 'normal');
   }
 }
