@@ -2,6 +2,7 @@ export const API_ENDPOINTS = {
   AUTH: {
     BASE: 'auth',
     LOGIN: 'login',
+    LOGIN_2FA: 'login-2fa',
     REGISTER: 'register',
     REFRESH: 'refresh',
     CHECK_UNIQUE: 'check-unique',
@@ -9,6 +10,9 @@ export const API_ENDPOINTS = {
     FORGOT_PASSWORD: 'forgot-password',
     RESET_PASSWORD: 'reset-password',
     REVOKE: 'revoke',
+    SETUP_2FA: 'setup-2fa',
+    TOGGLE_2FA: 'toggle-2fa',
+    TWO_FA_ENABLED: 'two-fa-enabled',
   },
   ADMIN: {
     BASE: 'admin',

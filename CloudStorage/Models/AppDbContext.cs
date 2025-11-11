@@ -171,6 +171,11 @@ public partial class AppDbContext : DbContext
             entity.Property(e => e.Disabled)
                 .IsRequired()
                 .HasDefaultValue(false);
+            entity.Property(e => e.TwoFaEnabled)
+                .HasColumnName("TwoFAEnabled")
+                .HasDefaultValue(false);
+            entity.Property(e => e.TotpSecret)
+                .HasColumnName("TOTPSecret");
         });
 
         modelBuilder.Entity<Category>().HasData(

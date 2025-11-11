@@ -34,7 +34,8 @@
             "scripts": [],
             "allowedCommonJsDependencies": [
               "file-saver",
-              "dayjs"
+              "dayjs",
+              "qrcode"
             ]
           },
           "configurations": {

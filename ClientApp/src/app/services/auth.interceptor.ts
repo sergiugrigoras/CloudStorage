@@ -12,10 +12,13 @@ import { catchError, switchMap, take } from 'rxjs/operators';
 import { AuthService } from './auth.service';
 import { buildUrl } from '../core/url-builder';
 import { API_ENDPOINTS } from '../core/api-endpoints';
+import { ClientIdService } from './client-id.service';
 
 @Injectable()
 export class AuthInterceptor implements HttpInterceptor {
-  public authService = inject(AuthService);
+  private readonly authService = inject(AuthService);
+  private readonly clientIdService = inject(ClientIdService);
+
   private isRefreshing = false;
   private newAccessTokenSubject = new ReplaySubject<string>(1);
   private readonly _anonymousEndpoints = [
@@ -26,6 +29,10 @@ export class AuthInterceptor implements HttpInterceptor {
     buildUrl(API_ENDPOINTS.AUTH.BASE, API_ENDPOINTS.AUTH.FORGOT_PASSWORD),
     buildUrl(API_ENDPOINTS.AUTH.BASE, API_ENDPOINTS.AUTH.RESET_PASSWORD),
   ];
+  private readonly _clientIdEndPoints = [
+    buildUrl(API_ENDPOINTS.AUTH.BASE, API_ENDPOINTS.AUTH.LOGIN),
+    buildUrl(API_ENDPOINTS.AUTH.BASE, API_ENDPOINTS.AUTH.LOGIN_2FA),
+  ];
   private readonly _revokeEndpoint = buildUrl(API_ENDPOINTS.AUTH.BASE, API_ENDPOINTS.AUTH.REVOKE);
   constructor() {}
 
@@ -33,6 +40,10 @@ export class AuthInterceptor implements HttpInterceptor {
     const token = this.authService.getJwtToken();
     if (token && this.shouldAttachToken(request.url)) {
       request = this.addTokenToRequest(request, token);
+    }
+
+    if (this.shouldAttachClientId(request.url)) {
+      request = this.addClientId(request, this.clientIdService.getClientId());
     }
 
     return next.handle(request).pipe(
@@ -78,7 +89,17 @@ export class AuthInterceptor implements HttpInterceptor {
     });
   }
 
+  private addClientId(request: HttpRequest<unknown>, clientId: string) {
+    return request.clone({
+      setHeaders: { 'X-Client-Id': clientId },
+    });
+  }
+
   private shouldAttachToken(url: string) {
     return !this._anonymousEndpoints.some((x) => url.includes(x));
+  }
+
+  private shouldAttachClientId(url: string) {
+    return this._clientIdEndPoints.some((x) => url.includes(x));
   }
 }

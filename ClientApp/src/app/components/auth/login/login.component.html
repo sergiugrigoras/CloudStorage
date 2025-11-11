@@ -1,21 +1,36 @@
 <div class="login-form">
-  <h2>Login</h2>
-  <form [formGroup]="form" #loginForm (ngSubmit)="login()">
-    <div>
-      <mat-form-field>
-        <mat-label>Username or Email</mat-label>
-        <input matInput formControlName="userIdentifier" type="text" />
-      </mat-form-field>
-    </div>
-    <div>
-      <mat-form-field>
-        <mat-label>Password</mat-label>
-        <input matInput formControlName="password" type="password" />
-      </mat-form-field>
-    </div>
-    <div>
-      <button type="submit" matButton="filled" [disabled]="form.invalid">Login</button>
-      <button type="button" matButton="text" routerLink="/password/reset">Forgot password</button>
-    </div>
-  </form>
+  @if (require2Fa()) {
+    <h2>Two-factor authentication</h2>
+    <form [formGroup]="twoFaForm" (ngSubmit)="loginTwoFa()">
+      <div>
+        <mat-form-field>
+          <mat-label>One-time password code</mat-label>
+          <input matInput formControlName="code" mask="000 000" type="tel" placeholder="123 456" />
+        </mat-form-field>
+      </div>
+      <div>
+        <button type="submit" matButton="filled" [disabled]="twoFaForm.invalid">Login</button>
+      </div>
+    </form>
+  } @else {
+    <h2>Login</h2>
+    <form [formGroup]="form" (ngSubmit)="login()">
+      <div>
+        <mat-form-field>
+          <mat-label>Username or Email</mat-label>
+          <input matInput formControlName="userIdentifier" type="text" />
+        </mat-form-field>
+      </div>
+      <div>
+        <mat-form-field>
+          <mat-label>Password</mat-label>
+          <input matInput formControlName="password" type="password" />
+        </mat-form-field>
+      </div>
+      <div>
+        <button type="submit" matButton="filled" [disabled]="form.invalid">Login</button>
+        <button type="button" matButton="text" routerLink="/password/reset">Forgot password</button>
+      </div>
+    </form>
+  }
 </div>

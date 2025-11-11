@@ -12,10 +12,10 @@ public static class ServiceExtension
     public static IServiceCollection RegisterServices(this IServiceCollection services,  IWebHostEnvironment environment)
     {
         services.AddSingleton<ContentAuthorization>();
-        services.AddTransient<ITokenService, TokenService>();
-        services.AddTransient<IFsoService, FsoService>();
-        services.AddTransient<IUserService, UserService>();
-        services.AddTransient<INoteService, NoteService>();
+        services.AddScoped<ITokenService, TokenService>();
+        services.AddScoped<IFsoService, FsoService>();
+        services.AddScoped<IUserService, UserService>();
+        services.AddScoped<INoteService, NoteService>();
         
         services.AddScoped<IExpenseRepository, ExpenseRepository>();
         services.AddScoped<ICategoryRepository, CategoryRepository>();

@@ -1,18 +1,23 @@
-.profile-form {
+.profile__form {
   width: 500px;
-  margin: auto;
+  margin: 1rem auto;
   min-width: 0;
   max-width: 80vw;
-}
 
-form button {
-  margin-right: 0.5rem;
-}
+  border-radius: var(--mat-sys-corner-medium);
+  box-shadow: var(--mat-sys-level1);
+  background-color: var(--mat-sys-surface-container-low);
+  padding: 0 1rem 1rem 1rem;
+  overflow: auto;
 
-div > div {
-  display: flex;
+  h3 {
+    margin: 1rem 0;
+  }
+  > div {
+    display: flex;
 
-  mat-form-field {
-    flex: 1;
+    mat-form-field {
+      flex: 1;
+    }
   }
 }

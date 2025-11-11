@@ -1,7 +1,7 @@
-import { AccessToken } from '../interfaces/token.interface';
+import { AccessToken, TokenType } from '../interfaces/token.interface';
 import { UserModel } from '../interfaces/user.interface';
 import { computed, inject, Injectable, signal } from '@angular/core';
-import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { finalize, Observable, of, throwError } from 'rxjs';
 import { catchError, map, tap } from 'rxjs/operators';
 import { Router } from '@angular/router';
@@ -11,6 +11,7 @@ import { buildUrl } from '../core/url-builder';
 import { HTTP_OPTIONS_CONTENT_JSON } from '../core/constants';
 import { JWT_KEY } from '../../main';
 import { AppRoute } from '../interfaces/app-route.interface';
+import { TwoFaKey } from '../interfaces/two-fa-key.interface';
 
 @Injectable({
   providedIn: 'root',
@@ -46,12 +47,14 @@ export class AuthService {
     return this.http.post<boolean>(url, body, HTTP_OPTIONS_CONTENT_JSON);
   }
 
-  loginWithPassword(user: UserModel): Observable<boolean> {
+  loginWithPassword(user: UserModel): Observable<AccessToken> {
     const url = buildUrl(API_ENDPOINTS.AUTH.BASE, API_ENDPOINTS.AUTH.LOGIN);
-    return this.http.post<AccessToken>(url, user).pipe(
-      tap((token) => this.doLoginUser(token)),
-      map(() => true)
-    );
+    return this.http.post<AccessToken>(url, user);
+  }
+
+  loginWithTwoFa(token: string, code: string) {
+    const url = buildUrl(API_ENDPOINTS.AUTH.BASE, API_ENDPOINTS.AUTH.LOGIN_2FA);
+    return this.http.post<AccessToken>(url, { token, code });
   }
 
   loginWithToken(token: AccessToken): Observable<boolean> {
@@ -86,13 +89,12 @@ export class AuthService {
     const url = buildUrl(API_ENDPOINTS.AUTH.BASE, API_ENDPOINTS.AUTH.REFRESH);
     const body: AccessToken = {
       token: this.getJwtToken() ?? '',
+      tokenType: TokenType.Authentication,
     };
     return this.http.post<AccessToken>(url, body, HTTP_OPTIONS_CONTENT_JSON).pipe(
       catchError((error) => {
-        if (error instanceof HttpErrorResponse && error.status === 400) {
-          this.doLogoutUser();
-          void this.router.navigate(['/login']);
-        }
+        this.doLogoutUser();
+        void this.router.navigate(['/login']);
         return throwError(() => error);
       }),
       tap((token: AccessToken) => {
@@ -165,15 +167,35 @@ export class AuthService {
     return false;
   }
 
+  loginUser(token: AccessToken) {
+    this.doLoginUser(token);
+  }
+
   logoutUser() {
     this.doLogoutUser();
   }
+
   getJwtToken() {
     return localStorage.getItem(JWT_KEY);
   }
 
   jwtTokenExists() {
     return !!this.getJwtToken();
+  }
+
+  setupTwoFa() {
+    const url = buildUrl(API_ENDPOINTS.AUTH.BASE, API_ENDPOINTS.AUTH.SETUP_2FA);
+    return this.http.post<TwoFaKey>(url, null, HTTP_OPTIONS_CONTENT_JSON);
+  }
+
+  toggleTwoFa(password: string, code: string) {
+    const url = buildUrl(API_ENDPOINTS.AUTH.BASE, API_ENDPOINTS.AUTH.TOGGLE_2FA);
+    return this.http.post<boolean>(url, { password, code }, HTTP_OPTIONS_CONTENT_JSON);
+  }
+
+  isTwoFaEnabled() {
+    const url = buildUrl(API_ENDPOINTS.AUTH.BASE, API_ENDPOINTS.AUTH.TWO_FA_ENABLED);
+    return this.http.get<boolean>(url, HTTP_OPTIONS_CONTENT_JSON);
   }
 
   private doLoginUser(tokens: AccessToken) {

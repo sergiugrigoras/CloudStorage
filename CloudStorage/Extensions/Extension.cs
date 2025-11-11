@@ -35,4 +35,9 @@ public static class Extension
         configuration.GetValue<string>("Authorization:AdminEmail");
     public static bool InviteOnly(this IConfiguration configuration) =>
         configuration.GetValue<bool>("Registration:InviteOnly");
+    
+    public static string AesKey(this IConfiguration configuration) =>
+        configuration.GetValue<string>("AesSettings:Key");
+    public static string AesIv(this IConfiguration configuration) =>
+        configuration.GetValue<string>("AesSettings:IV");
 }

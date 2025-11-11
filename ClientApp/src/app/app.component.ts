@@ -5,6 +5,7 @@ import {
   ElementRef,
   HostListener,
   inject,
+  OnDestroy,
   OnInit,
   signal,
   ViewChild,
@@ -12,7 +13,7 @@ import {
 import { AuthService } from './services/auth.service';
 import { ThemeService } from 'ng2-charts';
 import { ChartOptions } from 'chart.js';
-import { RouterLink, RouterOutlet } from '@angular/router';
+import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
 import { MatToolbar, MatToolbarRow } from '@angular/material/toolbar';
 import { MatMenu, MatMenuItem, MatMenuTrigger } from '@angular/material/menu';
 import { MatButton, MatIconButton, MatMiniFabButton } from '@angular/material/button';
@@ -20,6 +21,8 @@ import { MatTooltip } from '@angular/material/tooltip';
 import { NgTemplateOutlet } from '@angular/common';
 import { MatIcon } from '@angular/material/icon';
 import { MatDivider } from '@angular/material/divider';
+import { filter, map, Subject, takeUntil } from 'rxjs';
+import { tap } from 'rxjs/operators';
 
 const DARK_THEME_CHART_OVER: ChartOptions = {
   plugins: {
@@ -69,10 +72,11 @@ type AppPalette = {
     MatDivider,
   ],
 })
-export class AppComponent implements OnInit, AfterViewInit {
+export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
   private readonly authService = inject(AuthService);
   private readonly elem = inject(ElementRef);
   private readonly themeService = inject(ThemeService);
+  private readonly router = inject(Router);
   readonly title = 'scs';
   private readonly _darkModeIcon = 'dark_mode';
   private readonly _lightModeIcon = 'light_mode';
@@ -106,11 +110,19 @@ export class AppComponent implements OnInit, AfterViewInit {
     { name: 'Rose', cssClass: 'rose-theme', lightColor: '#ba005c', darkColor: '#ffb1c5' },
   ];
   protected readonly appRoutes = this.authService.appRoutes;
+  private currentRoute: string | null = null;
+  private readonly destroy$ = new Subject<void>();
 
   constructor() {}
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
   ngAfterViewInit(): void {
     const backTopButton = this.elem.nativeElement.querySelector('.back-top') as HTMLElement;
     const intersectionCallback = () => {
+      /*      const routes = ['/', '/media', '/drive', '/notes'];
+      if (this.currentRoute && routes.includes(this.currentRoute))*/
       backTopButton.classList.toggle('invisible');
     };
     const intersectionObserver = new IntersectionObserver(intersectionCallback, {
@@ -132,6 +144,16 @@ export class AppComponent implements OnInit, AfterViewInit {
   }
 
   ngOnInit(): void {
+    this.router.events
+      .pipe(
+        takeUntil(this.destroy$),
+        filter((event) => event instanceof NavigationEnd),
+        map((event: NavigationEnd) => event.urlAfterRedirects),
+        tap((url) => {
+          this.currentRoute = url;
+        })
+      )
+      .subscribe();
     this.isLoggedIn.set(this.authService.jwtTokenExists());
     const userSelectedTheme = localStorage.getItem(this._themeKey);
     const prefersDark =

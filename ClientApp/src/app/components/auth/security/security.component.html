@@ -1,0 +1,119 @@
+<form [formGroup]="passwordChangeForm" (ngSubmit)="changePassword()" class="security__form">
+  <h3>Change Password</h3>
+  <div>
+    <mat-form-field>
+      <mat-label>Old password</mat-label>
+      <input matInput formControlName="oldPassword" type="password" />
+    </mat-form-field>
+  </div>
+  <div>
+    <mat-form-field>
+      <mat-label>New password</mat-label>
+      <input matInput formControlName="newPassword" type="password" />
+    </mat-form-field>
+  </div>
+  <div>
+    <mat-form-field>
+      <mat-label>Confirm new password</mat-label>
+      <input matInput formControlName="confirmNewPassword" type="password" />
+    </mat-form-field>
+  </div>
+  <div>
+    <button type="submit" matButton="filled" [disabled]="passwordChangeForm.invalid">
+      Change password
+    </button>
+    <button type="reset" matButton="text">Clear</button>
+  </div>
+</form>
+
+@if (isTwoFaEnabled() === null) {
+  <div class="security__form">
+    <h3>Loading 2FA status...</h3>
+  </div>
+} @else if (isTwoFaEnabled() === false) {
+  @if (otpUri()) {
+    <form
+      [formGroup]="twoFaForm"
+      (ngSubmit)="toggleTwoFa()"
+      class="security__form security-otp-container"
+    >
+      <h3>Verify Two-Factor Authentication</h3>
+      <div class="security__auth-link">
+        <a matButton="outlined" [href]="otpUri()" target="_blank">
+          <mat-icon>open_in_new</mat-icon>
+          Open Authenticator
+        </a>
+        <button type="button" matButton="outlined" (click)="copySecretKey()">
+          <mat-icon>content_copy</mat-icon>
+          Copy Secret Key
+        </button>
+      </div>
+      <p>Or scan QR code</p>
+      <div class="security__qr-code">
+        <qrcode [qrdata]="otpUri()" [width]="256" [errorCorrectionLevel]="'M'"></qrcode>
+      </div>
+      <div>
+        <mat-form-field>
+          <mat-label>One-time password code</mat-label>
+          <input matInput formControlName="code" mask="000 000" type="tel" placeholder="123 456" />
+        </mat-form-field>
+      </div>
+      <div>
+        <mat-form-field>
+          <mat-label>Current password</mat-label>
+          <input matInput formControlName="password" type="password" />
+        </mat-form-field>
+      </div>
+      <div>
+        <button type="submit" matButton="filled" [disabled]="twoFaForm.invalid || processing()">
+          Verify OTP
+        </button>
+      </div>
+      @if (processing()) {
+        <mat-progress-bar mode="indeterminate" class="security__progress-bar"></mat-progress-bar>
+      }
+    </form>
+  } @else {
+    <div class="security__form">
+      <h3>Enable Two-Factor Authentication</h3>
+      <div>
+        <button type="button" matButton="filled" (click)="setupTwoFa()" [disabled]="processing()">
+          Enable 2FA
+        </button>
+      </div>
+    </div>
+  }
+} @else if (isTwoFaEnabled() === true) {
+  @if (showTwoFaDisableForm()) {
+    <form [formGroup]="twoFaForm" (ngSubmit)="toggleTwoFa()" class="security__form">
+      <h3>Disable Two-Factor Authentication</h3>
+      <div>
+        <mat-form-field>
+          <mat-label>One-time password code</mat-label>
+          <input matInput formControlName="code" mask="000 000" type="tel" placeholder="123 456" />
+        </mat-form-field>
+      </div>
+      <div>
+        <mat-form-field>
+          <mat-label>Current password</mat-label>
+          <input matInput formControlName="password" type="password" />
+        </mat-form-field>
+      </div>
+      <div>
+        <button type="submit" matButton="filled" [disabled]="twoFaForm.invalid || processing()">
+          Disable 2FA
+        </button>
+      </div>
+      @if (processing()) {
+        <mat-progress-bar mode="indeterminate" class="security__progress-bar"></mat-progress-bar>
+      }
+    </form>
+  } @else {
+    <div class="security__form">
+      <h3>Disable Two-Factor Authentication</h3>
+      <button type="button" matButton="filled" (click)="showTwoFaDisableForm.set(true)">
+        Disable 2FA
+      </button>
+    </div>
+  }
+}

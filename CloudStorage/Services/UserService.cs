@@ -5,8 +5,8 @@ using System.Security.Claims;
 using System.Security.Cryptography;
 using CloudStorage.Extensions;
 using CloudStorage.Models;
-using CloudStorage.ViewModels;
 using Microsoft.IdentityModel.Tokens;
+using OtpNet;
 
 namespace CloudStorage.Services;
 
@@ -18,7 +18,7 @@ public interface IUserService
     Task<User> GetUserByIdAsync(Guid id);
     Task UpdateUserAsync(User user);
     Task<User> CreateUserAsync(string username, string email, string password);
-    IEnumerable<Claim> GetUserClaims(User user);
+    List<Claim> GetUserClaims(User user);
     Task<ResetToken> CreatePasswordResetTokenAsync(Guid userId, string token);
     Task<ResetToken> GetResetTokenByIdAsync(int id);
     Task UpdateResetTokenAsync(ResetToken resetToken);
@@ -26,6 +26,9 @@ public interface IUserService
     Task<string> CreateInviteCodeAsync(string email);
     Task<List<User>> GetAllUsersAsync();
     string GeneratePasswordResetToken();
+    Task<string> GenerateTwoFaSecretAsync(Guid userId);
+    Task<bool> VerifyTotpCodeAsync(Guid userId, string code);
+    Task<bool> ToggleTwoFaAsync(Guid userId, string code);
 }
 
 public class UserService(AppDbContext context, IConfiguration configuration) : IUserService
@@ -90,7 +93,7 @@ public class UserService(AppDbContext context, IConfiguration configuration) : I
         return user;
     }
 
-    public IEnumerable<Claim> GetUserClaims(User user)
+    public List<Claim> GetUserClaims(User user)
     {
         if (user == null) return null;
         var claims = new List<Claim>
@@ -171,6 +174,48 @@ public class UserService(AppDbContext context, IConfiguration configuration) : I
         return Base64UrlEncoder.Encode(randomNumber);
     }
 
+    public async Task<string> GenerateTwoFaSecretAsync(Guid userId)
+    {
+        var user = await context.Users.FirstOrDefaultAsync(x => x.Id == userId);
+        if (user == null)
+            throw new InvalidOperationException("User not found");
+        
+        var secretKey = KeyGeneration.GenerateRandomKey(20);
+        var base32Secret = Base32Encoding.ToString(secretKey);
+        
+        user.TotpSecret = EncryptString(base32Secret, GetAesKey(), GetAesIv());
+        await context.SaveChangesAsync();
+
+        return base32Secret;
+    }
+
+    public async Task<bool> VerifyTotpCodeAsync(Guid userId, string code)
+    {
+        var user = await context.Users.FirstOrDefaultAsync(x => x.Id == userId);
+        if (user == null) throw new InvalidOperationException("User not found");
+        
+        var decryptedSecret = DecryptString(user.TotpSecret, GetAesKey(), GetAesIv());
+        var secretBytes = Base32Encoding.ToBytes(decryptedSecret);
+
+        var totp = new Totp(secretBytes);
+        return totp.VerifyTotp(code, out _, VerificationWindow.RfcSpecifiedNetworkDelay);
+    }
+
+    public async Task<bool> ToggleTwoFaAsync(Guid userId, string code)
+    {
+        var user = await context.Users.FirstOrDefaultAsync(x => x.Id == userId);
+        if (user == null)
+            throw new InvalidOperationException("User not found");
+        
+        var validCode = await VerifyTotpCodeAsync(userId, code);
+        if (!validCode)
+            throw new InvalidOperationException("Invalid code");
+
+        user.TwoFaEnabled = !user.TwoFaEnabled;
+        await context.SaveChangesAsync();
+        return user.TwoFaEnabled;
+    }
+    
     private static string GenerateInviteCode(int length = 6)
     {
         var random = new Random();
@@ -197,5 +242,66 @@ public class UserService(AppDbContext context, IConfiguration configuration) : I
     {
         context.ResetTokens.Update(resetToken);
         await context.SaveChangesAsync();
+    }
+    
+    private static string EncryptString(string plainText, byte[] key, byte[] iv)
+    {
+        using var aes = Aes.Create();
+        aes.Key = key;
+        aes.IV = iv;
+
+        var encryptor = aes.CreateEncryptor(aes.Key, aes.IV);
+        using var ms = new MemoryStream();
+        using (var cs = new CryptoStream(ms, encryptor, CryptoStreamMode.Write))
+        using (var sw = new StreamWriter(cs))
+        {
+            sw.Write(plainText);
+        }
+        return Convert.ToBase64String(ms.ToArray());
+    }
+
+    private static string DecryptString(string cipherText, byte[] key, byte[] iv)
+    {
+        using var aes = Aes.Create();
+        aes.Key = key;
+        aes.IV = iv;
+
+        var decryptor = aes.CreateDecryptor(aes.Key, aes.IV);
+        using var ms = new MemoryStream(Convert.FromBase64String(cipherText));
+        using var cs = new CryptoStream(ms, decryptor, CryptoStreamMode.Read);
+        using var sr = new StreamReader(cs);
+        return sr.ReadToEnd();
+    }
+
+    private byte[] GetAesKey()
+    {
+        var aesKeyBase64 = _configuration.AesKey();
+        if (string.IsNullOrWhiteSpace(aesKeyBase64))
+            throw new InvalidOperationException("AES key is missing from configuration.");
+        
+        try
+        {
+            return Convert.FromBase64String(aesKeyBase64);
+        }
+        catch (FormatException ex)
+        {
+            throw new InvalidOperationException("AES key is not a valid Base64 string.", ex);
+        }
+    }
+
+    private byte[] GetAesIv()
+    {
+        var aesIvBase64 = _configuration.AesIv();
+        if (string.IsNullOrWhiteSpace(aesIvBase64))
+            throw new InvalidOperationException("AES IV is missing from configuration.");
+        
+        try
+        {
+            return Convert.FromBase64String(aesIvBase64);
+        }
+        catch (FormatException ex)
+        {
+            throw new InvalidOperationException("AES IV is not a valid Base64 string.", ex);
+        }
     }
 }

@@ -13,6 +13,7 @@ import { MAT_FORM_FIELD_DEFAULT_OPTIONS } from '@angular/material/form-field';
 import { ErrorStateMatcher, ShowOnDirtyErrorStateMatcher } from '@angular/material/core';
 import { provideNativeDateAdapter } from '@angular/material/core';
 import { MAT_SNACK_BAR_DEFAULT_OPTIONS } from '@angular/material/snack-bar';
+import { provideEnvironmentNgxMask } from 'ngx-mask';
 
 if (environment.production) {
   enableProdMode();
@@ -59,5 +60,6 @@ bootstrapApplication(AppComponent, {
       },
     },
     provideNativeDateAdapter(),
+    provideEnvironmentNgxMask(),
   ],
 }).catch((err) => console.error(err));

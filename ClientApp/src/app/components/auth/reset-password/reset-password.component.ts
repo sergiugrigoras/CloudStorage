@@ -10,11 +10,11 @@ import {
   ReactiveFormsModule,
 } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { PasswordValidators } from '../profile/password.validators';
 import { EMPTY, finalize, tap } from 'rxjs';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatFormField, MatLabel, MatInput, MatError, MatHint } from '@angular/material/input';
 import { MatButton } from '@angular/material/button';
+import { PasswordValidators } from '../security/security.component';
 
 @Component({
   selector: 'app-reset-password',
