@@ -39,7 +39,7 @@ namespace CloudStorage.Controllers
                 if (user.Disabled)
                     return BadRequest("Account is Disabled");
             
-                return user.TwoFaEnabled ? await SendTwoFaTokenAsync(user) : await LoginUserAsync(user);
+                return user.TwoFaEnabled ? await SendTwoFaTokenAsync(user.Id) : await LoginUserAsync(user.Id);
             }
             catch
             {
@@ -71,7 +71,7 @@ namespace CloudStorage.Controllers
                 if (!validCode)
                     throw new InvalidOperationException("Invalid code");
 
-                return await LoginUserAsync(user);
+                return await LoginUserAsync(user.Id);
             }
             catch (SecurityTokenException)
             {
@@ -85,29 +85,6 @@ namespace CloudStorage.Controllers
             {
                 return StatusCode(500, "An unexpected error occurred.");
             }
-        }
-
-        private async Task<IActionResult> LoginUserAsync(User user)
-        {
-            var claims = _userService.GetUserClaims(user);
-            var accessToken = _tokenService.GenerateAccessToken(claims, AccessTokenType.Authentication);
-            var refreshToken = _tokenService.GenerateRefreshToken();
-            user.RefreshToken = refreshToken;
-            user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(7);
-            await _userService.UpdateUserAsync(user);
-            
-            Response.Cookies.Append(CookieNames.RefreshToken, refreshToken, _cookieOptionsProvider.GetOptions());
-
-            return new JsonResult(new AccessToken(accessToken, AccessTokenType.Authentication));
-        }
-
-        private async Task<IActionResult> SendTwoFaTokenAsync(User user)
-        {
-            var claims = _userService.GetUserClaims(user);
-            var clientId = HttpContext.Request.Headers["X-Client-Id"].ToString();
-            claims.Add(new Claim(AppClaims.ClientId, clientId));
-            var twoFaToken = _tokenService.GenerateAccessToken(claims, AccessTokenType.TwoFactorAuthentication);
-            return await Task.FromResult(new JsonResult(new AccessToken(twoFaToken, AccessTokenType.TwoFactorAuthentication)));
         }
         
         [AllowAnonymous]
@@ -128,24 +105,19 @@ namespace CloudStorage.Controllers
                 if (!validInviteCode)
                     return BadRequest("Invalid invite code");
             }
-            
+
             try
             {
                 var newUser = await _userService.CreateUserAsync(user.Username, user.Email, user.Password);
-                var claims = _userService.GetUserClaims(newUser);
-                var accessToken = _tokenService.GenerateAccessToken(claims, AccessTokenType.Authentication);
-                var refreshToken = _tokenService.GenerateRefreshToken();
-                newUser.RefreshToken = refreshToken;
-                newUser.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(7);
-                await _userService.UpdateUserAsync(newUser);
-            
-                Response.Cookies.Append(CookieNames.RefreshToken, refreshToken, _cookieOptionsProvider.GetOptions());
-
-                return new JsonResult(new AccessToken(accessToken, AccessTokenType.Authentication));
+                return await LoginUserAsync(newUser.Id);
             }
-            catch (Exception e)
+            catch (InvalidOperationException e)
             {
                 return BadRequest(e.Message);
+            }
+            catch (Exception)
+            {
+                return StatusCode(500, "An unexpected error occurred.");
             }
         }
         
@@ -169,20 +141,12 @@ namespace CloudStorage.Controllers
                 if (user.Disabled)
                     return BadRequest("Account is Disabled");
 
-                var newAccessToken = _tokenService.GenerateAccessToken(principal.Claims, AccessTokenType.Authentication);
-                var newRefreshToken = _tokenService.GenerateRefreshToken();
-                user.RefreshToken = newRefreshToken;
-                user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(7);
-                await _userService.UpdateUserAsync(user);
-        
-                Response.Cookies.Append(CookieNames.RefreshToken, newRefreshToken, _cookieOptionsProvider.GetOptions());
-                return new JsonResult(new AccessToken(newAccessToken, AccessTokenType.Authentication));
+                return await LoginUserAsync(user.Id);
             }
-            catch (Exception e)
+            catch (Exception)
             {
                 return StatusCode(500, "Unable to refresh expired access token");
             }
-            
         }
         
         [AllowAnonymous]
@@ -193,15 +157,29 @@ namespace CloudStorage.Controllers
         }
         
         [HttpPost("change-password")]
-        public async Task<IActionResult> ChangePasswordAsync([FromBody] ChangePasswordRequest pass)
+        public async Task<IActionResult> ChangePasswordAsync([FromBody] ChangePasswordRequest request)
         {
             var user = await _userService.GetUserAsync(User);
             if (user == null) return Unauthorized();
 
-            if (!BC.Verify(pass.OldPassword, user.Password)) return BadRequest("Invalid Password");
-            user.Password = BC.HashPassword(pass.NewPassword);
-            await _userService.UpdateUserAsync(user);
-            return Ok();
+            try
+            {
+                await _userService.ChangePasswordAsync(user.Id, request.OldPassword, request.NewPassword);
+                return Ok();
+            }
+            catch (InvalidOperationException e)
+            {
+                return BadRequest(e.Message);
+            }
+            catch (ArgumentException e)
+            {
+                return BadRequest(e.Message);
+            }
+            catch (Exception)
+            {
+                return StatusCode(500, "An unexpected error occurred.");
+            }
+
         }
         
         [AllowAnonymous]
@@ -217,9 +195,10 @@ namespace CloudStorage.Controllers
             if (user.Disabled)
                 return BadRequest("Account is Disabled");
             
-            var token = _userService.GeneratePasswordResetToken();
+            
             try
             {
+                var token = _userService.GeneratePasswordResetToken();
                 var passwordResetToken = await _userService.CreatePasswordResetTokenAsync(user.Id, token);
             
                 var resetLink =
@@ -230,41 +209,39 @@ namespace CloudStorage.Controllers
                 var hiddenEmail = EmailHelper.HideEmail(user.Email);
                 return new JsonResult(hiddenEmail);
             }
-            catch (Exception e)
+            catch (InvalidOperationException e)
             {
                 return BadRequest(e.Message);
             }
-            
+            catch (Exception)
+            {
+                return StatusCode(500, "An unexpected error occurred.");
+            }
         }
         
         [AllowAnonymous]
         [HttpPost, Route("reset-password")]
         public async Task<IActionResult> ResetPasswordAsync([FromBody] PasswordResetRequest request)
         {
-            var resetToken = await _userService.GetResetTokenByIdAsync(request.TokenId);
-            if (resetToken == null || resetToken.ExpirationDate <= DateTime.UtcNow || resetToken.TokenUsed || !BC.Verify(request.Token, resetToken.TokenHash))
-                return BadRequest();
-            
-            var user = await _userService.GetUserByIdAsync(resetToken.UserId);
-            if (user == null) 
-                return NotFound("Invalid user");
-            if (user.Disabled)
-                return BadRequest("Account is Disabled");
-            user.Password = BC.HashPassword(request.NewPassword);
-            resetToken.TokenUsed = true;
-
-            var claims = _userService.GetUserClaims(user);
-
-            var accessToken = _tokenService.GenerateAccessToken(claims, AccessTokenType.Authentication);
-            var refreshToken = _tokenService.GenerateRefreshToken();
-
-            user.RefreshToken = refreshToken;
-            user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(7);
-            await _userService.UpdateUserAsync(user);
-            await _userService.UpdateResetTokenAsync(resetToken);
-            
-            Response.Cookies.Append(CookieNames.RefreshToken, refreshToken, _cookieOptionsProvider.GetOptions());
-            return new JsonResult(new AccessToken(accessToken, AccessTokenType.Authentication));
+            if (request == null)
+                return BadRequest("Invalid client request");
+            try
+            {
+                var user = await _userService.ResetPasswordWithTokenAsync(request.TokenId, request.Token, request.NewPassword);
+                return user.TwoFaEnabled ? await SendTwoFaTokenAsync(user.Id) : await LoginUserAsync(user.Id);
+            }
+            catch (InvalidOperationException e)
+            {
+                return BadRequest(e.Message);
+            }
+            catch (ArgumentException e)
+            {
+                return BadRequest(e.Message);
+            }
+            catch (Exception)
+            {
+                return StatusCode(500, "An unexpected error occurred.");
+            }
         }
         
         [HttpDelete("revoke")]
@@ -272,12 +249,9 @@ namespace CloudStorage.Controllers
         {
             var user = await _userService.GetUserAsync(User);
             if (user == null)
-            {
-                return BadRequest();
-            }
-            user.RefreshToken = null;
-            user.RefreshTokenExpiryTime = null;
-            await _userService.UpdateUserAsync(user);
+                return Unauthorized();
+            
+            await _userService.UpdateRefreshTokenAsync(user.Id, null);
             return Ok();
         }
 
@@ -338,6 +312,29 @@ namespace CloudStorage.Controllers
             var user = await _userService.GetUserAsync(User);
             if (user == null) return Unauthorized();
             return new JsonResult(user.TwoFaEnabled);
+        }
+        
+        private async Task<IActionResult> LoginUserAsync(Guid userId)
+        {
+            var claims = await _userService.GetUserClaimsAsync(userId);
+            var accessToken = _tokenService.GenerateAccessToken(claims, AccessTokenType.Authentication);
+            var refreshToken = _tokenService.GenerateRefreshToken();
+            await _userService.UpdateRefreshTokenAsync(userId, refreshToken);
+            
+            Response.Cookies.Append(CookieNames.RefreshToken, refreshToken, _cookieOptionsProvider.GetOptions());
+
+            return new JsonResult(new AccessToken(accessToken, AccessTokenType.Authentication));
+        }
+
+        private async Task<IActionResult> SendTwoFaTokenAsync(Guid userId)
+        {
+            var claims = await _userService.GetUserClaimsAsync(userId);
+            
+            var clientId = HttpContext.Request.Headers["X-Client-Id"].ToString();
+            claims.Add(new Claim(AppClaims.ClientId, clientId));
+            
+            var twoFaToken = _tokenService.GenerateAccessToken(claims, AccessTokenType.TwoFactorAuthentication);
+            return new JsonResult(new AccessToken(twoFaToken, AccessTokenType.TwoFactorAuthentication));
         }
     }
 }

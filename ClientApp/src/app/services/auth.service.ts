@@ -2,8 +2,8 @@ import { AccessToken, TokenType } from '../interfaces/token.interface';
 import { UserModel } from '../interfaces/user.interface';
 import { computed, inject, Injectable, signal } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { finalize, Observable, of, throwError } from 'rxjs';
-import { catchError, map, tap } from 'rxjs/operators';
+import { finalize, Observable, throwError } from 'rxjs';
+import { catchError, tap } from 'rxjs/operators';
 import { Router } from '@angular/router';
 import { JwtHelperService } from '@auth0/angular-jwt';
 import { API_ENDPOINTS } from '../core/api-endpoints';
@@ -55,13 +55,6 @@ export class AuthService {
   loginWithTwoFa(token: string, code: string) {
     const url = buildUrl(API_ENDPOINTS.AUTH.BASE, API_ENDPOINTS.AUTH.LOGIN_2FA);
     return this.http.post<AccessToken>(url, { token, code });
-  }
-
-  loginWithToken(token: AccessToken): Observable<boolean> {
-    return of(token).pipe(
-      tap((token) => this.doLoginUser(token)),
-      map(() => true)
-    );
   }
 
   logout() {

@@ -32,6 +32,7 @@ export class AuthInterceptor implements HttpInterceptor {
   private readonly _clientIdEndPoints = [
     buildUrl(API_ENDPOINTS.AUTH.BASE, API_ENDPOINTS.AUTH.LOGIN),
     buildUrl(API_ENDPOINTS.AUTH.BASE, API_ENDPOINTS.AUTH.LOGIN_2FA),
+    buildUrl(API_ENDPOINTS.AUTH.BASE, API_ENDPOINTS.AUTH.RESET_PASSWORD),
   ];
   private readonly _revokeEndpoint = buildUrl(API_ENDPOINTS.AUTH.BASE, API_ENDPOINTS.AUTH.REVOKE);
   constructor() {}

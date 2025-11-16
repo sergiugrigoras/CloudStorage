@@ -41,7 +41,6 @@ export class SecurityComponent implements OnInit {
   private readonly authService = inject(AuthService);
   private readonly _snackBar = inject(MatSnackBar);
   protected readonly isTwoFaEnabled: WritableSignal<boolean | null> = signal(null);
-
   twoFaForm = new FormGroup({
     password: new FormControl('', Validators.required),
     code: new FormControl('', [
@@ -77,19 +76,27 @@ export class SecurityComponent implements OnInit {
     if (oldPassword === '' || newPassword === '') {
       return;
     }
-    this.authService.changePassword(oldPassword, newPassword).subscribe({
-      next: () => {
-        //this.resetPasswordFields();
-        this._snackBar.open(`Password has been changed successfully!`, 'Ok', { duration: 5000 });
-      },
-      error: (error: unknown) => {
-        if (error instanceof HttpErrorResponse && error.status === 400) {
-          this._snackBar.open(`Error. Invalid password.`, 'Ok', { duration: 5000 });
-        } else {
-          this._snackBar.open(`An error occurred.`, 'Ok', { duration: 5000 });
-        }
-      },
-    });
+    this.authService
+      .changePassword(oldPassword, newPassword)
+      .pipe(
+        catchError((error: unknown) => {
+          let message = 'An error occurred.';
+          if (error instanceof HttpErrorResponse && typeof error.error === 'string') {
+            message = error.error;
+          }
+          this._snackBar.open(message, 'Ok');
+          return EMPTY;
+        }),
+        tap(() => {
+          this.passwordChangeForm.reset({
+            oldPassword: '',
+            newPassword: '',
+            confirmNewPassword: '',
+          });
+          this._snackBar.open(`Password has been changed successfully!`, 'Ok', { duration: 5000 });
+        })
+      )
+      .subscribe();
   }
 
   protected readonly otpUri = signal('');

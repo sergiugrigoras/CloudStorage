@@ -17,11 +17,12 @@ public interface IUserService
     Task<User> GetUserByEmailAsync(string email);
     Task<User> GetUserByIdAsync(Guid id);
     Task UpdateUserAsync(User user);
+    Task UpdateRefreshTokenAsync(Guid userId, string refreshToken);
     Task<User> CreateUserAsync(string username, string email, string password);
-    List<Claim> GetUserClaims(User user);
+    Task<List<Claim>> GetUserClaimsAsync(Guid userId);
     Task<ResetToken> CreatePasswordResetTokenAsync(Guid userId, string token);
-    Task<ResetToken> GetResetTokenByIdAsync(int id);
-    Task UpdateResetTokenAsync(ResetToken resetToken);
+    Task<User> ResetPasswordWithTokenAsync(int tokenId, string tokenValue, string newPassword);
+    Task ChangePasswordAsync(Guid userId, string oldPassword, string newPassword);
     Task<bool> ValidateInviteCodeAsync(string code, string email);
     Task<string> CreateInviteCodeAsync(string email);
     Task<List<User>> GetAllUsersAsync();
@@ -35,11 +36,23 @@ public class UserService(AppDbContext context, IConfiguration configuration) : I
 {
     private readonly IConfiguration _configuration =
         configuration ?? throw new ArgumentNullException(nameof(configuration));
+
+    public async Task UpdateRefreshTokenAsync(Guid userId, string refreshToken)
+    {
+        var user = await context.Users.FirstOrDefaultAsync(x => x.Id == userId);
+        if (user == null)
+            throw new InvalidOperationException("User not found");
+        
+        user.RefreshToken = refreshToken;
+        user.RefreshTokenExpiryTime = refreshToken != null ? DateTime.UtcNow.AddDays(7) : null;
+        await context.SaveChangesAsync();
+    }
+
     public async Task<User> CreateUserAsync(string username, string email, string password)
     {
         if (await GetUserByNameAsync(username) != null || await GetUserByEmailAsync(email) != null)
         {
-            throw new Exception("User already exists");
+            throw new InvalidOperationException("User already registered");
         }
 
         var user = new User
@@ -63,7 +76,7 @@ public class UserService(AppDbContext context, IConfiguration configuration) : I
     public async Task<ResetToken> CreatePasswordResetTokenAsync(Guid userId, string token)
     {
         var userHasUnexpiredToken = await context.ResetTokens.AnyAsync(x => x.UserId == userId && x.ExpirationDate >= DateTime.UtcNow && x.TokenUsed == false);
-        if (userHasUnexpiredToken) throw new Exception("Unable to create reset token");
+        if (userHasUnexpiredToken) throw new InvalidOperationException("Unable to create reset token");
         var resetToken = new ResetToken
         {
             UserId = userId,
@@ -93,9 +106,12 @@ public class UserService(AppDbContext context, IConfiguration configuration) : I
         return user;
     }
 
-    public List<Claim> GetUserClaims(User user)
+    public async Task<List<Claim>> GetUserClaimsAsync(Guid userId)
     {
-        if (user == null) return null;
+        var user = await context.Users.FirstOrDefaultAsync(x => x.Id == userId);
+        if (user == null)
+            throw new InvalidOperationException("User not found");
+        
         var claims = new List<Claim>
         {
             new(ClaimTypes.Name, user.Username),
@@ -226,22 +242,51 @@ public class UserService(AppDbContext context, IConfiguration configuration) : I
         return new string(code);
     }
 
-    public async Task<ResetToken> GetResetTokenByIdAsync(int id)
+    public async Task<User> ResetPasswordWithTokenAsync(int tokenId, string tokenValue, string newPassword)
     {
-        var resetToken = await context.ResetTokens.FindAsync(id);
-        return resetToken;
+        if (string.IsNullOrEmpty(newPassword))
+            throw new ArgumentException("New password cannot be empty");
+        
+        var resetToken = await context.ResetTokens
+            .Include(x => x.User)
+            .FirstOrDefaultAsync(x => x.Id == tokenId);
+        if (resetToken?.User == null || !ValidPasswordResetToken(resetToken, tokenValue))
+            throw new InvalidOperationException("Invalid reset token");
+        if (resetToken.User.Disabled)
+            throw new InvalidOperationException("Account is Disabled");
+        
+        resetToken.TokenUsed = true;
+        resetToken.User.Password = BC.HashPassword(newPassword);
+        await context.SaveChangesAsync();
+        return resetToken.User;
+    }
+
+    private static bool ValidPasswordResetToken(ResetToken resetToken, string tokenValue)
+    {
+        return resetToken != null && resetToken.ExpirationDate > DateTime.UtcNow && !resetToken.TokenUsed &&
+               BC.Verify(tokenValue, resetToken.TokenHash);
+    }
+    
+    public async Task ChangePasswordAsync(Guid userId, string oldPassword, string newPassword)
+    {
+        var user = context.Users.FirstOrDefault(x => x.Id == userId);
+        if (user == null) 
+            throw new InvalidOperationException("User not found");
+        
+        if (string.IsNullOrEmpty(newPassword))
+            throw new ArgumentException("New password cannot be empty");
+        
+        if (!BC.Verify(oldPassword, user.Password))
+            throw new InvalidOperationException("Invalid password");
+        
+        user.Password = BC.HashPassword(newPassword);
+        await context.SaveChangesAsync();
     }
 
     public async Task<User> GetUserByIdAsync(Guid id)
     {
         var user = await context.Users.FindAsync(id);
         return user;
-    }
-
-    public async Task UpdateResetTokenAsync(ResetToken resetToken)
-    {
-        context.ResetTokens.Update(resetToken);
-        await context.SaveChangesAsync();
     }
     
     private static string EncryptString(string plainText, byte[] key, byte[] iv)

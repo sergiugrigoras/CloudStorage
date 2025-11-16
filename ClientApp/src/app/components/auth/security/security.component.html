@@ -1,4 +1,4 @@
-<form [formGroup]="passwordChangeForm" (ngSubmit)="changePassword()" class="security__form">
+<div [formGroup]="passwordChangeForm" class="elevated-form">
   <h3>Change Password</h3>
   <div>
     <mat-form-field>
@@ -19,15 +19,20 @@
     </mat-form-field>
   </div>
   <div>
-    <button type="submit" matButton="filled" [disabled]="passwordChangeForm.invalid">
+    <button
+      type="button"
+      matButton="filled"
+      [disabled]="passwordChangeForm.invalid"
+      (click)="changePassword()"
+    >
       Change password
     </button>
     <button type="reset" matButton="text">Clear</button>
   </div>
-</form>
+</div>
 
 @if (isTwoFaEnabled() === null) {
-  <div class="security__form">
+  <div class="elevated-form">
     <h3>Loading 2FA status...</h3>
   </div>
 } @else if (isTwoFaEnabled() === false) {
@@ -35,7 +40,7 @@
     <form
       [formGroup]="twoFaForm"
       (ngSubmit)="toggleTwoFa()"
-      class="security__form security-otp-container"
+      class="elevated-form security-otp-container"
     >
       <h3>Verify Two-Factor Authentication</h3>
       <div class="security__auth-link">
@@ -74,7 +79,7 @@
       }
     </form>
   } @else {
-    <div class="security__form">
+    <div class="elevated-form">
       <h3>Enable Two-Factor Authentication</h3>
       <div>
         <button type="button" matButton="filled" (click)="setupTwoFa()" [disabled]="processing()">
@@ -85,7 +90,7 @@
   }
 } @else if (isTwoFaEnabled() === true) {
   @if (showTwoFaDisableForm()) {
-    <form [formGroup]="twoFaForm" (ngSubmit)="toggleTwoFa()" class="security__form">
+    <form [formGroup]="twoFaForm" (ngSubmit)="toggleTwoFa()" class="elevated-form">
       <h3>Disable Two-Factor Authentication</h3>
       <div>
         <mat-form-field>
@@ -109,7 +114,7 @@
       }
     </form>
   } @else {
-    <div class="security__form">
+    <div class="elevated-form">
       <h3>Disable Two-Factor Authentication</h3>
       <button type="button" matButton="filled" (click)="showTwoFaDisableForm.set(true)">
         Disable 2FA

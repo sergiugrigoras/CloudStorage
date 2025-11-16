@@ -1,3 +1,4 @@
+/*
 .register-form {
   width: 500px;
   margin: auto;
@@ -18,4 +19,9 @@ form {
       flex: 1;
     }
   }
+}
+*/
+
+.register-form > div {
+  padding-top: 0.5rem;
 }

@@ -1,5 +1,5 @@
-<form [formGroup]="form" (ngSubmit)="register()" class="register-form">
-  <h2>Register</h2>
+<form [formGroup]="form" (ngSubmit)="register()" class="elevated-form register-form">
+  <h3>Register</h3>
   <div>
     <mat-form-field>
       <mat-label>Username</mat-label>
@@ -47,7 +47,6 @@
       }
     </mat-form-field>
   </div>
-  <div></div>
   <div>
     <button type="submit" matButton="filled" [disabled]="form.invalid">Register</button>
     <button type="button" matButton="text" (click)="form.reset()">Reset</button>

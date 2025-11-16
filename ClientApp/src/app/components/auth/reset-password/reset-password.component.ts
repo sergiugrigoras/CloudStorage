@@ -1,7 +1,7 @@
 import { catchError, switchMap } from 'rxjs/operators';
 import { AuthService } from '../../../services/auth.service';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, OnInit, signal, WritableSignal } from '@angular/core';
 import {
   FormControl,
   FormGroup,
@@ -10,11 +10,13 @@ import {
   ReactiveFormsModule,
 } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { EMPTY, finalize, tap } from 'rxjs';
+import { EMPTY, finalize, from, tap } from 'rxjs';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatFormField, MatLabel, MatInput, MatError, MatHint } from '@angular/material/input';
 import { MatButton } from '@angular/material/button';
 import { PasswordValidators } from '../security/security.component';
+import { LoginTwoFaComponent } from '../login-two-fa/login-two-fa.component';
+import { TokenType } from '../../../interfaces/token.interface';
 
 @Component({
   selector: 'app-reset-password',
@@ -29,6 +31,7 @@ import { PasswordValidators } from '../security/security.component';
     MatError,
     MatHint,
     MatButton,
+    LoginTwoFaComponent,
   ],
 })
 export class ResetPasswordComponent implements OnInit {
@@ -36,8 +39,10 @@ export class ResetPasswordComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly authService = inject(AuthService);
   private readonly _snackBar = inject(MatSnackBar);
-  resetToken = '';
-  resetTokenId = '';
+  protected readonly twoFaToken: WritableSignal<string | null> = signal(null);
+  resetToken = signal('');
+  resetTokenId = signal('');
+  protected readonly returnUrl = '/';
   userIdentifierForm = new FormGroup({
     userIdentifier: new FormControl('', Validators.required),
   });
@@ -53,8 +58,8 @@ export class ResetPasswordComponent implements OnInit {
   constructor() {}
 
   ngOnInit(): void {
-    this.resetToken = this.route.snapshot.queryParams['token'];
-    this.resetTokenId = this.route.snapshot.queryParams['id'];
+    this.resetToken.set(this.route.snapshot.queryParams['token'] || '');
+    this.resetTokenId.set(this.route.snapshot.queryParams['id'] || '');
   }
 
   getResetToken() {
@@ -95,26 +100,30 @@ export class ResetPasswordComponent implements OnInit {
       this._snackBar.open('New Password is Empty.', 'Ok', { duration: 5000 });
       return;
     }
+
     this.authService
-      .resetPassword(+this.resetTokenId, this.resetToken, newPassword)
+      .resetPassword(+this.resetTokenId(), this.resetToken(), newPassword)
       .pipe(
         catchError(() => {
           this._snackBar.open(`Invalid reset token.`, 'Ok', { duration: 5000 });
-          this.passwordForm.reset();
           return EMPTY;
         }),
-        switchMap((tokens) => {
-          return this.authService.loginWithToken(tokens);
+        switchMap((token) => {
+          this._snackBar.open(`Password has been changed successfully.`, 'Ok', { duration: 5000 });
+          if (token.tokenType === TokenType.Authentication) {
+            this.authService.loginUser(token);
+            return from(this.router.navigate([this.returnUrl]));
+          }
+          if (token.tokenType === TokenType.TwoFactorAuthentication) {
+            this.twoFaToken.set(token.token);
+          }
+          return EMPTY;
+        }),
+        finalize(() => {
+          this.passwordForm.reset({ newPassword: '', confirmNewPassword: '' });
         })
       )
-      .subscribe((res) => {
-        if (res) {
-          this._snackBar.open(`Password has been changed successfully.`, 'Ok', { duration: 3000 });
-          setTimeout(() => {
-            this.router.navigate(['/']);
-          }, 3000);
-        }
-      });
+      .subscribe();
   }
 
   get newPassword() {

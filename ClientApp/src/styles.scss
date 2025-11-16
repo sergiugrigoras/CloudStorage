@@ -79,3 +79,36 @@ body {
 .app-snack-bar {
   margin-bottom: 4.5rem !important;
 }
+
+.elevated-form {
+  width: 500px;
+  margin: 1rem auto;
+  min-width: 0;
+  max-width: 80vw;
+
+  border-radius: var(--mat-sys-corner-medium);
+  box-shadow: var(--mat-sys-level1);
+  background-color: var(--mat-sys-surface-container-low);
+  padding: 0 1rem 1rem 1rem;
+  overflow: auto;
+
+  h3 {
+    margin: 1rem 0;
+    text-align: center;
+  }
+  > div {
+    display: flex;
+
+    mat-form-field {
+      flex: 1;
+    }
+  }
+
+  div:has(> :first-child:is(button, a)) {
+    padding-top: 0.5rem;
+  }
+  button,
+  a {
+    margin-right: 0.5rem;
+  }
+}

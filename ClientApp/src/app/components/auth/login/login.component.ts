@@ -1,6 +1,6 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { UserModel } from '../../../interfaces/user.interface';
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, inject, OnInit, signal, WritableSignal } from '@angular/core';
 import {
   FormControl,
   FormGroup,
@@ -13,10 +13,10 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatFormField, MatLabel, MatInput } from '@angular/material/input';
 import { MatButton } from '@angular/material/button';
-import { catchError, switchMap, tap } from 'rxjs/operators';
+import { catchError, switchMap } from 'rxjs/operators';
 import { EMPTY, from } from 'rxjs';
 import { TokenType } from '../../../interfaces/token.interface';
-import { NgxMaskDirective } from 'ngx-mask';
+import { LoginTwoFaComponent } from '../login-two-fa/login-two-fa.component';
 
 @Component({
   selector: 'app-login',
@@ -30,7 +30,7 @@ import { NgxMaskDirective } from 'ngx-mask';
     MatInput,
     MatButton,
     RouterLink,
-    NgxMaskDirective,
+    LoginTwoFaComponent,
   ],
 })
 export class LoginComponent implements OnInit {
@@ -38,20 +38,12 @@ export class LoginComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly _snackBar = inject(MatSnackBar);
-  protected readonly require2Fa = signal(false);
+  protected readonly twoFaToken: WritableSignal<string | null> = signal(null);
   returnUrl: string = '';
-  form = new FormGroup({
+
+  loginForm = new FormGroup({
     userIdentifier: new FormControl('', Validators.required),
     password: new FormControl('', Validators.required),
-  });
-
-  twoFaForm = new FormGroup({
-    code: new FormControl('', [
-      Validators.required,
-      Validators.minLength(6),
-      Validators.maxLength(6),
-    ]),
-    token: new FormControl('', Validators.required),
   });
 
   constructor() {}
@@ -61,11 +53,11 @@ export class LoginComponent implements OnInit {
   }
 
   login() {
-    const identifier = this.form.get('userIdentifier')?.value;
+    const identifier = this.loginForm.get('userIdentifier')?.value;
     const user: UserModel = {
       username: String(identifier).includes('@') ? '' : identifier,
       email: String(identifier).includes('@') ? identifier : '',
-      password: this.form.get('password')?.value,
+      password: this.loginForm.get('password')?.value,
     };
 
     this.authService
@@ -88,35 +80,12 @@ export class LoginComponent implements OnInit {
           if (token.tokenType === TokenType.Authentication) {
             this.authService.loginUser(token);
             return from(this.router.navigate([this.returnUrl]));
-          } else if (token.tokenType === TokenType.TwoFactorAuthentication) {
-            this.require2Fa.set(true);
-            this.twoFaForm.get('token')?.setValue(token.token);
+          }
+          if (token.tokenType === TokenType.TwoFactorAuthentication) {
+            this.twoFaToken.set(token.token);
           }
           return EMPTY;
         })
-      )
-      .subscribe();
-  }
-
-  loginTwoFa() {
-    const token = this.twoFaForm.get('token')?.value;
-    const code = (this.twoFaForm.get('code')?.value || '').trim();
-    if (token == null || code === '') return;
-
-    this.authService
-      .loginWithTwoFa(token, code)
-      .pipe(
-        catchError(() => {
-          // TODO switch error status
-          this._snackBar.open(`An error occurred.`, 'Ok', { duration: 5000 });
-          return EMPTY;
-        }),
-        tap((token) => {
-          this.authService.loginUser(token);
-          this.require2Fa.set(false);
-          this.twoFaForm.reset({ token: '', code: '' });
-        }),
-        switchMap(() => from(this.router.navigate([this.returnUrl])))
       )
       .subscribe();
   }
