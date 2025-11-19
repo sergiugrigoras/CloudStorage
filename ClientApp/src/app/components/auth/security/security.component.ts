@@ -8,7 +8,7 @@ import {
 } from '@angular/forms';
 import { MatButton } from '@angular/material/button';
 import { MatIcon } from '@angular/material/icon';
-import { MatInput, MatLabel, MatFormField, MatError } from '@angular/material/input';
+import { MatInput, MatLabel, MatFormField, MatError, MatSuffix } from '@angular/material/input';
 import { QRCodeComponent } from 'angularx-qrcode';
 import { AuthService } from '../../../services/auth.service';
 import { catchError, take, tap } from 'rxjs/operators';
@@ -19,6 +19,7 @@ import { MatProgressBar } from '@angular/material/progress-bar';
 import { NgxMaskDirective } from 'ngx-mask';
 import { PasswordMismatchErrorStateMatcher } from '../../../utils/password-mismatch-error-state-matcher';
 import { PasswordValidators } from '../../../utils/password.validators';
+import { MatTooltip } from '@angular/material/tooltip';
 
 @Component({
   selector: 'app-security',
@@ -34,6 +35,8 @@ import { PasswordValidators } from '../../../utils/password.validators';
     MatProgressBar,
     NgxMaskDirective,
     MatError,
+    MatSuffix,
+    MatTooltip,
   ],
   templateUrl: './security.component.html',
   styleUrl: './security.component.scss',
@@ -43,7 +46,9 @@ export class SecurityComponent implements OnInit {
   private readonly _snackBar = inject(MatSnackBar);
   protected readonly isTwoFaEnabled: WritableSignal<boolean | null> = signal(null);
   protected readonly parentErrorMatcher = new PasswordMismatchErrorStateMatcher();
-  twoFaForm = new FormGroup({
+  protected readonly strongPasswordTooltip = PasswordValidators.strongPasswordTooltip;
+
+  protected readonly twoFaForm = new FormGroup({
     password: new FormControl('', Validators.required),
     code: new FormControl('', [
       Validators.required,
@@ -51,31 +56,31 @@ export class SecurityComponent implements OnInit {
       Validators.maxLength(6),
     ]),
   });
-  passwordChangeForm = new FormGroup(
+  protected readonly oldPasswordControl = new FormControl('', Validators.required);
+  protected readonly newPasswordControl = new FormControl('', [
+    Validators.required,
+    PasswordValidators.strongPasswordValidator,
+  ]);
+  protected readonly confirmNewPasswordControl = new FormControl('', Validators.required);
+  protected readonly passwordChangeForm = new FormGroup(
     {
-      oldPassword: new FormControl('', Validators.required),
-      newPassword: new FormControl('', Validators.required),
-      confirmNewPassword: new FormControl('', Validators.required),
+      oldPassword: this.oldPasswordControl,
+      newPassword: this.newPasswordControl,
+      confirmNewPassword: this.confirmNewPasswordControl,
     },
     PasswordValidators.passwordsMismatch('newPassword', 'confirmNewPassword')
   );
 
-  get oldPassword() {
-    return this.passwordChangeForm.get('oldPassword');
-  }
-
-  get newPassword() {
-    return this.passwordChangeForm.get('newPassword');
-  }
-
-  get confirmNewPassword() {
-    return this.passwordChangeForm.get('confirmNewPassword');
-  }
-
   changePassword() {
-    const oldPassword = this.oldPassword?.value || '';
-    const newPassword = this.newPassword?.value || '';
-    if (oldPassword === '' || newPassword === '') {
+    this.passwordChangeForm.markAllAsTouched();
+    const oldPassword = this.oldPasswordControl.value || '';
+    const newPassword = this.newPasswordControl.value || '';
+    if (
+      oldPassword === '' ||
+      newPassword === '' ||
+      this.passwordChangeForm.invalid ||
+      this.passwordChangeForm.pending
+    ) {
       return;
     }
     this.authService

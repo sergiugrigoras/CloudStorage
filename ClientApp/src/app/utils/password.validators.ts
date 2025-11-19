@@ -35,4 +35,10 @@ export class PasswordValidators {
 
     return Object.keys(errors).length ? errors : null;
   }
+
+  public static readonly strongPasswordTooltip = `Password must be at least 8 characters and include:
+• One lowercase letter
+• One uppercase letter
+• One digit
+• One symbol`;
 }

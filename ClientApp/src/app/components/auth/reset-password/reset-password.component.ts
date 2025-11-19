@@ -12,12 +12,14 @@ import {
 import { ActivatedRoute, Router } from '@angular/router';
 import { EMPTY, finalize, from, tap } from 'rxjs';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { MatFormField, MatLabel, MatInput, MatError } from '@angular/material/input';
+import { MatFormField, MatLabel, MatInput, MatError, MatSuffix } from '@angular/material/input';
 import { MatButton } from '@angular/material/button';
 import { LoginTwoFaComponent } from '../login-two-fa/login-two-fa.component';
 import { TokenType } from '../../../interfaces/token.interface';
 import { PasswordMismatchErrorStateMatcher } from '../../../utils/password-mismatch-error-state-matcher';
 import { PasswordValidators } from '../../../utils/password.validators';
+import { MatIcon } from '@angular/material/icon';
+import { MatTooltip } from '@angular/material/tooltip';
 
 @Component({
   selector: 'app-reset-password',
@@ -32,6 +34,9 @@ import { PasswordValidators } from '../../../utils/password.validators';
     MatError,
     MatButton,
     LoginTwoFaComponent,
+    MatIcon,
+    MatSuffix,
+    MatTooltip,
   ],
 })
 export class ResetPasswordComponent implements OnInit {
@@ -43,14 +48,20 @@ export class ResetPasswordComponent implements OnInit {
   resetToken = signal('');
   resetTokenId = signal('');
   protected readonly returnUrl = '/';
-  userIdentifierForm = new FormGroup({
+  protected readonly strongPasswordTooltip = PasswordValidators.strongPasswordTooltip;
+  protected readonly userIdentifierForm = new FormGroup({
     userIdentifier: new FormControl('', Validators.required),
   });
 
-  passwordForm = new FormGroup(
+  protected readonly newPasswordControl = new FormControl('', [
+    Validators.required,
+    PasswordValidators.strongPasswordValidator,
+  ]);
+  protected readonly confirmNewPasswordControl = new FormControl('', Validators.required);
+  protected readonly passwordForm = new FormGroup(
     {
-      newPassword: new FormControl('', Validators.required),
-      confirmNewPassword: new FormControl('', Validators.required),
+      newPassword: this.newPasswordControl,
+      confirmNewPassword: this.confirmNewPasswordControl,
     },
     PasswordValidators.passwordsMismatch('newPassword', 'confirmNewPassword')
   );
@@ -95,9 +106,9 @@ export class ResetPasswordComponent implements OnInit {
   }
 
   resetPassword() {
-    const newPassword = this.newPassword?.value || '';
-    if (newPassword === '') {
-      this._snackBar.open('New Password is Empty.', 'Ok', { duration: 5000 });
+    this.passwordForm.markAllAsTouched();
+    const newPassword = this.newPasswordControl.value || '';
+    if (newPassword === '' || this.passwordForm.invalid || this.passwordForm.pending) {
       return;
     }
 
@@ -124,13 +135,5 @@ export class ResetPasswordComponent implements OnInit {
         })
       )
       .subscribe();
-  }
-
-  get newPassword() {
-    return this.passwordForm.get('newPassword');
-  }
-
-  get confirmNewPassword() {
-    return this.passwordForm.get('confirmNewPassword');
   }
 }

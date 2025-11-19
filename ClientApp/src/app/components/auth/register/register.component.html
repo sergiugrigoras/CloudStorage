@@ -64,14 +64,7 @@
     </mat-form-field>
   </div>
   <div>
-    <button
-      type="button"
-      matButton="filled"
-      [disabled]="registerForm.invalid || registerForm.pending"
-      (click)="register()"
-    >
-      Register
-    </button>
+    <button type="button" matButton="filled" (click)="register()">Register</button>
     <button type="button" matButton="text" (click)="registerForm.reset()">Reset</button>
   </div>
 </div>

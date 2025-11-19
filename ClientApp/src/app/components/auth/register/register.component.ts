@@ -75,15 +75,10 @@ export class RegisterComponent implements OnInit, OnDestroy {
     PasswordValidators.passwordsMismatch('password', 'confirmPassword')
   );
 
-  protected readonly strongPasswordTooltip = `Password must be at least 8 characters and include:
-• One lowercase letter
-• One uppercase letter
-• One digit
-• One symbol`;
-
   protected readonly usernameTooltip = `Starts with a letter.
 Contains letters, numbers, dash, underscore, or period.
 Length 5-32.`;
+  protected readonly strongPasswordTooltip = PasswordValidators.strongPasswordTooltip;
 
   protected readonly inviteCodePatterns = { S: { pattern: /[A-Za-z0-9]/ } };
   private readonly destroy$ = new Subject<void>();
@@ -134,6 +129,10 @@ Length 5-32.`;
   }
 
   register() {
+    this.registerForm.markAllAsTouched();
+    if (this.registerForm.invalid || this.registerForm.pending) {
+      return;
+    }
     const user: UserModel = {
       username: this.usernameControl.value,
       email: this.emailControl.value,

@@ -3,15 +3,22 @@
   <div>
     <mat-form-field>
       <mat-label>Old password</mat-label>
-      <input matInput formControlName="oldPassword" type="password" />
+      <input matInput [formControl]="oldPasswordControl" type="password" />
       <mat-error>This field is required.</mat-error>
     </mat-form-field>
   </div>
   <div>
     <mat-form-field>
       <mat-label>New password</mat-label>
-      <input matInput formControlName="newPassword" type="password" />
-      <mat-error>This field is required.</mat-error>
+      <input matInput [formControl]="newPasswordControl" type="password" />
+      <mat-icon matSuffix [matTooltip]="strongPasswordTooltip" matTooltipClass="multiline-tooltip">
+        help_outline
+      </mat-icon>
+      <mat-error>{{
+        newPasswordControl.errors?.['required']
+          ? 'This field is required.'
+          : 'Password does not meet complexity requirements.'
+      }}</mat-error>
     </mat-form-field>
   </div>
   <div>
@@ -19,26 +26,19 @@
       <mat-label>Confirm new password</mat-label>
       <input
         matInput
-        formControlName="confirmNewPassword"
+        [formControl]="confirmNewPasswordControl"
         type="password"
         [errorStateMatcher]="parentErrorMatcher"
       />
       <mat-error>{{
-        confirmNewPassword?.errors?.['required']
+        confirmNewPasswordControl.errors?.['required']
           ? 'This field is required.'
           : 'Passwords do not match.'
       }}</mat-error>
     </mat-form-field>
   </div>
   <div>
-    <button
-      type="button"
-      matButton="filled"
-      [disabled]="passwordChangeForm.invalid"
-      (click)="changePassword()"
-    >
-      Change password
-    </button>
+    <button type="button" matButton="filled" (click)="changePassword()">Change password</button>
     <button type="button" matButton="text" (click)="passwordChangeForm.reset()">Clear</button>
   </div>
 </div>
