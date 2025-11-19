@@ -1,16 +1,17 @@
 import { UserModel } from '../../../interfaces/user.interface';
 import { AuthService } from '../../../services/auth.service';
 import { PasswordValidators } from '../../../utils/password.validators';
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, computed, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import {
   FormControl,
   FormGroup,
   Validators,
   FormsModule,
   ReactiveFormsModule,
+  ValidationErrors,
 } from '@angular/forms';
 import { UsernameValidators } from '../../../utils/username.validators';
-import { catchError, EMPTY } from 'rxjs';
+import { catchError, EMPTY, Subject, takeUntil } from 'rxjs';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { HttpErrorResponse } from '@angular/common/http';
@@ -19,6 +20,8 @@ import { MatIcon } from '@angular/material/icon';
 import { MatTooltip } from '@angular/material/tooltip';
 import { MatButton } from '@angular/material/button';
 import { PasswordMismatchErrorStateMatcher } from '../../../utils/password-mismatch-error-state-matcher';
+import { tap } from 'rxjs/operators';
+import { NgxMaskDirective } from 'ngx-mask';
 
 @Component({
   selector: 'app-register',
@@ -35,73 +38,108 @@ import { PasswordMismatchErrorStateMatcher } from '../../../utils/password-misma
     MatTooltip,
     MatError,
     MatButton,
+    NgxMaskDirective,
   ],
 })
-export class RegisterComponent implements OnInit {
+export class RegisterComponent implements OnInit, OnDestroy {
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   private readonly snackBar = inject(MatSnackBar);
+
   protected readonly passwordMismatchErrorStateMatcher = new PasswordMismatchErrorStateMatcher();
-  form = new FormGroup(
+  protected readonly usernameControl = new FormControl(
+    '',
+    [Validators.required, UsernameValidators.checkPattern],
+    UsernameValidators.checkUnique(this.authService)
+  );
+  protected readonly emailControl = new FormControl(
+    '',
+    [Validators.required, Validators.email],
+    UsernameValidators.checkUnique(this.authService)
+  );
+  protected readonly inviteCodeControl = new FormControl('');
+  protected readonly passwordControl = new FormControl('', [
+    Validators.required,
+    PasswordValidators.strongPasswordValidator,
+  ]);
+  protected readonly confirmPasswordControl = new FormControl('', Validators.required);
+  registerForm = new FormGroup(
     {
-      username: new FormControl(
-        '',
-        [Validators.required, UsernameValidators.checkPattern],
-        UsernameValidators.checkUnique(this.authService)
-      ),
-      email: new FormControl(
-        '',
-        [Validators.required, Validators.email],
-        UsernameValidators.checkUnique(this.authService)
-      ),
-      inviteCode: new FormControl(''),
-      password: new FormControl('', Validators.required),
-      confirmPassword: new FormControl('', Validators.required),
+      username: this.usernameControl,
+      email: this.emailControl,
+      inviteCode: this.inviteCodeControl,
+      password: this.passwordControl,
+      confirmPassword: this.confirmPasswordControl,
     },
     PasswordValidators.passwordsMismatch('password', 'confirmPassword')
   );
 
+  protected readonly strongPasswordTooltip = `Password must be at least 8 characters and include:
+• One lowercase letter
+• One uppercase letter
+• One digit
+• One symbol`;
+
+  protected readonly usernameTooltip = `Starts with a letter.
+Contains letters, numbers, dash, underscore, or period.
+Length 5-32.`;
+
+  protected readonly inviteCodePatterns = { S: { pattern: /[A-Za-z0-9]/ } };
+  private readonly destroy$ = new Subject<void>();
+
   constructor() {}
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
 
   ngOnInit(): void {
     const inviteCode = this.route.snapshot.queryParams['inviteCode'];
     const email = this.route.snapshot.queryParams['email'];
+
+    this.usernameControl.statusChanges
+      .pipe(
+        takeUntil(this.destroy$),
+        tap(() => {
+          this.usernameErrors.set(this.usernameControl.errors);
+        })
+      )
+      .subscribe();
+
+    this.emailControl.statusChanges
+      .pipe(
+        takeUntil(this.destroy$),
+        tap(() => {
+          this.emailErrors.set(this.emailControl.errors);
+        })
+      )
+      .subscribe();
+
+    this.inviteCodeControl.valueChanges
+      .pipe(
+        takeUntil(this.destroy$),
+        tap((value) => {
+          if (value) this.inviteCodeControl.setValue(value.toUpperCase(), { emitEvent: false });
+        })
+      )
+      .subscribe();
+
     if (inviteCode) {
-      this.inviteCode?.setValue(inviteCode);
+      this.inviteCodeControl.setValue(inviteCode);
     }
     if (email) {
-      this.email?.setValue(email);
+      this.emailControl.setValue(email);
     }
-  }
-
-  get password() {
-    return this.form.get('password');
-  }
-
-  get confirmPassword() {
-    return this.form.get('confirmPassword');
-  }
-
-  get email() {
-    return this.form.get('email');
-  }
-
-  get username() {
-    return this.form.get('username');
-  }
-
-  get inviteCode() {
-    return this.form.get('inviteCode');
   }
 
   register() {
     const user: UserModel = {
-      username: this.username?.value,
-      email: this.email?.value,
-      password: this.password?.value,
+      username: this.usernameControl.value,
+      email: this.emailControl.value,
+      password: this.passwordControl.value,
     };
-    const inviteCode = (this.inviteCode?.value || '').trim();
+    const inviteCode = (this.inviteCodeControl.value || '').trim();
     this.authService
       .register(user, inviteCode)
       .pipe(
@@ -117,22 +155,29 @@ export class RegisterComponent implements OnInit {
       });
   }
 
-  getUsernameError() {
-    const errors = this.username?.errors;
-    if (errors == null) return '';
+  private readonly usernameErrors = signal<ValidationErrors | null | undefined>(
+    this.usernameControl.errors
+  );
+
+  protected readonly usernameError = computed(() => {
+    const errors = this.usernameErrors();
+    if (!errors) return '';
     if (errors['required']) return 'Username is required.';
     if (errors['invalidPattern']) return 'Invalid username pattern.';
     if (errors['shouldBeUnique']) return 'Username is already taken.';
     return '';
-  }
+  });
 
-  getEmailError() {
-    const errors = this.email?.errors;
+  private readonly emailErrors = signal<ValidationErrors | null | undefined>(
+    this.emailControl.errors
+  );
+
+  protected readonly emailError = computed(() => {
+    const errors = this.emailErrors();
     if (errors == null) return '';
-    // console.log(errors);
     if (errors['required']) return 'Email is required.';
     if (errors['email']) return 'Invalid email.';
     if (errors['shouldBeUnique']) return 'Email is already registered.';
     return '';
-  }
+  });
 }

@@ -1,40 +1,50 @@
-<div [formGroup]="form" class="elevated-form register-form">
+<div [formGroup]="registerForm" class="elevated-form register-form">
   <h3>Register</h3>
   <div>
     <mat-form-field>
       <mat-label>Username</mat-label>
-      <input matInput formControlName="username" type="text" />
-      <mat-icon
-        matSuffix
-        matTooltip="Username starts with a letter. Contains characters a-z, 0-9, dash, underscor, period. Length 5-32."
-      >
+      <input matInput [formControl]="usernameControl" type="text" />
+      <mat-icon matSuffix [matTooltip]="usernameTooltip" matTooltipClass="multiline-tooltip">
         help_outline
       </mat-icon>
       <mat-error>
-        {{ getUsernameError() }}
+        {{ usernameError() }}
       </mat-error>
     </mat-form-field>
   </div>
   <div>
     <mat-form-field>
       <mat-label>Email</mat-label>
-      <input matInput formControlName="email" type="email" />
+      <input matInput [formControl]="emailControl" type="email" />
       <mat-error>
-        {{ getEmailError() }}
+        {{ emailError() }}
       </mat-error>
     </mat-form-field>
   </div>
   <div>
     <mat-form-field>
       <mat-label>Invite Code</mat-label>
-      <input matInput formControlName="inviteCode" type="text" />
+      <input
+        matInput
+        [formControl]="inviteCodeControl"
+        type="text"
+        mask="SSS SSS"
+        [patterns]="inviteCodePatterns"
+      />
     </mat-form-field>
   </div>
   <div>
     <mat-form-field>
       <mat-label>Password</mat-label>
-      <input matInput formControlName="password" type="password" />
-      <mat-error>This field is required.</mat-error>
+      <input matInput [formControl]="passwordControl" type="password" />
+      <mat-icon matSuffix [matTooltip]="strongPasswordTooltip" matTooltipClass="multiline-tooltip">
+        help_outline
+      </mat-icon>
+      <mat-error>{{
+        passwordControl.errors?.['required']
+          ? 'This field is required.'
+          : 'Password does not meet complexity requirements.'
+      }}</mat-error>
     </mat-form-field>
   </div>
   <div>
@@ -42,12 +52,12 @@
       <mat-label>Confirm password</mat-label>
       <input
         matInput
-        formControlName="confirmPassword"
+        [formControl]="confirmPasswordControl"
         type="password"
         [errorStateMatcher]="passwordMismatchErrorStateMatcher"
       />
       <mat-error>{{
-        confirmPassword?.errors?.['required']
+        confirmPasswordControl.errors?.['required']
           ? 'This field is required.'
           : 'Passwords do not match.'
       }}</mat-error>
@@ -57,11 +67,11 @@
     <button
       type="button"
       matButton="filled"
-      [disabled]="form.invalid || form.pending"
+      [disabled]="registerForm.invalid || registerForm.pending"
       (click)="register()"
     >
       Register
     </button>
-    <button type="button" matButton="text" (click)="form.reset()">Reset</button>
+    <button type="button" matButton="text" (click)="registerForm.reset()">Reset</button>
   </div>
 </div>
