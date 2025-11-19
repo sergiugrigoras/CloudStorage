@@ -12,11 +12,12 @@ import {
 import { ActivatedRoute, Router } from '@angular/router';
 import { EMPTY, finalize, from, tap } from 'rxjs';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { MatFormField, MatLabel, MatInput, MatError, MatHint } from '@angular/material/input';
+import { MatFormField, MatLabel, MatInput, MatError } from '@angular/material/input';
 import { MatButton } from '@angular/material/button';
-import { PasswordValidators } from '../security/security.component';
 import { LoginTwoFaComponent } from '../login-two-fa/login-two-fa.component';
 import { TokenType } from '../../../interfaces/token.interface';
+import { PasswordMismatchErrorStateMatcher } from '../../../utils/password-mismatch-error-state-matcher';
+import { PasswordValidators } from '../../../utils/password.validators';
 
 @Component({
   selector: 'app-reset-password',
@@ -29,7 +30,6 @@ import { TokenType } from '../../../interfaces/token.interface';
     MatLabel,
     MatInput,
     MatError,
-    MatHint,
     MatButton,
     LoginTwoFaComponent,
   ],
@@ -52,9 +52,9 @@ export class ResetPasswordComponent implements OnInit {
       newPassword: new FormControl('', Validators.required),
       confirmNewPassword: new FormControl('', Validators.required),
     },
-    PasswordValidators.passwordsShouldMatch
+    PasswordValidators.passwordsMismatch('newPassword', 'confirmNewPassword')
   );
-
+  protected readonly parentErrorMatcher = new PasswordMismatchErrorStateMatcher();
   constructor() {}
 
   ngOnInit(): void {

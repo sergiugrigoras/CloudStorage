@@ -1,21 +1,33 @@
-<div [formGroup]="passwordChangeForm" class="elevated-form">
+<div [formGroup]="passwordChangeForm" class="elevated-form password-change-form">
   <h3>Change Password</h3>
   <div>
     <mat-form-field>
       <mat-label>Old password</mat-label>
       <input matInput formControlName="oldPassword" type="password" />
+      <mat-error>This field is required.</mat-error>
     </mat-form-field>
   </div>
   <div>
     <mat-form-field>
       <mat-label>New password</mat-label>
       <input matInput formControlName="newPassword" type="password" />
+      <mat-error>This field is required.</mat-error>
     </mat-form-field>
   </div>
   <div>
     <mat-form-field>
       <mat-label>Confirm new password</mat-label>
-      <input matInput formControlName="confirmNewPassword" type="password" />
+      <input
+        matInput
+        formControlName="confirmNewPassword"
+        type="password"
+        [errorStateMatcher]="parentErrorMatcher"
+      />
+      <mat-error>{{
+        confirmNewPassword?.errors?.['required']
+          ? 'This field is required.'
+          : 'Passwords do not match.'
+      }}</mat-error>
     </mat-form-field>
   </div>
   <div>
@@ -27,7 +39,7 @@
     >
       Change password
     </button>
-    <button type="reset" matButton="text">Clear</button>
+    <button type="button" matButton="text" (click)="passwordChangeForm.reset()">Clear</button>
   </div>
 </div>
 

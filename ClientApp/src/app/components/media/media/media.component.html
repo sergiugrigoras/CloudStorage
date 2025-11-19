@@ -169,7 +169,12 @@
     <div>
       <mat-form-field appearance="outline">
         <mat-label>Album Name</mat-label>
-        <input matInput #albumNameInput formControlName="name" />
+        <input
+          matInput
+          #albumNameInput
+          formControlName="name"
+          [errorStateMatcher]="showOnDirtyErrorStateMatcher"
+        />
         <mat-error>{{ newAlbumErrorMessage() }}</mat-error>
       </mat-form-field>
     </div>

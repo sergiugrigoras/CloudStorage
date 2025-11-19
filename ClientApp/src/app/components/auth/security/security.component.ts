@@ -1,16 +1,14 @@
 import { Component, inject, OnInit, signal, WritableSignal } from '@angular/core';
 import {
-  AbstractControl,
   FormControl,
   FormGroup,
   FormsModule,
   ReactiveFormsModule,
-  ValidationErrors,
   Validators,
 } from '@angular/forms';
 import { MatButton } from '@angular/material/button';
 import { MatIcon } from '@angular/material/icon';
-import { MatInput, MatLabel, MatFormField } from '@angular/material/input';
+import { MatInput, MatLabel, MatFormField, MatError } from '@angular/material/input';
 import { QRCodeComponent } from 'angularx-qrcode';
 import { AuthService } from '../../../services/auth.service';
 import { catchError, take, tap } from 'rxjs/operators';
@@ -19,6 +17,8 @@ import { EMPTY, finalize, from } from 'rxjs';
 import { HttpErrorResponse } from '@angular/common/http';
 import { MatProgressBar } from '@angular/material/progress-bar';
 import { NgxMaskDirective } from 'ngx-mask';
+import { PasswordMismatchErrorStateMatcher } from '../../../utils/password-mismatch-error-state-matcher';
+import { PasswordValidators } from '../../../utils/password.validators';
 
 @Component({
   selector: 'app-security',
@@ -33,6 +33,7 @@ import { NgxMaskDirective } from 'ngx-mask';
     ReactiveFormsModule,
     MatProgressBar,
     NgxMaskDirective,
+    MatError,
   ],
   templateUrl: './security.component.html',
   styleUrl: './security.component.scss',
@@ -41,6 +42,7 @@ export class SecurityComponent implements OnInit {
   private readonly authService = inject(AuthService);
   private readonly _snackBar = inject(MatSnackBar);
   protected readonly isTwoFaEnabled: WritableSignal<boolean | null> = signal(null);
+  protected readonly parentErrorMatcher = new PasswordMismatchErrorStateMatcher();
   twoFaForm = new FormGroup({
     password: new FormControl('', Validators.required),
     code: new FormControl('', [
@@ -55,7 +57,7 @@ export class SecurityComponent implements OnInit {
       newPassword: new FormControl('', Validators.required),
       confirmNewPassword: new FormControl('', Validators.required),
     },
-    PasswordValidators.passwordsShouldMatch
+    PasswordValidators.passwordsMismatch('newPassword', 'confirmNewPassword')
   );
 
   get oldPassword() {
@@ -182,15 +184,5 @@ export class SecurityComponent implements OnInit {
         })
       )
       .subscribe();
-  }
-}
-
-export class PasswordValidators {
-  static passwordsShouldMatch(control: AbstractControl): ValidationErrors | null {
-    const newPass = control.get('newPassword')?.value;
-    const confirmNewPass = control.get('confirmNewPassword')?.value;
-
-    if (newPass !== confirmNewPass) return { passwordsShouldMatch: true };
-    return null;
   }
 }

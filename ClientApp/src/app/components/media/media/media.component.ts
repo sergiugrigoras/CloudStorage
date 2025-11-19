@@ -80,6 +80,7 @@ import { StorageInfoComponent } from '../../drive/storage-info/storage-info.comp
 import { MatPaginator } from '@angular/material/paginator';
 import { take } from 'rxjs/operators';
 import { DomSanitizer } from '@angular/platform-browser';
+import { ShowOnDirtyErrorStateMatcher } from '@angular/material/core';
 
 const KEY_UPDATE_INTERVAL = 60000; // 1 minute
 const SNACKBAR_OPTIONS = { duration: 3000 };
@@ -755,4 +756,6 @@ export class MediaComponent implements OnInit, OnDestroy, AfterViewInit {
     this.mediaService.largeGridSize.update((value) => !value);
     localStorage.setItem(this._gridSizeKey, this.mediaService.largeGridSize() ? 'large' : 'normal');
   }
+
+  protected readonly showOnDirtyErrorStateMatcher = new ShowOnDirtyErrorStateMatcher();
 }

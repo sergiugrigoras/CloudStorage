@@ -1,33 +1,24 @@
 import { UserModel } from '../../../interfaces/user.interface';
 import { AuthService } from '../../../services/auth.service';
-import { PasswordValidators } from './password.validators';
+import { PasswordValidators } from '../../../utils/password.validators';
 import { Component, inject, OnInit } from '@angular/core';
 import {
-  AbstractControl,
   FormControl,
   FormGroup,
-  ValidationErrors,
   Validators,
   FormsModule,
   ReactiveFormsModule,
 } from '@angular/forms';
-import { UsernameValidators } from './username.validators';
-import { catchError, EMPTY, Observable } from 'rxjs';
-import { map } from 'rxjs/operators';
+import { UsernameValidators } from '../../../utils/username.validators';
+import { catchError, EMPTY } from 'rxjs';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { HttpErrorResponse } from '@angular/common/http';
-import {
-  MatFormField,
-  MatLabel,
-  MatInput,
-  MatSuffix,
-  MatError,
-  MatHint,
-} from '@angular/material/input';
+import { MatFormField, MatLabel, MatInput, MatSuffix, MatError } from '@angular/material/input';
 import { MatIcon } from '@angular/material/icon';
 import { MatTooltip } from '@angular/material/tooltip';
 import { MatButton } from '@angular/material/button';
+import { PasswordMismatchErrorStateMatcher } from '../../../utils/password-mismatch-error-state-matcher';
 
 @Component({
   selector: 'app-register',
@@ -43,7 +34,6 @@ import { MatButton } from '@angular/material/button';
     MatSuffix,
     MatTooltip,
     MatError,
-    MatHint,
     MatButton,
   ],
 })
@@ -52,23 +42,24 @@ export class RegisterComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   private readonly snackBar = inject(MatSnackBar);
+  protected readonly passwordMismatchErrorStateMatcher = new PasswordMismatchErrorStateMatcher();
   form = new FormGroup(
     {
       username: new FormControl(
         '',
         [Validators.required, UsernameValidators.checkPattern],
-        this.shouldBeUnique.bind(this)
+        UsernameValidators.checkUnique(this.authService)
       ),
       email: new FormControl(
         '',
         [Validators.required, Validators.email],
-        this.shouldBeUnique.bind(this)
+        UsernameValidators.checkUnique(this.authService)
       ),
       inviteCode: new FormControl(''),
       password: new FormControl('', Validators.required),
       confirmPassword: new FormControl('', Validators.required),
     },
-    PasswordValidators.passwordsShouldMatch
+    PasswordValidators.passwordsMismatch('password', 'confirmPassword')
   );
 
   constructor() {}
@@ -124,15 +115,6 @@ export class RegisterComponent implements OnInit {
       .subscribe(() => {
         void this.router.navigate(['/']);
       });
-  }
-
-  shouldBeUnique(control: AbstractControl): Observable<ValidationErrors | null> {
-    return this.authService.checkUniqueLogin(control.value).pipe(
-      map((result) => {
-        if (result) return null;
-        else return { shouldBeUnique: true };
-      })
-    );
   }
 
   getUsernameError() {

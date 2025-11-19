@@ -10,7 +10,6 @@ import { JwtModule } from '@auth0/angular-jwt';
 import { AuthInterceptor } from './app/services/auth.interceptor';
 import { AppErrorHandler } from './app/model/app-error-handler';
 import { MAT_FORM_FIELD_DEFAULT_OPTIONS } from '@angular/material/form-field';
-import { ErrorStateMatcher, ShowOnDirtyErrorStateMatcher } from '@angular/material/core';
 import { provideNativeDateAdapter } from '@angular/material/core';
 import { MAT_SNACK_BAR_DEFAULT_OPTIONS } from '@angular/material/snack-bar';
 import { provideEnvironmentNgxMask } from 'ngx-mask';
@@ -45,10 +44,6 @@ bootstrapApplication(AppComponent, {
     {
       provide: MAT_FORM_FIELD_DEFAULT_OPTIONS,
       useValue: { appearance: 'outline' },
-    },
-    {
-      provide: ErrorStateMatcher,
-      useClass: ShowOnDirtyErrorStateMatcher,
     },
     {
       provide: MAT_SNACK_BAR_DEFAULT_OPTIONS,

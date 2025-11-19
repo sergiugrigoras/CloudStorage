@@ -42,6 +42,7 @@ import { CdkDrag, CdkDragHandle } from '@angular/cdk/drag-drop';
 import { MatFormField, MatLabel, MatInput, MatError } from '@angular/material/input';
 import { MatButton } from '@angular/material/button';
 import { StorageInfoComponent } from '../storage-info/storage-info.component';
+import { ShowOnDirtyErrorStateMatcher } from '@angular/material/core';
 
 const SNACKBAR_OPTIONS = { duration: 3000 };
 const DOUBLE_CLICK_THRESHOLD = 300;
@@ -104,6 +105,8 @@ export class DriveComponent implements OnInit, OnDestroy {
     }
     this.forbiddenChar.unshift(String.fromCharCode(127));
   }
+
+  protected readonly showOnDirtyErrorStateMatcher = new ShowOnDirtyErrorStateMatcher();
 
   ngOnDestroy(): void {
     this.subscriptions.unsubscribe();

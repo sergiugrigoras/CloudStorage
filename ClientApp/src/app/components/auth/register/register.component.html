@@ -1,4 +1,4 @@
-<form [formGroup]="form" (ngSubmit)="register()" class="elevated-form register-form">
+<div [formGroup]="form" class="elevated-form register-form">
   <h3>Register</h3>
   <div>
     <mat-form-field>
@@ -34,21 +34,34 @@
     <mat-form-field>
       <mat-label>Password</mat-label>
       <input matInput formControlName="password" type="password" />
-      <mat-error>Password is required.</mat-error>
+      <mat-error>This field is required.</mat-error>
     </mat-form-field>
   </div>
   <div>
     <mat-form-field>
       <mat-label>Confirm password</mat-label>
-      <input matInput formControlName="confirmPassword" type="password" />
-      <mat-error>Confirming Password is required.</mat-error>
-      @if (form.errors && confirmPassword?.touched && password?.touched) {
-        <mat-hint>Passwords do not match.</mat-hint>
-      }
+      <input
+        matInput
+        formControlName="confirmPassword"
+        type="password"
+        [errorStateMatcher]="passwordMismatchErrorStateMatcher"
+      />
+      <mat-error>{{
+        confirmPassword?.errors?.['required']
+          ? 'This field is required.'
+          : 'Passwords do not match.'
+      }}</mat-error>
     </mat-form-field>
   </div>
   <div>
-    <button type="submit" matButton="filled" [disabled]="form.invalid">Register</button>
+    <button
+      type="button"
+      matButton="filled"
+      [disabled]="form.invalid || form.pending"
+      (click)="register()"
+    >
+      Register
+    </button>
     <button type="button" matButton="text" (click)="form.reset()">Reset</button>
   </div>
-</form>
+</div>
