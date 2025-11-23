@@ -1,45 +1,63 @@
 import { NoteService } from '../../services/note.service';
-import { NoteListItem, NoteModel } from '../../model/note.model';
-import { Component, inject, OnInit, signal, TemplateRef, ViewChild } from '@angular/core';
-import { delay, switchMap, take, tap } from 'rxjs/operators';
 import {
+  ChecklistItem,
+  ListNoteFormValue,
+  NoteModel,
+  NoteType,
+  TextNoteFormValue,
+} from '../../model/note.model';
+import {
+  Component,
+  ElementRef,
+  inject,
+  OnInit,
+  QueryList,
+  signal,
+  TemplateRef,
+  ViewChild,
+  ViewChildren,
+  WritableSignal,
+} from '@angular/core';
+import { catchError, switchMap, tap } from 'rxjs/operators';
+import {
+  DialogPosition,
   MatDialog,
-  MatDialogTitle,
-  MatDialogContent,
   MatDialogActions,
   MatDialogClose,
+  MatDialogContent,
+  MatDialogTitle,
 } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import {
   FormArray,
   FormBuilder,
+  FormControl,
   FormGroup,
-  Validators,
   FormsModule,
   ReactiveFormsModule,
+  Validators,
 } from '@angular/forms';
 import { MatButton, MatIconButton } from '@angular/material/button';
-import { EMPTY, of } from 'rxjs';
-import { TitleCasePipe, DatePipe } from '@angular/common';
+import { EMPTY, finalize } from 'rxjs';
+import { DatePipe } from '@angular/common';
 import { MatIcon } from '@angular/material/icon';
 import {
   MatCard,
-  MatCardHeader,
-  MatCardTitle,
-  MatCardSubtitle,
-  MatCardContent,
   MatCardActions,
+  MatCardContent,
   MatCardFooter,
+  MatCardHeader,
+  MatCardSubtitle,
+  MatCardTitle,
 } from '@angular/material/card';
 import { MatDivider } from '@angular/material/list';
 import { MatProgressBar } from '@angular/material/progress-bar';
 import { MatProgressSpinner } from '@angular/material/progress-spinner';
 import { CdkDrag, CdkDragHandle } from '@angular/cdk/drag-drop';
-import { MatFormField, MatLabel, MatInput, MatError } from '@angular/material/input';
+import { MatError, MatFormField, MatInput, MatLabel } from '@angular/material/input';
 import { CdkTextareaAutosize } from '@angular/cdk/text-field';
 import { MatCheckbox } from '@angular/material/checkbox';
 
-const SNACKBAR_OPTIONS = { duration: 3000 };
 @Component({
   selector: 'app-notes',
   templateUrl: './notes.component.html',
@@ -72,7 +90,6 @@ const SNACKBAR_OPTIONS = { duration: 3000 };
     MatButton,
     MatDialogActions,
     MatDialogClose,
-    TitleCasePipe,
     DatePipe,
   ],
 })
@@ -81,130 +98,170 @@ export class NotesComponent implements OnInit {
   private readonly _dialog = inject(MatDialog);
   private readonly _snackBar = inject(MatSnackBar);
   private readonly fb = inject(FormBuilder);
-  notes: NoteModel[] = [];
-  notesLoaded = signal(false);
-  noteForm: FormGroup | null = null;
+  protected readonly notes: WritableSignal<NoteModel[] | null> = signal(null);
+  protected readonly textNoteForm = this.fb.nonNullable.group({
+    title: this.fb.nonNullable.control('', Validators.required),
+    text: this.fb.nonNullable.control(''),
+  });
+  protected readonly listNoteForm = this.fb.nonNullable.group({
+    title: this.fb.nonNullable.control('', Validators.required),
+    list: this.fb.nonNullable.array<FormGroup<ChecklistItemGroup>>([]),
+  });
 
-  @ViewChild('noteDialog', { static: true }) noteDialog: TemplateRef<unknown> | null = null;
+  @ViewChild('textNoteDialog', { static: true }) textNoteTemplateRef!: TemplateRef<unknown>;
+  @ViewChild('listNoteDialog', { static: true }) listNoteTemplateRef!: TemplateRef<unknown>;
   @ViewChild('deleteConfirmDialog', { static: true })
-  deleteConfirmDialog: TemplateRef<unknown> | null = null;
+  deleteConfirmDialog!: TemplateRef<unknown>;
+  @ViewChildren('listInput') listInputs!: QueryList<ElementRef<HTMLInputElement>>;
+  @ViewChild('titleInput') titleInput!: ElementRef<HTMLInputElement>;
+
   constructor() {}
 
   ngOnInit(): void {
     this.noteService
       .getAll()
       .pipe(
+        catchError(() => {
+          return EMPTY;
+        }),
         tap((notes) => {
-          this.notes = notes ?? [];
-          this.notesLoaded.set(true);
+          this.notes.set([...notes]);
         })
       )
       .subscribe();
   }
 
-  private createNoteForm(note: NoteModel) {
-    this.noteForm = this.fb.group({
-      type: [note.type, Validators.required],
-      title: [note.title, Validators.required],
-      text: note.type === 'text' ? note.body : null,
-      list:
-        note.type === 'list'
-          ? this.fb.array(note.getListItems()?.map(this.listItemToGroup.bind(this)) ?? [])
-          : null,
-    });
+  get listNoteFormArray() {
+    return this.listNoteForm.get('list') as FormArray<FormGroup<ChecklistItemGroup>>;
   }
 
-  private listItemToGroup(item: NoteListItem) {
-    return this.fb.group({
-      label: item.label,
-      checked: item.checked,
+  private clearForms() {
+    this.textNoteForm.reset({
+      title: '',
+      text: '',
     });
-  }
 
-  private createEmptyNoteForm(type: string) {
-    this.noteForm = this.fb.group({
-      type: [type, Validators.required],
-      title: [null, Validators.required],
-      text: null,
-      list: this.fb.array([]),
-    });
-  }
-
-  get noteList() {
-    const formArray = this.noteForm?.get('list');
-    return formArray ? (formArray as FormArray<FormGroup>) : null;
+    while (this.listNoteFormArray.length > 0) {
+      this.listNoteFormArray.removeAt(0);
+    }
+    this.listNoteForm.reset({ title: '', list: [] });
   }
 
   addListItem(itemIndex?: number) {
-    if (this.noteList == null || this.noteForm == null) return;
-    const itemFormGroup = this.fb.group({
-      label: [''],
-      checked: [false],
+    const itemFormGroup = this.fb.nonNullable.group({
+      label: '',
+      checked: false,
     });
-    itemIndex = itemIndex ?? this.noteList.length;
-    this.noteList.insert(itemIndex, itemFormGroup);
-    this.noteForm.patchValue({
-      list: this.noteList.value,
+    itemIndex = itemIndex ?? this.listNoteFormArray.length;
+    this.listNoteFormArray.insert(itemIndex, itemFormGroup);
+
+    setTimeout(() => {
+      const inputArray = this.listInputs.toArray();
+      if (inputArray[itemIndex]) {
+        inputArray[itemIndex].nativeElement.focus();
+      }
     });
-    // focus new input element
-    of(null)
-      .pipe(take(1), delay(50))
-      .subscribe(() => {
-        const input = document.querySelector(`#list-item-${itemIndex}`);
-        if (input instanceof HTMLInputElement) {
-          input.focus();
-        }
-      });
   }
 
-  deleteListItem(itemIndex: number) {
-    if (this.noteList == null) return;
-    this.noteList.removeAt(itemIndex);
+  removeListItem(index: number) {
+    this.listNoteFormArray.removeAt(index);
   }
 
-  createNote(button: MatButton, type: 'text' | 'list') {
-    if (this.noteDialog == null) return;
-    this.createEmptyNoteForm(type);
+  createNote(button: MatButton, type: NoteType) {
+    const templateRef =
+      type === NoteType.Text ? this.textNoteTemplateRef : this.listNoteTemplateRef;
     const element = button._elementRef.nativeElement;
-    if (element instanceof HTMLElement) {
-      const rectangle = element.getBoundingClientRect();
-      const top = rectangle.bottom + 5;
-      const left = rectangle.left;
-      this._dialog
-        .open(this.noteDialog, {
-          disableClose: true,
-          hasBackdrop: true,
-          width: '500px',
-          position: {
-            top: top + 'px',
-            left: left + 'px',
-          },
-          data: type,
-        })
-        .afterClosed()
-        .pipe(
-          switchMap((dialogResult) => {
-            const newNote = this.convertFormToNote();
-            if (dialogResult && newNote) {
-              return this.noteService.add(newNote);
-            }
-            return EMPTY;
-          })
-        )
-        .subscribe({
-          next: (result) => {
-            this.notes.unshift(result);
-          },
-          error: () => {
-            this._snackBar.open(`An Error occurred.`, 'Ok', SNACKBAR_OPTIONS);
-          },
-        });
+    if (!(element instanceof HTMLElement)) {
+      return;
     }
+    this._dialog
+      .open(templateRef, {
+        disableClose: true,
+        hasBackdrop: true,
+        width: '500px',
+        position: this.getDialogPositionFromElement(element),
+      })
+      .afterClosed()
+      .pipe(
+        switchMap((dialogResult) => {
+          const newNote = this.getNoteFromForm(type);
+          if (dialogResult && newNote) {
+            return this.noteService.add(newNote);
+          }
+          return EMPTY;
+        }),
+        catchError(() => {
+          this._snackBar.open(`An Error occurred.`, 'Ok');
+          return EMPTY;
+        }),
+        tap((result) => {
+          this.notes.update((value) => {
+            if (value === null) return [];
+            return [result, ...value];
+          });
+        }),
+        finalize(() => {
+          this.clearForms();
+        })
+      )
+      .subscribe();
+  }
+
+  editNote(note: NoteModel) {
+    const templateRef =
+      note.type === NoteType.Text ? this.textNoteTemplateRef : this.listNoteTemplateRef;
+    this.setFormValue(note);
+    this._dialog
+      .open(templateRef, {
+        disableClose: true,
+        hasBackdrop: true,
+        width: '500px',
+      })
+      .afterClosed()
+      .pipe(
+        switchMap((dialogResult) => {
+          const noteUpdate = this.getNoteFromForm(note.type);
+          if (dialogResult && noteUpdate) {
+            noteUpdate.id = note.id;
+            note.updating.set(true);
+            return this.noteService.update(noteUpdate);
+          }
+          return EMPTY;
+        }),
+        catchError(() => {
+          this._snackBar.open(`An Error occurred.`, 'Ok');
+          return EMPTY;
+        }),
+        tap((result) => {
+          this.notes.update((value) => {
+            if (value === null) return [];
+            const index = value.findIndex((x) => x.id === result.id);
+            if (index >= 0) {
+              value[index] = result;
+            }
+            return [...value];
+          });
+        }),
+        finalize(() => {
+          this.clearForms();
+        })
+      )
+      .subscribe();
+  }
+
+  private getDialogPositionFromElement(element: HTMLElement): DialogPosition {
+    const rectangle = element.getBoundingClientRect();
+    const top = rectangle.bottom + 5;
+    const left = rectangle.left;
+    return {
+      top: top + 'px',
+      left: left + 'px',
+    };
   }
 
   deleteNote(note: NoteModel) {
-    if (this.deleteConfirmDialog == null) return;
-    if (note == null) return;
+    const nodeId = note?.id;
+    if (!nodeId) return;
     this._dialog
       .open(this.deleteConfirmDialog, {
         disableClose: false,
@@ -217,70 +274,70 @@ export class NotesComponent implements OnInit {
       .pipe(
         switchMap((dialogResult) => {
           if (dialogResult) {
-            return this.noteService.delete(note.id);
+            return this.noteService.delete(nodeId);
           }
           return EMPTY;
-        })
-      )
-      .subscribe({
-        next: () => {
-          const index = this.notes.findIndex((x) => x.id === note.id);
-          if (index >= 0) {
-            this.notes.splice(index, 1);
-          }
-        },
-        error: () => {
-          this._snackBar.open(`An Error occurred.`, 'Ok', SNACKBAR_OPTIONS);
-        },
-      });
-  }
-
-  editNote(note: NoteModel) {
-    if (this.noteDialog == null) return;
-    this.createNoteForm(note);
-    this._dialog
-      .open(this.noteDialog, {
-        disableClose: true,
-        hasBackdrop: true,
-        width: '500px',
-        data: note.type,
-      })
-      .afterClosed()
-      .pipe(
-        switchMap((dialogResult) => {
-          const noteUpdate = this.convertFormToNote();
-          if (dialogResult && noteUpdate) {
-            note.updating = true;
-            noteUpdate.id = note.id;
-            return this.noteService.update(noteUpdate);
-          }
+        }),
+        catchError(() => {
+          this._snackBar.open(`An Error occurred.`, 'Ok');
           return EMPTY;
+        }),
+        tap(() => {
+          this.notes.update((value) => {
+            if (value === null) return [];
+            const index = value.findIndex((x) => x.id === nodeId);
+            if (index >= 0) {
+              value.splice(index, 1);
+            }
+            return [...value];
+          });
         })
       )
-      .subscribe({
-        next: (result) => {
-          const index = this.notes.findIndex((x) => x.id === note.id);
-          if (index >= 0) {
-            this.notes[index] = result;
-          }
-        },
-        error: () => {
-          this._snackBar.open(`An Error occurred.`, 'Ok', SNACKBAR_OPTIONS);
-        },
+      .subscribe();
+  }
+
+  private getNoteFromForm(type: NoteType) {
+    if (type === NoteType.Text) {
+      return NoteModel.fromTextFormValue(this.textNoteForm.value as TextNoteFormValue);
+    }
+    if (type === NoteType.List) {
+      return NoteModel.fromListFormValue(this.listNoteForm.value as ListNoteFormValue);
+    }
+    return null;
+  }
+
+  private setFormValue(note: NoteModel) {
+    const listItemToGroup = (item: ChecklistItem) =>
+      this.fb.nonNullable.group({ label: item.label, checked: item.checked });
+    if (note.type === NoteType.Text) {
+      this.textNoteForm.setValue({
+        title: note.title,
+        text: note.text ?? '',
       });
+    } else if (note.type === NoteType.List) {
+      const groups = (note.checklist || []).map((item) => listItemToGroup(item));
+      this.listNoteForm.setControl('list', this.fb.nonNullable.array(groups));
+      this.listNoteForm.patchValue({ title: note.title });
+    }
   }
 
-  private convertFormToNote(): NoteModel | null {
-    if (this.noteForm == null || this.noteList == null) return null;
-    const type = this.noteForm.get('type')?.value;
-    const title = this.noteForm.get('title')?.value;
-    const text = this.noteForm.get('text')?.value;
-    const list = this.noteList.value;
-
-    return new NoteModel({
-      type,
-      title,
-      body: type === 'text' ? text : JSON.stringify(list),
-    });
+  removeItemIfEmpty(index: number) {
+    if (this.listNoteFormArray.at(index).controls.label.value === '') {
+      this.removeListItem(index);
+      const inputArray = this.listInputs.toArray();
+      const previousInput = inputArray[index - 1];
+      if (previousInput) {
+        previousInput.nativeElement.focus();
+      } else {
+        this.titleInput.nativeElement.focus();
+      }
+    }
   }
+
+  protected readonly NoteType = NoteType;
+}
+
+interface ChecklistItemGroup {
+  label: FormControl<string>;
+  checked: FormControl<boolean>;
 }

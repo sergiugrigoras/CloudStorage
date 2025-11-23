@@ -14,7 +14,6 @@ public partial class AppDbContext : DbContext
     }
 
     public virtual DbSet<FileSystemObject> FileSystemObjects { get; set; }
-    public virtual DbSet<Note> Notes { get; set; }
     public virtual DbSet<ResetToken> ResetTokens { get; set; }
     public virtual DbSet<User> Users { get; set; }
     public virtual DbSet<MediaObject> MediaObjects { get; set; }
@@ -113,28 +112,7 @@ public partial class AppDbContext : DbContext
                 .HasForeignKey(d => d.ParentId)
                 .HasConstraintName("FK__FileSyste__Paren__74AE54BC");
         });
-
-        modelBuilder.Entity<Note>(entity =>
-        {
-            entity.HasKey(e => e.Id).HasName("PK__Note__3214EC07447CE5E5");
-
-            entity.ToTable("Note");
-
-            entity.Property(e => e.Color).HasMaxLength(50);
-            entity.Property(e => e.CreationDate).HasColumnType("datetime");
-            entity.Property(e => e.ModificationDate).HasColumnType("datetime");
-            entity.Property(e => e.Title).HasMaxLength(255);
-            entity.Property(e => e.Type)
-                .HasMaxLength(50)
-                .IsUnicode(false)
-                .HasDefaultValueSql("('text')");
-
-            entity.HasOne(d => d.User).WithMany(p => p.Notes)
-                .HasForeignKey(d => d.UserId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_Note_Users");
-        });
-
+        
         modelBuilder.Entity<ResetToken>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("PK__ResetTok__3214EC07DA0D1D7C");

@@ -31,6 +31,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
         inMemoryDb = true;
     }
 });
+builder.Services.RegisterMongoDb(builder.Configuration);
 var allowedOrigins = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>();
 builder.Services.AddCors(options =>
 {

@@ -1,4 +1,5 @@
-﻿using CloudStorage.Models;
+﻿using CloudStorage.Interfaces.Notes;
+using CloudStorage.Models;
 using CloudStorage.Services;
 using CloudStorage.ViewModels;
 using Microsoft.AspNetCore.Authorization;
@@ -10,54 +11,80 @@ namespace CloudStorage.Controllers;
 [Authorize]
 [Route("api/[controller]")]
 [ApiController]
-public class NoteController(IUserService userService, INoteService noteService) : ControllerBase
+public class NoteController(IUserService userService, INotesRepository notesRepository) : ControllerBase
 {
     private readonly IUserService _userService = userService ?? throw new ArgumentNullException(nameof(userService));
-    private readonly INoteService _noteService = noteService ?? throw new ArgumentNullException(nameof(noteService));
+    private readonly INotesRepository _notesRepository = notesRepository ?? throw new ArgumentNullException(nameof(notesRepository));
     
     [HttpGet]
-    public async Task<IActionResult> GetNotesAsync()
+    public async Task<IActionResult> GetUserNotesAsync()
     {
-        var user = await _userService.GetUserAsync(User);
-        if (user == null) return Unauthorized();
-        var notes = await _noteService.GetUserNotesAsync(user.Id);
-
-        return new JsonResult(notes.Select(x => new NoteViewModel(x)));
+        try
+        {
+            var user = await _userService.GetUserAsync(User);
+            if (user == null) return Unauthorized();
+            var notes = await _notesRepository.GetUserNotesAsync(user.Id);
+            return new JsonResult(notes.Select(NoteViewModel.FromDomain));
+        }
+        catch (Exception)
+        {
+            return StatusCode(500, "An unexpected error occurred.");
+        }
     }
 
     [HttpPost]
-    public async Task<IActionResult> CreateNoteAsync([FromBody] NoteViewModel note)
+    public async Task<IActionResult> CreateNoteAsync([FromBody] NoteInputModel noteInput)
     {
-        var user = await _userService.GetUserAsync(User);
-        if (user == null) return Unauthorized();
-        var model = await _noteService.CreateAsync(note, user.Id);
-        return new JsonResult(new NoteViewModel(model));
+        try
+        {
+            if (noteInput == null) return BadRequest();
+            var user = await _userService.GetUserAsync(User);
+            if (user == null) return Unauthorized();
+            var utcNow = DateTime.UtcNow;
+            var note = NoteInputModel.ToDomain(noteInput, user.Id, utcNow, utcNow);
+            await _notesRepository.CreateAsync(note);
+            return new JsonResult(NoteViewModel.FromDomain(note));
+        }
+        catch (Exception)
+        {
+            return StatusCode(500, "An unexpected error occurred.");
+        }
     }
 
     [HttpPut]
-    public async Task<IActionResult> UpdateNoteAsync([FromBody] NoteViewModel note)
+    public async Task<IActionResult> UpdateNoteAsync([FromBody] NoteInputModel noteInput)
     {
-        var model = await _noteService.GetByIdAsync(note.Id);
-        var user = await _userService.GetUserAsync(User);
-        if (user == null) return Unauthorized();
-        if (model == null) return NotFound();
-        if (model.UserId != user.Id) return Forbid();
-        var result = await _noteService.UpdateAsync(note);
-
-        return new JsonResult(new NoteViewModel(result));
+        try
+        {
+            if (noteInput == null) return BadRequest();
+            var user = await _userService.GetUserAsync(User);
+            if (user == null) return Unauthorized();
+            var update = await _notesRepository.UpdateAsync(noteInput, user.Id);
+            if (update == null) return NotFound();
+            
+            return new JsonResult(NoteViewModel.FromDomain(update));
+        }
+        catch (Exception)
+        {
+            return StatusCode(500, "An unexpected error occurred.");
+        }
     }
 
-    [HttpDelete]
-    public async Task<IActionResult> DeleteNote(int? id)
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> DeleteNote(string id)
     {
-        if (id == null) return BadRequest();
-        var model = await _noteService.GetByIdAsync(id.Value);
-        var user = await _userService.GetUserAsync(User);
-        if (model == null) return NotFound();
-        if (user == null) return Unauthorized();
-        if (model.UserId != user.Id) return Forbid();
-        
-        await _noteService.DeleteAsync(model);
-        return Ok();
+        try
+        {
+            var user = await _userService.GetUserAsync(User);
+            if (user == null) return Unauthorized();
+            
+            var result = await _notesRepository.DeleteAsync(id, user.Id);
+            if (result == null) return NotFound();
+            return Ok();
+        }
+        catch (Exception)
+        {
+            return StatusCode(500, "An unexpected error occurred.");
+        }
     }
 }

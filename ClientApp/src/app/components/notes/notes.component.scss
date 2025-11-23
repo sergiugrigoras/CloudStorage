@@ -56,14 +56,16 @@ mat-spinner {
 .note-dialog__content {
   > mat-form-field {
     display: block;
-    margin: 8px 0;
+    margin-top: 8px;
+  }
+  &-action {
+    overflow: hidden;
   }
 }
 
 .list-item {
   display: flex;
   align-items: center;
-  margin-bottom: 4px;
 }
 .list-item-input {
   outline: none;

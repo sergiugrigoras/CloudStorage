@@ -1,5 +1,5 @@
-import { NoteModel } from '../model/note.model';
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { NoteData, NoteModel } from '../model/note.model';
+import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { map } from 'rxjs';
 import { buildUrl } from '../core/url-builder';
@@ -20,26 +20,24 @@ export class NoteService {
   };
   getAll() {
     return this.http
-      .get<NoteModel[]>(this._url)
+      .get<NoteData[]>(this._url)
       .pipe(map((notes) => notes.map((x) => new NoteModel(x)).sort(this._noteSort)));
   }
 
   add(note: NoteModel) {
     return this.http
-      .post<NoteModel>(this._url, note, HTTP_OPTIONS_CONTENT_JSON)
+      .post<NoteData>(this._url, note, HTTP_OPTIONS_CONTENT_JSON)
       .pipe(map((x) => new NoteModel(x)));
   }
 
   update(note: NoteModel) {
     return this.http
-      .put<NoteModel>(this._url, note, HTTP_OPTIONS_CONTENT_JSON)
+      .put<NoteData>(this._url, note, HTTP_OPTIONS_CONTENT_JSON)
       .pipe(map((x) => new NoteModel(x)));
   }
 
-  delete(id: number) {
-    const options = {
-      params: new HttpParams().set('id', id),
-    };
-    return this.http.delete<unknown>(this._url, options);
+  delete(id: string) {
+    const url = buildUrl(API_ENDPOINTS.NOTE.BASE, id);
+    return this.http.delete<unknown>(url);
   }
 }

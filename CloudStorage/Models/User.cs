@@ -30,9 +30,7 @@ public class User
     public DateTime? LastActive { get; set; }
 
     public virtual ICollection<FileSystemObject> FileSystemObjects { get; set; } = [];
-
-    public virtual ICollection<Note> Notes { get; } = [];
-
+    
     public virtual ICollection<ResetToken> ResetTokens { get; } = [];
 
     public virtual ICollection<MediaObject> MediaObjects { get; set; } = [];
