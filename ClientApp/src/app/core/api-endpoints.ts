@@ -50,18 +50,15 @@ export const API_ENDPOINTS = {
   NOTE: {
     BASE: 'note',
   },
-  FSO: {
-    BASE: 'fso',
+  STORAGE_NODE: {
+    BASE: 'storage-node',
     ROOT: 'root',
-    FOLDER: 'folder',
-    FULL_PATH: 'full-path',
     ADD_FOLDER: 'add-folder',
     RENAME: 'rename',
     DELETE: 'delete',
     MOVE: 'move',
     UPLOAD: 'upload',
     DOWNLOAD: 'download',
-    UNIQUE: 'unique',
   },
   STORAGE: {
     BASE: 'storage',

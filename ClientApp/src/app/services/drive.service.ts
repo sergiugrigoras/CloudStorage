@@ -1,8 +1,7 @@
 import { IStorageInfo } from '../interfaces/disk.interface';
-import { FsoModel, FsoMoveResultModel } from '../model/fso.model';
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { IStorageNodeModel } from '../model/storage-node.model';
+import { HttpClient } from '@angular/common/http';
 import { inject, Injectable, signal } from '@angular/core';
-import { Subject } from 'rxjs';
 import { buildUrl } from '../core/url-builder';
 import { API_ENDPOINTS } from '../core/api-endpoints';
 import { HTTP_OPTIONS_CONTENT_JSON } from '../core/constants';
@@ -11,24 +10,13 @@ import { HTTP_OPTIONS_CONTENT_JSON } from '../core/constants';
   providedIn: 'root',
 })
 export class DriveService {
-  openFolder$ = new Subject<number>();
-  clipboard = signal<number[]>([]);
+  clipboard = signal<string[]>([]);
   private readonly http = inject(HttpClient);
   constructor() {}
 
-  getUserRoot() {
-    const url = buildUrl(API_ENDPOINTS.FSO.BASE, API_ENDPOINTS.FSO.ROOT);
-    return this.http.get<FsoModel>(url);
-  }
-
-  getFolder(id: number) {
-    const url = buildUrl(API_ENDPOINTS.FSO.BASE, API_ENDPOINTS.FSO.FOLDER, `${id}`);
-    return this.http.get<FsoModel>(url);
-  }
-
-  getFullPath(id: number) {
-    const url = buildUrl(API_ENDPOINTS.FSO.BASE, API_ENDPOINTS.FSO.FULL_PATH, `${id}`);
-    return this.http.get<FsoModel[]>(url);
+  getNodes() {
+    const url = buildUrl(API_ENDPOINTS.STORAGE_NODE.BASE, API_ENDPOINTS.STORAGE_NODE.ROOT);
+    return this.http.get<IStorageNodeModel[]>(url);
   }
 
   getStorageInfo() {
@@ -36,14 +24,13 @@ export class DriveService {
     return this.http.get<IStorageInfo>(url);
   }
 
-  addFolder(name: string, parentId: number) {
-    const url = buildUrl(API_ENDPOINTS.FSO.BASE, API_ENDPOINTS.FSO.ADD_FOLDER);
-    const body = { name, parentId, isFolder: true };
-    return this.http.post<FsoModel>(url, body, HTTP_OPTIONS_CONTENT_JSON);
+  addFolder(node: IStorageNodeModel) {
+    const url = buildUrl(API_ENDPOINTS.STORAGE_NODE.BASE, API_ENDPOINTS.STORAGE_NODE.ADD_FOLDER);
+    return this.http.post<IStorageNodeModel>(url, node, HTTP_OPTIONS_CONTENT_JSON);
   }
 
-  delete(ids: number[]) {
-    const url = buildUrl(API_ENDPOINTS.FSO.BASE, API_ENDPOINTS.FSO.DELETE);
+  delete(ids: string[]) {
+    const url = buildUrl(API_ENDPOINTS.STORAGE_NODE.BASE, API_ENDPOINTS.STORAGE_NODE.DELETE);
     const options = {
       headers: HTTP_OPTIONS_CONTENT_JSON.headers,
       body: ids,
@@ -51,47 +38,39 @@ export class DriveService {
     return this.http.delete(url, options);
   }
 
-  move(list: number[], destination: number) {
-    const url = buildUrl(API_ENDPOINTS.FSO.BASE, API_ENDPOINTS.FSO.MOVE);
+  move(nodeIds: string[], destinationNodeId: string | null) {
+    const url = buildUrl(API_ENDPOINTS.STORAGE_NODE.BASE, API_ENDPOINTS.STORAGE_NODE.MOVE);
     const options = {
-      params: new HttpParams().set('destinationId', destination),
       headers: HTTP_OPTIONS_CONTENT_JSON.headers,
     };
-    return this.http.post<FsoMoveResultModel>(url, list, options);
+    return this.http.post<IStorageNodeModel[]>(url, { nodeIds, destinationNodeId }, options);
   }
 
-  rename(id: number, name: string) {
-    const url = buildUrl(API_ENDPOINTS.FSO.BASE, API_ENDPOINTS.FSO.RENAME);
-    return this.http.put(url, { id, name }, HTTP_OPTIONS_CONTENT_JSON);
+  rename(node: IStorageNodeModel) {
+    const url = buildUrl(API_ENDPOINTS.STORAGE_NODE.BASE, API_ENDPOINTS.STORAGE_NODE.RENAME);
+    return this.http.put<IStorageNodeModel>(url, node, HTTP_OPTIONS_CONTENT_JSON);
   }
 
   upload(formData: FormData) {
-    const url = buildUrl(API_ENDPOINTS.FSO.BASE, API_ENDPOINTS.FSO.UPLOAD);
+    const url = buildUrl(API_ENDPOINTS.STORAGE_NODE.BASE, API_ENDPOINTS.STORAGE_NODE.UPLOAD);
     return this.http.post(url, formData, {
       observe: 'events',
       reportProgress: true,
     });
   }
 
-  download(list: number[]) {
-    const url = buildUrl(API_ENDPOINTS.FSO.BASE, API_ENDPOINTS.FSO.DOWNLOAD);
+  download(nodeIds: string[]) {
+    const url = buildUrl(API_ENDPOINTS.STORAGE_NODE.BASE, API_ENDPOINTS.STORAGE_NODE.DOWNLOAD);
 
-    return this.http.post<Blob>(url, list, {
-      observe: 'events',
-      reportProgress: true,
-      responseType: 'blob' as 'json',
-      headers: HTTP_OPTIONS_CONTENT_JSON.headers,
-    });
-  }
-
-  uniqueName(name: string, parentId: number, isFolder: boolean) {
-    const url = buildUrl(API_ENDPOINTS.FSO.BASE, API_ENDPOINTS.FSO.UNIQUE);
-    const options = {
-      params: new HttpParams()
-        .set('parentId', parentId)
-        .set('name', name)
-        .set('isFolder', isFolder),
-    };
-    return this.http.get<boolean>(url, options);
+    return this.http.post<Blob>(
+      url,
+      { nodeIds },
+      {
+        observe: 'events',
+        reportProgress: true,
+        responseType: 'blob' as 'json',
+        headers: HTTP_OPTIONS_CONTENT_JSON.headers,
+      }
+    );
   }
 }

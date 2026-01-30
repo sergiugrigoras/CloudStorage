@@ -1,6 +1,6 @@
 import { DriveService } from '../../../services/drive.service';
-import { FsoModel } from '../../../model/fso.model';
-import { Component, inject, Input, OnChanges, SimpleChanges } from '@angular/core';
+import { Component, EventEmitter, inject, Input, Output } from '@angular/core';
+import { ISimpleNode } from '../../../model/storage-node.model';
 
 @Component({
   selector: 'path-bar',
@@ -8,20 +8,13 @@ import { Component, inject, Input, OnChanges, SimpleChanges } from '@angular/cor
   styleUrls: ['./path-bar.component.scss'],
   imports: [],
 })
-export class PathBarComponent implements OnChanges {
+export class PathBarComponent {
   private readonly driveService = inject(DriveService);
-  @Input() folder: FsoModel | null = null;
-  fullPathArr: FsoModel[] = [];
+  @Input() path: ISimpleNode[] = [];
+  @Output() open = new EventEmitter<string | null>();
   constructor() {}
 
-  ngOnChanges(changes: SimpleChanges) {
-    const folderId = (changes['folder'].currentValue as FsoModel).id;
-    this.driveService.getFullPath(folderId).subscribe((result) => {
-      this.fullPathArr = result.map((x) => new FsoModel(x));
-    });
-  }
-
-  openFolder(id: number) {
-    this.driveService.openFolder$.next(id);
+  openFolder(id: string | null) {
+    this.open.emit(id);
   }
 }

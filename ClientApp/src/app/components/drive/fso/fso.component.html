@@ -1,4 +1,4 @@
-<div class="fso" [class.fso-selected]="fso?.isSelected" [class.fso-cut]="fso?.isCut">
+<div class="fso" [ngClass]="{ 'fso-selected': fso?.isSelected(), 'fso-cut': fso?.isCut() }">
   <div class="fso-icon">
     @if ((fso && fso.isFolder) || this.text) {
       <div class="folder-icon-box">
@@ -8,11 +8,8 @@
       <div class="file-icon-box">
         <span class="material-icons"> description </span>
       </div>
-      <div
-        class="file-ext-box"
-        [ngStyle]="{ 'font-size': getFileExtension(fso).length < 4 ? '.8rem' : '.6rem' }"
-      >
-        {{ getFileExtension(fso) }}
+      <div class="file-ext-box" [ngStyle]="{ 'font-size': fso.ext.length < 4 ? '.8rem' : '.6rem' }">
+        {{ fso.ext }}
       </div>
     }
   </div>
@@ -24,11 +21,11 @@
     <div class="fso-text">
       <div class="fso-info-1">
         @if (fso.isFolder) {
-          <span class="folder-name" [title]="fso.name">{{ fso.name }}</span>
+          <span class="folder-name" [title]="fso.fullName">{{ fso.fullName }}</span>
         } @else {
-          <span class="file-name" [title]="fso.name">{{ fso.name }}</span>
+          <span class="file-name" [title]="fso.fullName">{{ fso.fullName }}</span>
           <span class="file-size"
-            ><strong>{{ fso.fileSize | readableBytes: 0 }}</strong></span
+            ><strong>{{ fso.fileSize ?? 0 | readableBytes: 0 }}</strong></span
           >
         }
       </div>

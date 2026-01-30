@@ -1,8 +1,8 @@
 <div class="path-bar">
-  @for (fso of fullPathArr; track fso.id) {
+  @for (node of path; track $index) {
     <div class="path-bar-elem">
-      <div class="path-bar-folder" (click)="openFolder(fso.id)">
-        {{ fso.name }}
+      <div class="path-bar-folder" (click)="openFolder(node.id)">
+        {{ node.name }}
       </div>
       <div class="path-bar-icon">
         <span class="material-icons"> chevron_right </span>

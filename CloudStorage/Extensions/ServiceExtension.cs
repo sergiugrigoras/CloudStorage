@@ -2,10 +2,12 @@ using CloudStorage.Interfaces;
 using CloudStorage.Interfaces.Expense;
 using CloudStorage.Interfaces.Media;
 using CloudStorage.Interfaces.Notes;
+using CloudStorage.Interfaces.StorageNodes;
 using CloudStorage.Models;
 using CloudStorage.Repositories.Expense;
 using CloudStorage.Repositories.Media;
 using CloudStorage.Repositories.Notes;
+using CloudStorage.Repositories.StorageNodes;
 using CloudStorage.Services;
 using Microsoft.Extensions.Options;
 using MongoDB.Driver;
@@ -18,7 +20,7 @@ public static class ServiceExtension
     {
         services.AddSingleton<ContentAuthorization>();
         services.AddScoped<ITokenService, TokenService>();
-        services.AddScoped<IFsoService, FsoService>();
+        services.AddScoped<IStorageNodeService, StorageNodeService>();
         services.AddScoped<IUserService, UserService>();
         
         services.AddScoped<IExpenseRepository, ExpenseRepository>();
@@ -48,6 +50,7 @@ public static class ServiceExtension
         }
         
         services.AddScoped<INotesRepository, NotesRepository>();
+        services.AddScoped<IStorageNodesRepository, StorageNodesRepository>();
 
         return services;
     }
