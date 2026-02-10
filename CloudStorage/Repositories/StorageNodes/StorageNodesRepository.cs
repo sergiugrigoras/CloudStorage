@@ -1,34 +1,30 @@
 using System.Linq.Expressions;
-using CloudStorage.Interfaces.StorageNodes;
 using CloudStorage.Models;
+using CloudStorage.Services;
 using MongoDB.Driver;
 
 namespace CloudStorage.Repositories.StorageNodes;
 
-public class StorageNodesRepository: IStorageNodesRepository
+public interface IStorageNodesRepository
 {
-    private const string CollectionName = "storage_nodes";
-    private readonly IMongoCollection<StorageNode> _collection;
+    Task<StorageNode> GetOneAsync(Expression<Func<StorageNode, bool>> filter);
+    Task<StorageNode> GetByIdAsync(string id);
+    Task<List<StorageNode>> GetManyAsync(Expression<Func<StorageNode, bool>> filter);
+    Task<List<StorageNode>> GetManyAsync(FilterDefinition<StorageNode> filter);
 
-    public StorageNodesRepository(IMongoDatabase db)
-    {
-        _collection = db.GetCollection<StorageNode>(CollectionName);
-        CreateIndexes();
-    }
-    private void CreateIndexes()
-    {
-        var indexKeys = Builders<StorageNode>.IndexKeys
-            .Ascending(x => x.OwnerId)
-            .Ascending(x => x.ParentId)
-            .Ascending(x => x.Name)
-            .Ascending(x => x.Extension)
-            .Ascending(x => x.IsFolder);
-        
-        var indexModel = new CreateIndexModel<StorageNode>(indexKeys, new CreateIndexOptions { Unique = true });
-
-        _collection.Indexes.CreateOne(indexModel);
-    }
+    Task CreateNodeAsync(StorageNode node);
+    Task<StorageNode> UpdateOneAsync(FilterDefinition<StorageNode> filter, UpdateDefinition<StorageNode> update);
+    Task BulkWriteAsync(IEnumerable<WriteModel<StorageNode>> model);
+    Task DeleteNodesAsync(IEnumerable<string> nodeIds);
     
+    Task<bool> ExistsAsync(Expression<Func<StorageNode, bool>> filter);
+    Task<bool> ExistsAsync(FilterDefinition<StorageNode> filter);
+}
+
+public class StorageNodesRepository(IMongoDatabase db): IStorageNodesRepository
+{
+    private readonly IMongoCollection<StorageNode> _collection = db.GetCollection<StorageNode>(MongoDbCollections.StorageNodes);
+        
     public Task<StorageNode> GetOneAsync(Expression<Func<StorageNode,bool>> filter) => _collection.Find(filter).Limit(1).FirstOrDefaultAsync();
     
     public Task<StorageNode> GetByIdAsync(string id) => GetOneAsync(x => x.Id == id);

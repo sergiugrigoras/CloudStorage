@@ -1,8 +1,5 @@
 using CloudStorage.Interfaces;
-using CloudStorage.Interfaces.Expense;
 using CloudStorage.Interfaces.Media;
-using CloudStorage.Interfaces.Notes;
-using CloudStorage.Interfaces.StorageNodes;
 using CloudStorage.Models;
 using CloudStorage.Repositories.Expense;
 using CloudStorage.Repositories.Media;
@@ -19,6 +16,10 @@ public static class ServiceExtension
     public static IServiceCollection RegisterServices(this IServiceCollection services,  IWebHostEnvironment environment)
     {
         services.AddSingleton<ContentAuthorization>();
+        
+        services.AddHttpContextAccessor();
+        services.AddScoped<ICurrentUser, HttpCurrentUser>();
+        
         services.AddScoped<ITokenService, TokenService>();
         services.AddScoped<IStorageNodeService, StorageNodeService>();
         services.AddScoped<IUserService, UserService>();
@@ -26,7 +27,6 @@ public static class ServiceExtension
         services.AddScoped<IExpenseRepository, ExpenseRepository>();
         services.AddScoped<ICategoryRepository, CategoryRepository>();
         services.AddScoped<IPaymentMethodRepository, PaymentMethodRepository>();
-        services.AddScoped<IExpenseUnitOfWork, ExpenseUnitOfWork>();
         services.AddScoped<IExpenseService, ExpenseService>();
 
         services.AddScoped<IMediaObjectRepository, MediaObjectRepository>();

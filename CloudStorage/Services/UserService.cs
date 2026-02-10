@@ -114,9 +114,9 @@ public class UserService(AppDbContext context, IConfiguration configuration) : I
         
         var claims = new List<Claim>
         {
-            new(ClaimTypes.Name, user.Username),
+            new(JwtRegisteredClaimNames.Name, user.Username),
             new(JwtRegisteredClaimNames.Email, user.Email),
-            new(JwtRegisteredClaimNames.Jti, user.Id.ToString()),
+            new(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
         };
         var isAdmin = string.Equals(user.Email, _configuration.AdminEmail(), StringComparison.OrdinalIgnoreCase);
         claims.Add(new Claim(ClaimTypes.Role, isAdmin ? Roles.Admin : Roles.User));
@@ -125,10 +125,8 @@ public class UserService(AppDbContext context, IConfiguration configuration) : I
 
     public async Task<User> GetUserAsync(ClaimsPrincipal principal)
     {
-        var jti = principal.FindFirst(JwtRegisteredClaimNames.Jti);
-        if (jti == null) return null;
-        var value = jti.Value;
-        if (!Guid.TryParse(value, out var userId)) return null;
+        var claim = principal.FindFirst(ClaimTypes.NameIdentifier);
+        if (!Guid.TryParse(claim?.Value, out var userId)) return null;
         var user = await context.Users.FindAsync(userId);
         return user;
     }

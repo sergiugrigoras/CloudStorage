@@ -1,7 +1,6 @@
-﻿using CloudStorage.Interfaces.Notes;
-using CloudStorage.Models;
+﻿using CloudStorage.Models;
+using CloudStorage.Repositories.Notes;
 using CloudStorage.Services;
-using CloudStorage.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 

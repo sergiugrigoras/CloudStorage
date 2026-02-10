@@ -1,82 +1,85 @@
-using CloudStorage.Interfaces;
-using CloudStorage.Interfaces.Expense;
-using CloudStorage.Models;
+using CloudStorage.Extensions;
+using CloudStorage.Models.Expense;
 using CloudStorage.Services;
-using CloudStorage.ViewModels.Expense;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using MongoDB.Bson;
 
 namespace CloudStorage.Controllers.Expense;
 
 [Authorize]
 [Route("api/expense")]
 [ApiController]
-public class ExpenseController(IUserService userService, IExpenseService expenseService) : ControllerBase
+public class ExpenseController(IExpenseService expenseService) : ControllerBase
 {
-    private readonly IUserService _userService = userService ?? throw new ArgumentNullException(nameof(userService));
     private readonly IExpenseService _expenseService = expenseService ?? throw new ArgumentNullException(nameof(expenseService));
 
     [HttpGet]
     public async Task<IActionResult> GetExpensesAsync([FromQuery] ExpenseFilter filter)
     {
-        var user = await _userService.GetUserAsync(User);
-        if (user == null) return Unauthorized();
-        filter.UserId = user.Id;
-        var result = await _expenseService.GetExpensesAsync(filter);
-        return new JsonResult(result.Select(x => new ExpenseViewModel(x)));
+        if (filter == null) return BadRequest("Invalid request.");
+        try
+        {
+            var result = (await _expenseService.GetExpensesAsync(filter)).Select(ExpenseViewModel.FromDomain).ToArray();
+            var paymentMethods = (await _expenseService.GetPaymentMethodsAsync()).Select(PaymentMethodViewModel.FromDomain)
+                .ToDictionary(x => x.Id);
+            var categories = (await _expenseService.GetCategoriesAsync()).Select(CategoryViewModel.FromDomain).ToDictionary(x => x.Id);
+
+            foreach (var expense in result)
+            {
+                expense.PaymentMethod = paymentMethods.TryGetValue(expense.PaymentMethodId, out var paymentMethod) ? paymentMethod : null;
+                expense.Category = categories.TryGetValue(expense.CategoryId, out var category) ? category : null;
+            }
+            return Ok(result);
+        }
+        catch (Exception)
+        {
+            return StatusCode(500, "An unexpected error occurred.");
+        }
     }
 
     [HttpPost]
-    public async Task<IActionResult> AddExpenseAsync([FromBody] ExpenseViewModel viewModel)
+    public async Task<IActionResult> AddExpenseAsync([FromBody] ExpenseViewModel request)
     {
-        var user = await _userService.GetUserAsync(User);
-        if (user == null) return Unauthorized();
         try
         {
-            var expense = _expenseService.CreateExpense(viewModel.Amount, viewModel.Description, viewModel.Date, user.Id, viewModel.CategoryId, viewModel.PaymentMethodId);
+            var expense = _expenseService.CreateExpense(request.Amount, request.Description, request.Date, request.CategoryId, request.PaymentMethodId);
             var result = await _expenseService.AddExpenseAsync(expense);
-            return new JsonResult(new ExpenseViewModel(result));
+            return Ok(ExpenseViewModel.FromDomain(result));
         }
-        catch
+        catch (Exception)
         {
-            return StatusCode(500);
+            return StatusCode(500, "An unexpected error occurred.");
         }
     }
 
     [HttpPut]
-    public async Task<IActionResult> UpdateExpenseAsync([FromBody] ExpenseViewModel viewModel)
+    public async Task<IActionResult> UpdateExpenseAsync([FromBody] ExpenseViewModel request)
     {
-        var user = await _userService.GetUserAsync(User);
-        if (user == null) return Unauthorized();
         try
         {
-            var expense = await _expenseService.GetExpenseAsync(viewModel.Id.GetValueOrDefault());
-            if (expense == null || expense.UserId != user.Id) return BadRequest();
-            expense.UpdateValues(viewModel.Description, viewModel.Amount, viewModel.Date, viewModel.CategoryId, viewModel.PaymentMethodId);
-            await _expenseService.UpdateExpenseAsync(expense);
-            return new JsonResult(new ExpenseViewModel(expense));
+            var result = await _expenseService.UpdateExpenseAsync(request?.ToDomain());
+            return Ok(ExpenseViewModel.FromDomain(result));
         }
-        catch
+        catch (Exception)
         {
-            return StatusCode(500);
+            return StatusCode(500, "An unexpected error occurred.");
         }
     }
 
     [HttpDelete]
-    public async Task<IActionResult> DeleteExpenseAsync([FromQuery] Guid id)
+    public async Task<IActionResult> DeleteExpenseAsync([FromQuery] string id)
     {
-        var user = await _userService.GetUserAsync(User);
-        if (user == null) return Unauthorized();
+        if (!ObjectId.TryParse(id, out var expenseId))
+            return BadRequest("Invalid id.");
         try
         {
-            var expense = await _expenseService.GetExpenseAsync(id);
-            if (expense == null || expense.UserId != user.Id) return BadRequest();
-            await _expenseService.DeleteExpenseAsync(expense);
-            return Ok();
+            await _expenseService.DeleteExpenseAsync(expenseId);
+            return NoContent();
         }
-        catch
+        catch (Exception)
         {
-            return StatusCode(500);
+            return StatusCode(500, "An unexpected error occurred.");
         }
     }
 

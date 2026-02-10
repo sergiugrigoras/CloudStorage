@@ -18,10 +18,7 @@ public partial class AppDbContext : DbContext
     public virtual DbSet<User> Users { get; set; }
     public virtual DbSet<MediaObject> MediaObjects { get; set; }
     public virtual DbSet<MediaAlbum> MediaAlbums { get; set; }
-
-    public virtual DbSet<Expense> Expenses { get; set; }
-    public virtual DbSet<Category> Categories { get; set; }
-    public virtual DbSet<PaymentMethod> PaymentMethods { get; set; }
+    
     public virtual DbSet<InviteCode> InviteCodes { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -155,24 +152,7 @@ public partial class AppDbContext : DbContext
             entity.Property(e => e.TotpSecret)
                 .HasColumnName("TOTPSecret");
         });
-
-        modelBuilder.Entity<Category>().HasData(
-            new Category { Id = Guid.NewGuid(), Name = "Housing", Emoji = "🏠", UserId = null },
-            new Category { Id = Guid.NewGuid(), Name = "Utilities", Emoji = "💡", UserId = null },
-            new Category { Id = Guid.NewGuid(), Name = "Food & Dining", Emoji = "🍽️", UserId = null },
-            new Category { Id = Guid.NewGuid(), Name = "Transportation", Emoji = "🚗", UserId = null },
-            new Category { Id = Guid.NewGuid(), Name = "Health & Fitness", Emoji = "🏋️‍♂️", UserId = null },
-            new Category { Id = Guid.NewGuid(), Name = "Entertainment & Recreation", Emoji = "🎮", UserId = null },
-            new Category { Id = Guid.NewGuid(), Name = "Personal Care", Emoji = "💇‍♂️", UserId = null },
-            new Category { Id = Guid.NewGuid(), Name = "Education", Emoji = "🎓", UserId = null },
-            new Category { Id = Guid.NewGuid(), Name = "Insurance", Emoji = "🛡️", UserId = null },
-            new Category { Id = Guid.NewGuid(), Name = "Debt Payments", Emoji = "💳", UserId = null },
-            new Category { Id = Guid.NewGuid(), Name = "Savings & Investments", Emoji = "💰", UserId = null },
-            new Category { Id = Guid.NewGuid(), Name = "Gifts & Donations", Emoji = "🎁", UserId = null },
-            new Category { Id = Guid.NewGuid(), Name = "Travel", Emoji = "✈️", UserId = null },
-            new Category { Id = Guid.NewGuid(), Name = "Miscellaneous", Emoji = "📦", UserId = null }
-        );
-
+        
         OnModelCreatingPartial(modelBuilder);
     }
 

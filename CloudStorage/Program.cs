@@ -32,6 +32,8 @@ builder.Services.AddDbContext<AppDbContext>(options =>
     }
 });
 builder.Services.RegisterMongoDb(builder.Configuration);
+builder.Services.AddHostedService<MongoDbInitializer>();
+
 var allowedOrigins = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>();
 builder.Services.AddCors(options =>
 {

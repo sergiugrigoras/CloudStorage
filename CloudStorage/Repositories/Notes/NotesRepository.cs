@@ -1,13 +1,22 @@
-using CloudStorage.Interfaces.Notes;
 using CloudStorage.Models;
+using CloudStorage.Services;
 using MongoDB.Driver;
 
 namespace CloudStorage.Repositories.Notes;
 
+public interface INotesRepository
+{
+    Task<Note> GetAsync(string id);
+    Task<List<Note>> GetUserNotesAsync(Guid userId);
+    Task CreateAsync(Note note);
+    Task ReplaceAsync(Note note);
+    Task<Note> UpdateAsync(NoteInputModel input, Guid userId);
+    Task<Note> DeleteAsync(string id, Guid userId);
+}
+
 public class NotesRepository(IMongoDatabase db) : INotesRepository
 {
-    private const string CollectionName = "notes";
-    private readonly IMongoCollection<Note> _collection = db.GetCollection<Note>(CollectionName);
+    private readonly IMongoCollection<Note> _collection = db.GetCollection<Note>(MongoDbCollections.Notes);
     
     public Task<Note> GetAsync(string id) => _collection.Find(x => x.Id == id).FirstOrDefaultAsync();
     public Task<List<Note>> GetUserNotesAsync(Guid userId) => _collection.Find(x => x.UserId == userId).ToListAsync();

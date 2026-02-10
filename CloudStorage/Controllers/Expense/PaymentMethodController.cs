@@ -1,75 +1,72 @@
-using CloudStorage.Interfaces.Expense;
-using CloudStorage.Models;
+using CloudStorage.Extensions;
+using CloudStorage.Models.Expense;
 using CloudStorage.Services;
-using CloudStorage.ViewModels.Expense;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using MongoDB.Bson;
 
 namespace CloudStorage.Controllers.Expense;
 
 [Authorize]
 [Route("api/expense/payment-method")]
 [ApiController]
-public class PaymentMethodController(IUserService userService, IExpenseService expenseService)  : ControllerBase
+public class PaymentMethodController(IExpenseService expenseService)  : ControllerBase
 {
-    private readonly IUserService _userService = userService ?? throw new ArgumentNullException(nameof(userService));
     private readonly IExpenseService _expenseService = expenseService ?? throw new ArgumentNullException(nameof(expenseService));
     
     [HttpGet]
     public async Task<IActionResult> GetPaymentMethodsAsync()
     {
-        var user = await _userService.GetUserAsync(User);
-        if (user == null) return Unauthorized();
-        var filter = new PaymentMethodFilter
+        try
         {
-            UserId = user.Id,
-        };
-        var result =await _expenseService.GetPaymentMethodsAsync(filter);
-        return new JsonResult(result.Select(x => new PaymentMethodViewModel(x)));
+            var result =await _expenseService.GetPaymentMethodsAsync();
+            return Ok(result.Select(PaymentMethodViewModel.FromDomain));
+        }
+        catch (Exception)
+        {
+            return StatusCode(500, "An unexpected error occurred.");
+        }
     }
 
     [HttpPost]
     public async Task<IActionResult> AddPaymentMethodAsync([FromBody] PaymentMethodViewModel paymentMethodViewModel)
     {
-        var user = await _userService.GetUserAsync(User);
-        if (user == null) return Unauthorized();
-        if (string.IsNullOrWhiteSpace(paymentMethodViewModel?.Name)) return BadRequest();
+        if (string.IsNullOrWhiteSpace(paymentMethodViewModel?.Name))
+            return BadRequest("Invalid name");
         var paymentMethod = new PaymentMethod
         {
-            Id = Guid.NewGuid(),
             Name = paymentMethodViewModel.Name,
             IsActive = paymentMethodViewModel.IsActive,
-            UserId = user.Id
         };
         try
         {
             var result = await _expenseService.AddPaymentMethodAsync(paymentMethod);
-            return new JsonResult(new PaymentMethodViewModel(result));
+            return Ok(PaymentMethodViewModel.FromDomain(result));
         }
-        catch
+        catch (Exception)
         {
-            return StatusCode(500);
+            return StatusCode(500, "An unexpected error occurred.");
         }
     }
     
     [HttpPut]
     public async Task<IActionResult> UpdatePaymentMethodAsync([FromBody] PaymentMethodViewModel paymentMethodViewModel)
     {
-        var user = await _userService.GetUserAsync(User);
-        if (user == null) return Unauthorized();
         if (paymentMethodViewModel == null) return BadRequest();
-        var paymentMethod = await _expenseService.GetPaymentMethodAsync(paymentMethodViewModel.Id.GetValueOrDefault());
-        if (paymentMethod == null || paymentMethod.UserId != user.Id) return BadRequest();
         try
         {
-            paymentMethod.Name = paymentMethodViewModel.Name;
-            paymentMethod.IsActive = paymentMethodViewModel.IsActive;
-            var result = await _expenseService.UpdatePaymentMethodAsync(paymentMethod);
-            return new JsonResult(new PaymentMethodViewModel(result));
+            var update = new PaymentMethod
+            {
+                Id = ObjectId.TryParse(paymentMethodViewModel.Id,  out var id) ? id : ObjectId.Empty,
+                Name = paymentMethodViewModel.Name,
+                IsActive = paymentMethodViewModel.IsActive,
+            };
+            var result = await _expenseService.UpdatePaymentMethodAsync(update);
+            return Ok(PaymentMethodViewModel.FromDomain(result));
         }
-        catch
+        catch (Exception)
         {
-            return StatusCode(500);
+            return StatusCode(500, "An unexpected error occurred.");
         }
     }
 }
