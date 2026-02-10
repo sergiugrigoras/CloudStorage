@@ -3,7 +3,7 @@ using CloudStorage.Interfaces.Media;
 using CloudStorage.Models;
 using CloudStorage.Repositories.Expense;
 using CloudStorage.Repositories.Media;
-using CloudStorage.Repositories.Notes;
+using CloudStorage.Repositories.Note;
 using CloudStorage.Repositories.StorageNodes;
 using CloudStorage.Services;
 using Microsoft.Extensions.Options;
@@ -49,7 +49,9 @@ public static class ServiceExtension
             services.AddScoped<ICookieOptionsProvider, DevCookieOptionsProvider>();
         }
         
-        services.AddScoped<INotesRepository, NotesRepository>();
+        services.AddScoped<INoteRepository, NoteRepository>();
+        services.AddScoped<INoteService, NoteService>();
+        
         services.AddScoped<IStorageNodesRepository, StorageNodesRepository>();
 
         return services;

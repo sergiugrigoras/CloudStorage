@@ -1,8 +1,8 @@
 ﻿using CloudStorage.Models;
-using CloudStorage.Repositories.Notes;
 using CloudStorage.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using MongoDB.Bson;
 
 
 namespace CloudStorage.Controllers;
@@ -10,20 +10,17 @@ namespace CloudStorage.Controllers;
 [Authorize]
 [Route("api/[controller]")]
 [ApiController]
-public class NoteController(IUserService userService, INotesRepository notesRepository) : ControllerBase
+public class NoteController(INoteService noteService) : ControllerBase
 {
-    private readonly IUserService _userService = userService ?? throw new ArgumentNullException(nameof(userService));
-    private readonly INotesRepository _notesRepository = notesRepository ?? throw new ArgumentNullException(nameof(notesRepository));
+    private readonly INoteService _noteService = noteService ?? throw new ArgumentNullException(nameof(noteService));
     
     [HttpGet]
     public async Task<IActionResult> GetUserNotesAsync()
     {
         try
         {
-            var user = await _userService.GetUserAsync(User);
-            if (user == null) return Unauthorized();
-            var notes = await _notesRepository.GetUserNotesAsync(user.Id);
-            return new JsonResult(notes.Select(NoteViewModel.FromDomain));
+            var notes = await _noteService.GetAsync();
+            return Ok(notes.Select(NoteViewModel.FromDomain));
         }
         catch (Exception)
         {
@@ -33,16 +30,13 @@ public class NoteController(IUserService userService, INotesRepository notesRepo
 
     [HttpPost]
     public async Task<IActionResult> CreateNoteAsync([FromBody] NoteInputModel noteInput)
-    {
+    { 
+        if (noteInput == null) return BadRequest();
         try
         {
-            if (noteInput == null) return BadRequest();
-            var user = await _userService.GetUserAsync(User);
-            if (user == null) return Unauthorized();
-            var utcNow = DateTime.UtcNow;
-            var note = NoteInputModel.ToDomain(noteInput, user.Id, utcNow, utcNow);
-            await _notesRepository.CreateAsync(note);
-            return new JsonResult(NoteViewModel.FromDomain(note));
+            var note = NoteInputModel.ToDomain(noteInput);
+            await _noteService.CreateAsync(note);
+            return Ok(NoteViewModel.FromDomain(note));
         }
         catch (Exception)
         {
@@ -56,12 +50,10 @@ public class NoteController(IUserService userService, INotesRepository notesRepo
         try
         {
             if (noteInput == null) return BadRequest();
-            var user = await _userService.GetUserAsync(User);
-            if (user == null) return Unauthorized();
-            var update = await _notesRepository.UpdateAsync(noteInput, user.Id);
+            var update = await _noteService.UpdateAsync(NoteInputModel.ToDomain(noteInput));
             if (update == null) return NotFound();
             
-            return new JsonResult(NoteViewModel.FromDomain(update));
+            return Ok(NoteViewModel.FromDomain(update));
         }
         catch (Exception)
         {
@@ -72,14 +64,12 @@ public class NoteController(IUserService userService, INotesRepository notesRepo
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteNote(string id)
     {
+        if (!ObjectId.TryParse(id, out var noteId))
+            return BadRequest("Invalid id.");
         try
         {
-            var user = await _userService.GetUserAsync(User);
-            if (user == null) return Unauthorized();
-            
-            var result = await _notesRepository.DeleteAsync(id, user.Id);
-            if (result == null) return NotFound();
-            return Ok();
+            await _noteService.DeleteAsync(noteId);
+            return NoContent();
         }
         catch (Exception)
         {

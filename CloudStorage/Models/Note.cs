@@ -6,8 +6,7 @@ namespace CloudStorage.Models;
 public class Note
 {
     [BsonId]
-    [BsonRepresentation(BsonType.ObjectId)]
-    public string Id { get; set; }
+    public ObjectId Id { get; set; }
 
     [BsonRepresentation(BsonType.String)]
     public Guid UserId { get; set; }
@@ -48,17 +47,13 @@ public class NoteInputModel
     public string Title { get; set; }
     public string Text { get; set; }
     public List<ChecklistItem> Checklist { get; set; }
-
-    public NoteInputModel()
-    {
-        
-    }
-    public static Note ToDomain(NoteInputModel note, Guid userId, DateTime creationDate, DateTime modificationDate)
+    
+    public static Note ToDomain(NoteInputModel note)
     {
         if (note == null) return null;
         return new Note
         {
-            Id = note.Id,
+            Id = ObjectId.TryParse(note.Id, out var id) ? id : ObjectId.Empty,
             Type = note.Type,
             Title = note.Title,
             Text = note.Type != NoteType.Text ? null : note.Text,
@@ -67,10 +62,7 @@ public class NoteInputModel
                     ? null
                     : (note.Checklist ?? [])
                     .Select(ChecklistItem.Clone)
-                    .ToList(),
-            UserId = userId,
-            CreationDate = creationDate,
-            ModificationDate = modificationDate
+                    .ToList()
         };
     }
 }
@@ -89,7 +81,7 @@ public class NoteViewModel
         if (note == null) return null;
         return new NoteViewModel
         {
-            Id = note.Id,
+            Id = note.Id.ToString(),
             Type = note.Type,
             Title = note.Title,
             Text = note.Type != NoteType.Text ? null : note.Text,
