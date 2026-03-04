@@ -52,7 +52,7 @@ public static class ServiceExtension
         services.AddScoped<INoteRepository, NoteRepository>();
         services.AddScoped<INoteService, NoteService>();
         
-        services.AddScoped<IStorageNodesRepository, StorageNodesRepository>();
+        services.AddScoped<IStorageNodeRepository, StorageNodeRepository>();
 
         return services;
     }

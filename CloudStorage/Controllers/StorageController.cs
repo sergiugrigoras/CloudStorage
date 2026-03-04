@@ -15,27 +15,15 @@ public class StorageController(IUserService userService, IStorageService storage
     [HttpGet("info")]
     public async Task<IActionResult> GetCurrentUserDiskInfo()
     {
-        var user = await _userService.GetUserAsync(User);
-        if (user == null) return Unauthorized();
-        
-        var storageInfo = await _storageService.GetUsedStorageByUser(user.Id);
-        if (storageInfo == null) 
-            return StatusCode(500, "Unable to retrieve storage info.");
-        
-        return new JsonResult(storageInfo);
+        var storageInfo = await _storageService.GetUsedStorage();
+        return storageInfo == null ? StatusCode(500, "Unable to retrieve storage info.") : Ok(storageInfo);
     }
     
     [Authorize(Roles = Roles.Admin)]
     [HttpGet("user-info")]
     public async Task<IActionResult> GetUserDiskInfo(Guid id)
     {
-        var user = await _userService.GetUserByIdAsync(id);
-        if (user == null) return NotFound();
-        
-        var storageInfo = await _storageService.GetUsedStorageByUser(user.Id);
-        if (storageInfo == null) 
-            return StatusCode(500, "Unable to retrieve storage info.");
-        
-        return new JsonResult(storageInfo);
+        var storageInfo = await _storageService.GetUsedStorage();
+        return storageInfo == null ? StatusCode(500, "Unable to retrieve storage info.") : Ok(storageInfo);
     }
 }

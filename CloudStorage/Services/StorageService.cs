@@ -1,28 +1,30 @@
 using System.Globalization;
 using CloudStorage.Models;
+using CloudStorage.Repositories.StorageNodes;
 using CloudStorage.ViewModels;
 using Microsoft.EntityFrameworkCore;
+using MongoDB.Driver;
 
 namespace CloudStorage.Services;
 
 public interface IStorageService
 {
-    Task<StorageInfo> GetUsedStorageByUser(Guid userId);
+    Task<StorageInfo> GetUsedStorage();
 }
 
-public class StorageService(AppDbContext context, IConfiguration configuration): IStorageService
+public class StorageService(ICurrentUser currentUser, AppDbContext context, IConfiguration configuration, IStorageNodeRepository storageNodeRepository): IStorageService
 {
+    private readonly ICurrentUser _currentUser =  currentUser ?? throw new ArgumentNullException(nameof(currentUser));
+    private readonly IStorageNodeRepository _nodeRepository = storageNodeRepository ?? throw new ArgumentNullException(nameof(storageNodeRepository));
     private readonly string _storageSize = configuration.GetValue<string>("Storage:Size");
     private const long DefaultStorageSize = 100L * 1024 * 1024; // 100MB
-    public async Task<StorageInfo> GetUsedStorageByUser(Guid userId)
+    public async Task<StorageInfo> GetUsedStorage()
     {
         var mediaSize = await context.MediaObjects
-            .Where(x => x.OwnerId == userId && x.FileSize != null)
+            .Where(x => x.OwnerId == _currentUser.UserId && x.FileSize != null)
             .SumAsync(x => (long?)x.FileSize.Value) ?? 0L;
         
-        var driveSize = await context.FileSystemObjects
-            .Where(x => x.OwnerId == userId && !x.IsFolder && x.FileSize != null)
-            .SumAsync(x => (long?)x.FileSize.Value) ?? 0L;
+        var driveSize = await _nodeRepository.GetFilesSizeAsync(Builders<StorageNode>.Filter.Eq(x => x.IsFolder, false), _currentUser.UserId) ?? 0L;
         
         var storageSize = ParseStorageSize(_storageSize) ?? DefaultStorageSize;
         return new StorageInfo(mediaSize, driveSize, storageSize);

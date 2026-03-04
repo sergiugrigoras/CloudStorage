@@ -2,6 +2,7 @@
 using CloudStorage.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using MongoDB.Bson;
 
 namespace CloudStorage.Controllers;
 
@@ -12,18 +13,14 @@ public class StorageNodeController(IStorageNodeService storageNodeService, IUser
     : ControllerBase
 {
     private readonly IStorageNodeService _storageNodeService = storageNodeService ?? throw new ArgumentNullException(nameof(storageNodeService));
-    private readonly IUserService _userService = userService ?? throw new ArgumentNullException(nameof(userService));
     private readonly IStorageService _storageService = storageService ?? throw new ArgumentNullException(nameof(storageService));
 
     [HttpGet("root")]
     public async Task<IActionResult> GetUserRootContentAsync()
     {
-        var user = await _userService.GetUserAsync(User);
-        if (user == null) return Unauthorized();
-
         try
         {
-            var nodes = await _storageNodeService.GetUserNodesAsync(user.Id);
+            var nodes = await _storageNodeService.GetNodesAsync();
             return new JsonResult(nodes.Select(StorageNodeViewModel.FromDomain));
         }
         catch (Exception)
@@ -35,17 +32,13 @@ public class StorageNodeController(IStorageNodeService storageNodeService, IUser
     [HttpPost("add-folder")]
     public async Task<IActionResult> AddAsync([FromBody] StorageNodeInputModel nodeInput)
     {
-        var user = await _userService.GetUserAsync(User);
-        if (user == null) return Unauthorized();
-        
         if (nodeInput is not { IsFolder: true } || string.IsNullOrWhiteSpace(nodeInput.Name))
             return BadRequest();
 
         try
         {
-            var node = await _storageNodeService.CreateAsync(
-                StorageNodeInputModel.ToDomain(nodeInput, user.Id, DateTime.UtcNow));
-            return new JsonResult(StorageNodeViewModel.FromDomain(node));
+            var node = await _storageNodeService.CreateAsync(nodeInput.ToDomain());
+            return Ok(StorageNodeViewModel.FromDomain(node));
         }
         catch (InvalidOperationException e)
         {
@@ -64,14 +57,13 @@ public class StorageNodeController(IStorageNodeService storageNodeService, IUser
     [HttpPut("rename")]
     public async Task<IActionResult> RenameAsync([FromBody] StorageNodeInputModel nodeInput)
     {
-        var user = await _userService.GetUserAsync(User);
-        if (user == null) return Unauthorized();
-        if (nodeInput == null) return BadRequest();
+        if (nodeInput == null)
+            return BadRequest();
 
         try
         {
-            var resultNode = await _storageNodeService.RenameAsync(StorageNodeInputModel.ToDomain(nodeInput, user.Id));
-            return new JsonResult(StorageNodeViewModel.FromDomain(resultNode));
+            var resultNode = await _storageNodeService.RenameAsync(nodeInput.ToDomain());
+            return Ok(StorageNodeViewModel.FromDomain(resultNode));
         }
         catch (InvalidOperationException e)
         {
@@ -85,17 +77,18 @@ public class StorageNodeController(IStorageNodeService storageNodeService, IUser
 
 
     [HttpDelete("delete")]
-    public async Task<IActionResult> DeleteAsync([FromBody] List<string> deleteList)
+    public async Task<IActionResult> DeleteAsync([FromBody] List<string> request)
     {
-        var user = await _userService.GetUserAsync(User);
-        if (user == null) return Unauthorized();
-        
-        if (deleteList == null || deleteList.Count == 0)
+        if (request == null || request.Count == 0)
             return BadRequest("Invalid delete list");
         
         try
         {
-            await _storageNodeService.DeleteAsync(deleteList, user.Id);
+            var deleteList = request
+                .Select(x => ObjectId.TryParse(x, out var id) ? id : ObjectId.Empty)
+                .Where(x => x != ObjectId.Empty)
+                .ToList();
+            await _storageNodeService.DeleteAsync(deleteList);
             return NoContent();
         }
         catch (Exception)
@@ -106,16 +99,18 @@ public class StorageNodeController(IStorageNodeService storageNodeService, IUser
     [HttpPost("move")]
     public async Task<IActionResult> MoveAsync([FromBody] CollectionOfNodes request)
     {
-        var user = await _userService.GetUserAsync(User);
-        if (user == null) return Unauthorized();
-
         if (request?.NodeIds == null)
             return BadRequest("Invalid request");
 
         try
         {
-            var result = await _storageNodeService.MoveNodesAsync(request.NodeIds, request.DestinationNodeId,  user.Id);
-            return  new JsonResult(result.Select(StorageNodeViewModel.FromDomain));
+            var moveList = request.NodeIds
+                .Select(x => ObjectId.TryParse(x, out var id) ? id : ObjectId.Empty)
+                .Where(x => x != ObjectId.Empty)
+                .ToList();
+            var hasDestinationNode = ObjectId.TryParse(request.DestinationNodeId, out var destinationNodeId);
+            var result = await _storageNodeService.MoveNodesAsync(moveList, hasDestinationNode ? destinationNodeId : null);
+            return  Ok(result.Select(StorageNodeViewModel.FromDomain));
         }
         catch (Exception)
         {
@@ -126,12 +121,10 @@ public class StorageNodeController(IStorageNodeService storageNodeService, IUser
     [HttpPost("upload"), DisableRequestSizeLimit]
     public async Task<IActionResult> UploadAsync([FromForm] FileUploadModel uploadModel)
     {
-        var user = await _userService.GetUserAsync(User);
-        if (user == null) return Unauthorized();
         if (uploadModel?.Files == null) return BadRequest();
         
         // Check storage space.
-        var storageInfo = await _storageService.GetUsedStorageByUser(user.Id);
+        var storageInfo = await _storageService.GetUsedStorage();
         if (storageInfo == null) 
             return StatusCode(500, "Unable to retrieve storage info.");
         
@@ -140,12 +133,12 @@ public class StorageNodeController(IStorageNodeService storageNodeService, IUser
             return BadRequest("Not enough storage space.");
         
         var result = new List<StorageNodeViewModel>();
-        var utcNow = DateTime.UtcNow;
         foreach (var file in uploadModel.Files)
         {
             try
             {
-                var node = await _storageNodeService.StoreFileAsync(file, user.Id, uploadModel.NodeId, utcNow);
+                var hasDestinationNode = ObjectId.TryParse(uploadModel.NodeId, out var parentId);
+                var node = await _storageNodeService.StoreFileAsync(file, hasDestinationNode ? parentId : null);
                 result.Add(StorageNodeViewModel.FromDomain(node));
             }
             catch
@@ -159,15 +152,17 @@ public class StorageNodeController(IStorageNodeService storageNodeService, IUser
     [HttpPost("download")]
     public async Task<IActionResult> DownloadAsync([FromBody] CollectionOfNodes request)
     {
-        var user = await _userService.GetUserAsync(User);
-        if (user == null) return Unauthorized();
-
         if (request?.NodeIds == null)
             return BadRequest("Invalid request");
 
         try
         {
-            var result = await _storageNodeService.DownloadNodesAsync(request.NodeIds, user.Id);
+            var downloadList = request.NodeIds
+                .Select(x => ObjectId.TryParse(x, out var id) ? id : ObjectId.Empty)
+                .Where(x => x != ObjectId.Empty)
+                .ToList();
+            
+            var result = await _storageNodeService.DownloadNodesAsync(downloadList);
             return File(result.Stream, result.ContentType);
         }
         catch (InvalidOperationException e)

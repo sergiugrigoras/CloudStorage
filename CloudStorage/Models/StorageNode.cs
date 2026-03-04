@@ -7,18 +7,16 @@ namespace CloudStorage.Models;
 public class StorageNode
 {
     [BsonId]
-    [BsonRepresentation(BsonType.ObjectId)]
-    public string Id { get; set; }
+    public ObjectId Id { get; set; }
 
-    public List<string> Path { get; set; } = [];
+    public List<ObjectId> Path { get; set; } = [];
     
     public string Name { get; set; }
     public string Extension { get; set; } 
     
     public bool IsFolder { get; set; }
     
-    [BsonRepresentation(BsonType.ObjectId)]
-    public string ParentId { get; set; }
+    public ObjectId? ParentId { get; set; }
     
     public string FileName { get; set; }
 
@@ -30,9 +28,6 @@ public class StorageNode
     public Guid OwnerId { get; set; }
     
     [BsonIgnore]
-    public bool HasParent => !string.IsNullOrWhiteSpace(ParentId);
-    
-    [BsonIgnore]
     public string FullName => IsFolder ? Name : Name + (Extension ?? string.Empty);
 }
 
@@ -42,25 +37,20 @@ public class StorageNodeInputModel
     public string Name { get; set; }
     public bool IsFolder { get; set; }
     public string ParentId { get; set; }
-
-    public StorageNodeInputModel() { }
-    public static StorageNode ToDomain(StorageNodeInputModel inputModel, Guid ownerId, DateTime? date = null)
+    
+    public StorageNode ToDomain()
     {
-        if (inputModel == null || string.IsNullOrWhiteSpace(inputModel.Name)) return null;
-        
-        var nameAndExtension = inputModel.IsFolder
-            ? new NameAndExtension(inputModel.Name.Trim(), null)
-            : SplitNameAndExtension(inputModel.Name);
+        var nameAndExtension = IsFolder
+            ? new NameAndExtension(Name?.Trim(), null)
+            : SplitNameAndExtension(Name);
         
         return new StorageNode
         {
-            Id = inputModel.Id,
+            Id = ObjectId.TryParse(Id, out var id) ? id : ObjectId.Empty,
             Name = FileNameSanitizer.Sanitize(nameAndExtension.Name),
             Extension = nameAndExtension.Extension,
-            IsFolder = inputModel.IsFolder,
-            ParentId = inputModel.ParentId,
-            Date = date,
-            OwnerId = ownerId
+            IsFolder = IsFolder,
+            ParentId = ObjectId.TryParse(ParentId, out var  parentId) ? parentId : null,
         };
     }
 
@@ -139,11 +129,11 @@ public class StorageNodeViewModel
         
         return new StorageNodeViewModel
         {
-            Id = node.Id,
+            Id = node.Id.ToString(),
             Name = node.Name,
             Extension = node.Extension,
             IsFolder = node.IsFolder,
-            ParentId = node.ParentId,
+            ParentId = node.ParentId != null ? node.ParentId.ToString() : null,
             FileSize = node.FileSize,
             Date = node.Date
         };
