@@ -1,52 +1,110 @@
-﻿using CloudStorage.Models;
-using CloudStorage.ViewModels;
+﻿using System.Net.Mime;
+using CloudStorage.Extensions;
 using FFMpegCore;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
-using CloudStorage.Interfaces.Media;
+using CloudStorage.Models.Media;
+using CloudStorage.Repositories.Media;
+using MongoDB.Bson;
 
 namespace CloudStorage.Services;
 
-public class MediaService(IMediaUnitOfWork unitOfWork, IConfiguration configuration, IServiceProvider serviceProvider) : IMediaService
+public interface IMediaService
 {
-    private string StorageDirectory { get; } = configuration.GetValue<string>("Storage:Url");
-    private const string MediaRootDirectory = "media";
-    private const string SnapshotDirectory = "snapshots";
-    private const string MediaFileDirectory = "files";
+    Task<List<MediaEntry>> GetMediaEntriesAsync(MediaEntryQuery query);
+    Task<MediaEntry> GetMediaEntryByIdAsync(string id);
+    Task<MediaEntry> GetMediaEntryForContentDeliveryAsync(string id);
+    Task<MediaFileResult> GetSnapshotStreamAsync(MediaEntry mediaEntry);
+    MediaFileResult GetMediaStream(MediaEntry mediaEntry);
+
+    Task<bool?> ToggleFavorite(string id);
+    Task<List<MediaEntry>> UploadMediaFilesAsync(IEnumerable<IFormFile> files);
+    Task<MediaAlbum> CreateAlbumAsync(string name);
+    Task<List<MediaAlbum>> GetAlbumsAsync();
+    Task AddToAlbumAsync(IEnumerable<string> mediaIds, IEnumerable<string> albumIds);
+    Task<bool> AlbumExistsAsync(string name);
+    Task<List<MediaEntry>> GetAlbumContentAsync(string albumName);
+    Task DeleteMediaEntriesAsync(IEnumerable<string> ids, bool permanent);
+    Task RestoreMediaEntriesAsync(IEnumerable<string> ids);
+
+    string GenerateContentAccessKey();
+    void RemoveContentAccessKey();
+    bool ValidateContentAccessKey(string userId, string key);
+}
+
+public class MediaService(
+    ICurrentUser currentUser,
+    IMediaStorageService mediaStorageService,
+    IMediaEntryRepository mediaEntryRepository,
+    IMediaEntrySystemRepository mediaEntrySystemRepository,
+    IMediaAlbumRepository mediaAlbumRepository,
+    ContentAuthorization contentAuthorization) : IMediaService
+{
+    private readonly ICurrentUser _currentUser = currentUser ?? throw new ArgumentNullException(nameof(currentUser));
+
+    private readonly IMediaStorageService _mediaStorageService = mediaStorageService ?? throw new ArgumentNullException(nameof(mediaStorageService));
+    private readonly IMediaEntryRepository _mediaEntryRepository =
+        mediaEntryRepository ?? throw new ArgumentNullException(nameof(mediaEntryRepository));
+    
+    private readonly IMediaEntrySystemRepository _mediaEntrySystemRepository =
+        mediaEntrySystemRepository ?? throw new ArgumentNullException(nameof(mediaEntrySystemRepository));
+
+    private readonly IMediaAlbumRepository _mediaAlbumRepository =
+        mediaAlbumRepository ?? throw new ArgumentNullException(nameof(mediaAlbumRepository));
+
+    private readonly ContentAuthorization _contentAuthorization =
+        contentAuthorization ?? throw new ArgumentNullException(nameof(contentAuthorization));
+    
+    private const string SnapshotContentType = MediaTypeNames.Image.Jpeg;
     private List<Task> SnapshotTasks { get; } = [];
     private SemaphoreSlim SnapshotSemaphore { get; } = new(10);
     private static string _ffmpegTmpFolder = GlobalFFOptions.Current.TemporaryFilesFolder;
 
-    private IMediaUnitOfWork UnitOfWork { get; } = unitOfWork;
-
-    public async Task<MediaObject> GetMediaObjectByIdAsync(Guid id) => await UnitOfWork.MediaObjects.GetAsync(id);
-
-    public async Task<IEnumerable<MediaObject>> GetMediaObjectsAsync(MediaObjectFilter filter) =>
-        await UnitOfWork.MediaObjects.Query(filter.ToExpression()).ToArrayAsync();
-
-    public async Task<Stream> GetSnapshotStreamAsync(Guid id)
+    public Task<MediaEntry> GetMediaEntryByIdAsync(string id)
     {
-        var mediaObject = await GetMediaObjectByIdAsync(id);
-        if (mediaObject == null) return null;
-        var snapshotFolder = GetUserSnapshotsDirectory(mediaObject.OwnerId);
+        if (!ObjectId.TryParse(id, out var objectId))
+            throw new ArgumentException("Invalid ObjectId.", nameof(id));
 
-        var provider = new PhysicalFileProvider(snapshotFolder);
-        var fileInfo = provider.GetFileInfo(mediaObject.SnapshotFile);
-        if (fileInfo.Exists)
-            return fileInfo.CreateReadStream();
+        return _mediaEntryRepository.GetOneAsync(objectId, _currentUser.UserId);
+    }
 
-        // Try to create a new snapshot if the file doesn't exist.
-        var mediaFileFolder = GetUserMediaFilesDirectory(mediaObject.OwnerId);
-        var mediaFile = Path.GetFullPath(Path.Combine(mediaFileFolder, mediaObject.MediaFile));
-        if (!File.Exists(mediaFile)) 
+    public Task<MediaEntry> GetMediaEntryForContentDeliveryAsync(string id)
+    {
+        if (!ObjectId.TryParse(id, out var objectId))
+            throw new ArgumentException("Invalid ObjectId.", nameof(id));
+
+        return _mediaEntrySystemRepository.GetOneAsync(objectId);
+    }
+
+    public Task<List<MediaEntry>> GetMediaEntriesAsync(MediaEntryQuery query)
+    {
+        ArgumentNullException.ThrowIfNull(query);
+        return _mediaEntryRepository.SearchAsync(query.Favorite, query.Deleted, query.Ids?.ToObjectIdList(),
+            _currentUser.UserId);
+    }
+
+    public async Task<MediaFileResult> GetSnapshotStreamAsync(MediaEntry mediaEntry)
+    {
+        if (mediaEntry == null)
             return null;
-        
+
+        var snapshotFolder = _mediaStorageService.GetUserSnapshotsDirectory(mediaEntry.UserId);
+        var provider = new PhysicalFileProvider(snapshotFolder);
+        var fileInfo = provider.GetFileInfo(mediaEntry.SnapshotFile);
+    
+        if (fileInfo.Exists)
+            return new MediaFileResult(fileInfo.CreateReadStream(), SnapshotContentType);
+
+        var mediaFileFolder = _mediaStorageService.GetUserMediaFilesDirectory(mediaEntry.UserId);
+        var mediaFile = Path.GetFullPath(Path.Combine(mediaFileFolder, mediaEntry.MediaFile));
+        if (!File.Exists(mediaFile))
+            return null;
+
         try
         {
-            var snapshotFile = Path.GetFullPath(Path.Combine(snapshotFolder, mediaObject.SnapshotFile));
+            var snapshotFile = Path.GetFullPath(Path.Combine(snapshotFolder, mediaEntry.SnapshotFile));
             await MediaHelper.CreateSnapshotAsync(mediaFile, snapshotFile, SnapshotSemaphore);
-            fileInfo = provider.GetFileInfo(mediaObject.SnapshotFile);
-            return fileInfo.Exists ? fileInfo.CreateReadStream() : null;
+            fileInfo = provider.GetFileInfo(mediaEntry.SnapshotFile);
+            return fileInfo.Exists ? new MediaFileResult(fileInfo.CreateReadStream(), SnapshotContentType) : null;
         }
         catch (Exception e)
         {
@@ -55,87 +113,45 @@ public class MediaService(IMediaUnitOfWork unitOfWork, IConfiguration configurat
         }
     }
 
-    public async Task<Stream> GetMediaStreamAsync(Guid id)
+    public MediaFileResult GetMediaStream(MediaEntry mediaEntry)
     {
-        var mediaObject = await GetMediaObjectByIdAsync(id);
-        if (mediaObject == null) return null;
-        var mediaFileFolder = GetUserMediaFilesDirectory(mediaObject.OwnerId);
+        if (mediaEntry == null)
+            return null;
+
+        var mediaFileFolder = _mediaStorageService.GetUserMediaFilesDirectory(mediaEntry.UserId);
         var provider = new PhysicalFileProvider(mediaFileFolder);
-        var fileInfo = provider.GetFileInfo(mediaObject.MediaFile);
-        return fileInfo.Exists ? fileInfo.CreateReadStream() : null;
-    }
-    
-    public async Task<bool?> ToggleFavorite(Guid id)
-    {
-        var mediaObject = await GetMediaObjectByIdAsync(id);
-        if (mediaObject == null) return null;
-        
-        mediaObject.Favorite = !mediaObject.Favorite;
-        await UnitOfWork.SaveAsync();
-        return mediaObject.Favorite;
+        var fileInfo = provider.GetFileInfo(mediaEntry.MediaFile);
+        return fileInfo.Exists ? new MediaFileResult(fileInfo.CreateReadStream(), mediaEntry.ContentType) : null;
     }
 
-    public async Task<List<MediaObject>> UploadMediaFilesAsync(IEnumerable<IFormFile> files, Guid userId)
+    public async Task<bool?> ToggleFavorite(string id)
     {
-        var uploadedFiles = await StoreFilesAsync(files.ToList(), userId);
-        return await ProcessMediaFilesAsync(uploadedFiles, userId);
+        var mediaEntry = await GetMediaEntryByIdAsync(id);
+        if (mediaEntry == null)
+            return null;
+        var result =
+            await _mediaEntryRepository.SetFavoriteAsync(mediaEntry.Id, _currentUser.UserId, !mediaEntry.Favorite);
+        return result?.Favorite;
     }
-    
-    private async Task<IEnumerable<UploadFile>> StoreFilesAsync(IEnumerable<IFormFile> formFiles, Guid userId)
+
+    public async Task<List<MediaEntry>> UploadMediaFilesAsync(IEnumerable<IFormFile> files)
     {
-        var uploadedFilesInfo = new Dictionary<string, UploadFile>();
-        var userMediaFolder = GetUserMediaFilesDirectory(userId);
-
-        foreach (var formFile in formFiles)
-        {
-            if (formFile == null || formFile.Length == 0) continue;
-            
-            var hash = await MediaHelper.ComputeSha256Async(formFile);
-            if (uploadedFilesInfo.ContainsKey(hash)) continue;
-            var fullPath = Path.GetFullPath(Path.Combine(userMediaFolder, hash));
-            
-            if (!fullPath.StartsWith(userMediaFolder))
-                continue;
-            
-            try
-            {
-                // Save file to disk
-                await using var stream = File.Create(fullPath);
-                await formFile.CopyToAsync(stream);
-                stream.Close();
-                var fileInfo = new UploadFile
-                {
-                    OriginalFileName = formFile.FileName,
-                    FullPath = fullPath,
-                    FileSize = formFile.Length,
-                    Hash = hash,
-                };
-                uploadedFilesInfo.TryAdd(hash, fileInfo);
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e);
-            }
-        }
-
-        return uploadedFilesInfo.Values;
+        var uploadedFiles = await _mediaStorageService.StoreFilesAsync(files, _currentUser.UserId);
+        return await ProcessMediaFilesAsync(uploadedFiles);
     }
-    
-    private async Task<List<MediaObject>> ProcessMediaFilesAsync(IEnumerable<UploadFile> uploadFiles, Guid userId)
+
+    private async Task<List<MediaEntry>> ProcessMediaFilesAsync(IEnumerable<PendingMediaFile> uploadFiles)
     {
-        var snapshotFolder = GetUserSnapshotsDirectory(userId);
-        var result = new List<MediaObject>();
+        var snapshotFolder = _mediaStorageService.GetUserSnapshotsDirectory(_currentUser.UserId);
+        var result = new List<MediaEntry>();
         foreach (var uploadFile in uploadFiles)
         {
             if (uploadFile == null) continue;
-            
-            var dbEntry = await UnitOfWork.MediaObjects.Query(x => x.OwnerId == userId && x.Hash == uploadFile.Hash)
-                .FirstOrDefaultAsync();
-            
+
             try
             {
-                var mediaObject = await AddOrUpdateMediaObjectAsync(dbEntry, uploadFile, userId, snapshotFolder);
-                result.Add(mediaObject);
+                var mediaEntry = await AddOrUpdateMediaEntryAsync(uploadFile, snapshotFolder);
+                result.Add(mediaEntry);
             }
             catch (Exception e)
             {
@@ -143,177 +159,100 @@ public class MediaService(IMediaUnitOfWork unitOfWork, IConfiguration configurat
             }
         }
 
-        await UnitOfWork.SaveAsync();
         await Task.WhenAll(SnapshotTasks);
         SnapshotTasks.Clear();
         return result;
     }
 
-    private async Task<MediaObject> AddOrUpdateMediaObjectAsync(MediaObject dbEntry, UploadFile uploadFile, Guid userId, string snapshotFolder)
+    private async Task<MediaEntry> AddOrUpdateMediaEntryAsync(PendingMediaFile pendingMediaFile, string snapshotFolder)
     {
-        if (string.IsNullOrWhiteSpace(uploadFile?.FullPath)) throw new ArgumentNullException(nameof(uploadFile));
-        if (userId == Guid.Empty) throw new ArgumentNullException(nameof(userId));
-        
-        var contentType = MimeTypes.GetType(Path.GetExtension(uploadFile.OriginalFileName));
-        var mediaAnalysis = await FFProbe.AnalyseAsync(uploadFile.FullPath);
+        if (string.IsNullOrWhiteSpace(pendingMediaFile?.FullPath))
+            throw new ArgumentNullException(nameof(pendingMediaFile));
 
-        MediaObject mediaObject;
+        var contentType = MimeTypes.GetType(Path.GetExtension(pendingMediaFile.OriginalFileName));
+        var mediaAnalysis = await FFProbe.AnalyseAsync(pendingMediaFile.FullPath);
 
-        if (dbEntry == null)
-        {
-            mediaObject = new MediaObject
-            {
-                Id = Guid.NewGuid(),
-                ContentType = contentType,
-                Favorite = false,
-                Hash = uploadFile.Hash,
-                Width = mediaAnalysis.PrimaryVideoStream?.Width,
-                Height = mediaAnalysis.PrimaryVideoStream?.Height,
-                Duration = Convert.ToInt32(mediaAnalysis.PrimaryVideoStream?.Duration.TotalMilliseconds),
-                OwnerId = userId,
-                UploadFileName = uploadFile.OriginalFileName,
-                MarkedForDeletion = false,
-                FileSize = uploadFile.FileSize,
-            };
-            
-            await UnitOfWork.MediaObjects.AddAsync(mediaObject);
-        }
+        var existing = await _mediaEntryRepository.GetByHashAsync(pendingMediaFile.Hash, _currentUser.UserId);
+
+        var mediaEntry = existing ?? new MediaEntry { Favorite = false };
+
+        mediaEntry.ContentType = contentType;
+        mediaEntry.Hash = pendingMediaFile.Hash;
+        mediaEntry.Width = mediaAnalysis.PrimaryVideoStream?.Width;
+        mediaEntry.Height = mediaAnalysis.PrimaryVideoStream?.Height;
+        mediaEntry.Duration = Convert.ToInt32(mediaAnalysis.PrimaryVideoStream?.Duration.TotalMilliseconds);
+        mediaEntry.UploadFileName = pendingMediaFile.OriginalFileName!;
+        mediaEntry.MarkedForDeletion = false;
+        mediaEntry.FileSize = pendingMediaFile.FileSize;
+
+        if (existing == null)
+            await _mediaEntryRepository.CreateAsync(mediaEntry, _currentUser.UserId);
         else
-        {
-            dbEntry.ContentType = contentType;
-            dbEntry.Hash = uploadFile.Hash;
-            dbEntry.Width = mediaAnalysis.PrimaryVideoStream?.Width;
-            dbEntry.Height = mediaAnalysis.PrimaryVideoStream?.Height;
-            dbEntry.Duration = Convert.ToInt32(mediaAnalysis.PrimaryVideoStream?.Duration.TotalMilliseconds);
-            dbEntry.UploadFileName = uploadFile.OriginalFileName;
-            dbEntry.MarkedForDeletion = false;
-            dbEntry.FileSize = uploadFile.FileSize;
+            mediaEntry = await _mediaEntryRepository.UpdateAsync(mediaEntry, _currentUser.UserId);
 
-            mediaObject = dbEntry;
-        }
-        
-        var snapshotFullPath = Path.GetFullPath(Path.Combine(snapshotFolder, mediaObject.SnapshotFile));
+        var snapshotFullPath = Path.GetFullPath(Path.Combine(snapshotFolder, mediaEntry.SnapshotFile));
         var createSnapshotTask = MediaHelper.CreateSnapshotAsync(
-            uploadFile.FullPath,
+            pendingMediaFile.FullPath,
             snapshotFullPath,
             SnapshotSemaphore,
             mediaAnalysis
         );
         SnapshotTasks.Add(createSnapshotTask);
 
-        return mediaObject;
+        return mediaEntry;
     }
-
-    private string GetUserMediaRootDirectory(Guid userId) =>
-        Path.GetFullPath(Path.Combine(StorageDirectory, userId.ToString(), MediaRootDirectory));
     
-    private string GetUserMediaFilesDirectory(Guid userId)
+    public async Task<MediaAlbum> CreateAlbumAsync(string name)
     {
-        var mediaFilesFolder = Path.GetFullPath(Path.Combine(GetUserMediaRootDirectory(userId), MediaFileDirectory));
-        MediaHelper.CreateDirectoryIfNotExists(mediaFilesFolder);
-        return mediaFilesFolder;
+        var album = new MediaAlbum { Name = name };
+
+        await _mediaAlbumRepository.CreateAsync(album, _currentUser.UserId);
+        return album;
     }
 
-    private string GetUserSnapshotsDirectory(Guid userId)
+    public Task<List<MediaAlbum>> GetAlbumsAsync() => _mediaAlbumRepository.GetAlbumsAsync(_currentUser.UserId);
+
+    public Task AddToAlbumAsync(IEnumerable<string> mediaIds, IEnumerable<string> albumIds)
     {
-        var snapshotsFolder = Path.GetFullPath(Path.Combine(GetUserMediaRootDirectory(userId), SnapshotDirectory));
-        MediaHelper.CreateDirectoryIfNotExists(snapshotsFolder);
-        return snapshotsFolder;
+        if (mediaIds == null || albumIds == null) return Task.CompletedTask;
+        return _mediaAlbumRepository.AddMediaEntriesToAlbumsAsync(mediaIds.ToObjectIdList(), albumIds.ToObjectIdList(),
+            _currentUser.UserId);
     }
 
-    public async Task CreateAlbumAsync(Guid userId, string name)
+    public Task<bool> AlbumExistsAsync(string name) => _mediaAlbumRepository.ExistsAsync(name, _currentUser.UserId);
+
+    public async Task<List<MediaEntry>> GetAlbumContentAsync(string albumName)
     {
-        var album = new MediaAlbum
-        {
-            Id = Guid.NewGuid(),
-            OwnerId = userId,
-            Name = name,
-            CreateDate = DateTime.UtcNow,
-        };
-        
-        await UnitOfWork.MediaAlbums.AddAsync(album);
-        await UnitOfWork.SaveAsync();
+        var album = await _mediaAlbumRepository.GetAlbumByNameAsync(albumName, _currentUser.UserId);
+        if (album == null)
+            throw new InvalidOperationException($"Album {albumName} not found");
+        var mediaEntries =
+            await _mediaEntryRepository.SearchAsync(null, false, album.MediaEntries ?? [], _currentUser.UserId);
+        return mediaEntries;
     }
 
-    public async Task<IEnumerable<MediaAlbum>> GetAllUserAlbumsAsync(Guid userId)
+    public async Task DeleteMediaEntriesAsync(IEnumerable<string> ids, bool permanent)
     {
-        var albums = await UnitOfWork.MediaAlbums
-            .Query(x => x.OwnerId == userId)
-            .ToListAsync();
-        return albums;
-    }
-
-    public async Task AddMediaToAlbumAsync(Guid userId, IEnumerable<Guid> mediaIds, IEnumerable<Guid> albumIds)
-    {
-        if (mediaIds == null || albumIds == null) return;
-        var filter = new MediaObjectFilter
-        {
-            UserId = userId,
-            Ids = mediaIds,
-        };
-        var mediaObjects = await UnitOfWork.MediaObjects.Query(filter.ToExpression())
-            .ToListAsync();
-        foreach (var albumId in albumIds)
-        {
-            var album = await UnitOfWork.MediaAlbums.GetAlbumByIdAsync(albumId, userId, true);
-            if (album == null) continue;
-            MediaHelper.AddMediaToAlbum(album, mediaObjects);
-        }
-
-        await UnitOfWork.SaveAsync();
-    }
-
-    public async Task<bool> UniqueAlbumNameAsync(Guid userId, string name)
-    {
-        var album = await UnitOfWork.MediaAlbums.GetAlbumByNameAsync(name, userId);
-        return album == null;
-    }
-
-    public async Task<IEnumerable<MediaObject>> GetAlbumContentAsync(Guid userId, string albumName)
-    {
-        var album = await UnitOfWork.MediaAlbums.GetAlbumByNameAsync(albumName, userId, true);
-        return album == null ? [] : album.MediaObjects.Where(x => !x.MarkedForDeletion);
-    }
-
-    public async Task<List<Guid>> DeleteMediaObjectsAsync(Guid userId, MediaObjectFilter filter, bool permanent)
-    {
-        var expression = filter.ToExpression();
-        var mediaObjects = await UnitOfWork.MediaObjects.Query(expression).ToListAsync();
+        var mediaEntries = await _mediaEntryRepository.SearchAsync(null, null, ids.ToObjectIdList(), _currentUser.UserId);
+    
         if (permanent)
         {
-            var mediaFilesFolder = GetUserMediaFilesDirectory(userId);
-            var snapshotsFolder = GetUserSnapshotsDirectory(userId);
-            foreach (var mediaObject in mediaObjects)
-            {
-                MediaHelper.DeleteFile(Path.GetFullPath(Path.Combine(mediaFilesFolder, mediaObject.MediaFile)));
-                MediaHelper.DeleteFile(Path.GetFullPath(Path.Combine(snapshotsFolder, mediaObject.SnapshotFile)));
-            }
-
-            UnitOfWork.MediaObjects.DeleteMany(mediaObjects);
+            await _mediaEntryRepository.DeleteManyAsync(mediaEntries.Select(x => x.Id), _currentUser.UserId);
+            await _mediaAlbumRepository.PullMediaEntriesAsync(mediaEntries.Select(x => x.Id), _currentUser.UserId);
+            _mediaStorageService.DeleteMediaFiles(mediaEntries, _currentUser.UserId);
         }
         else
         {
-            foreach (var media in mediaObjects)
-                media.MarkedForDeletion = true;
+            await _mediaEntryRepository.SetDeletedAsync(mediaEntries.Select(x => x.Id), _currentUser.UserId, true);
         }
-        await UnitOfWork.SaveAsync();
-        return mediaObjects.Select(x => x.Id).ToList();
     }
 
-    public async Task RestoreMediaObjectsAsync(MediaObjectFilter filter)
-    {
-        var mediaObjects = await UnitOfWork.MediaObjects.Query(filter.ToExpression()).ToListAsync();
-        foreach (var mediaObject in mediaObjects)
-            mediaObject.MarkedForDeletion = false;
+    public Task RestoreMediaEntriesAsync(IEnumerable<string> ids) =>
+        _mediaEntryRepository.SetDeletedAsync(ids.ToObjectIdList(), _currentUser.UserId, false);
 
-        await UnitOfWork.SaveAsync();
-    }
+    public string GenerateContentAccessKey() =>
+        _contentAuthorization.GenerateKeyForUser(_currentUser.UserId.ToString());
 
-    private class UploadFile
-    {
-        public string OriginalFileName { get; set; }
-        public string FullPath { get; set; }
-        public long FileSize { get; set; }
-        public string Hash { get; set; }
-    }
+    public void RemoveContentAccessKey() => _contentAuthorization.RemoveKeyForUser(_currentUser.UserId.ToString());
+    public bool ValidateContentAccessKey(string userId, string key) => _contentAuthorization.ValidKey(userId, key);
 }

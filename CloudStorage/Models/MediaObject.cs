@@ -31,7 +31,7 @@ public class MediaObject
     public long? FileSize { get; set; }
 
     public virtual User Owner { get; set; }
-    public virtual ICollection<MediaAlbum> MediaAlbums { get; set; } = new List<MediaAlbum>();
+    public virtual ICollection<MediaAlbumLegacy> MediaAlbums { get; set; } = new List<MediaAlbumLegacy>();
 
     [NotMapped]
     public string SnapshotFile => Hash + SnapshotExtension;

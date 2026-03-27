@@ -34,7 +34,7 @@ public class User
     public virtual ICollection<ResetToken> ResetTokens { get; } = [];
 
     public virtual ICollection<MediaObject> MediaObjects { get; set; } = [];
-    public virtual ICollection<MediaAlbum> MediaAlbums { get; set; } = [];
+    public virtual ICollection<MediaAlbumLegacy> MediaAlbums { get; set; } = [];
 }
 
 public class AccessToken(string token, AccessTokenType tokenType)

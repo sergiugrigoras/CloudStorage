@@ -6,8 +6,6 @@ namespace CloudStorage.Services;
 
 public sealed class MongoDbInitializer(IMongoDatabase db) : IHostedService
 {
-    private readonly IMongoDatabase _database = db;
-    
     public async Task StartAsync(CancellationToken ct)
     {
         await InitializeExpenseCategoriesCollectionAsync(ct);
@@ -20,7 +18,7 @@ public sealed class MongoDbInitializer(IMongoDatabase db) : IHostedService
     {
         try
         {
-            var collection = _database.GetCollection<Category>(MongoDbCollections.ExpenseCategories);
+            var collection = db.GetCollection<Category>(MongoDbCollections.ExpenseCategories);
             
             var indexKeysDefinition = Builders<Category>.IndexKeys
                 .Ascending(x => x.Name)
@@ -56,7 +54,7 @@ public sealed class MongoDbInitializer(IMongoDatabase db) : IHostedService
 
     private async Task InitializeStorageNodesCollectionAsync(CancellationToken ct)
     {
-        var collection = _database.GetCollection<StorageNode>(MongoDbCollections.StorageNodes);
+        var collection = db.GetCollection<StorageNode>(MongoDbCollections.StorageNodes);
         
         var indexKeysDefinition = Builders<StorageNode>.IndexKeys
             .Ascending(x => x.OwnerId)
@@ -77,4 +75,6 @@ public static class MongoDbCollections
     public const string ExpensePaymentMethods =  "expense_payment_methods";
     public const string Notes =  "notes";
     public const string StorageNodes =  "storage_nodes";
+    public const string MediaEntries =  "media_entries";
+    public const string MediaAlbums =  "media_albums";
 }

@@ -1,5 +1,4 @@
 using CloudStorage.Interfaces;
-using CloudStorage.Interfaces.Media;
 using CloudStorage.Models;
 using CloudStorage.Repositories.Expense;
 using CloudStorage.Repositories.Media;
@@ -28,10 +27,11 @@ public static class ServiceExtension
         services.AddScoped<ICategoryRepository, CategoryRepository>();
         services.AddScoped<IPaymentMethodRepository, PaymentMethodRepository>();
         services.AddScoped<IExpenseService, ExpenseService>();
-
-        services.AddScoped<IMediaObjectRepository, MediaObjectRepository>();
+        
+        services.AddScoped<IMediaEntryRepository, MediaEntryRepository>();
+        services.AddScoped<IMediaEntrySystemRepository, MediaEntrySystemRepository>();
         services.AddScoped<IMediaAlbumRepository, MediaAlbumRepository>();
-        services.AddScoped<IMediaUnitOfWork, MediaUnitOfWork>();
+        services.AddScoped<IMediaStorageService, MediaStorageService>();
         services.AddScoped<IMediaService, MediaService>();
         services.AddScoped<IStorageService, StorageService>();
 

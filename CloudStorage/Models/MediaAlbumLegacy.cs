@@ -1,6 +1,6 @@
 ﻿namespace CloudStorage.Models;
 
-public class MediaAlbum
+public class MediaAlbumLegacy
 {
     public Guid Id { get; set; }
 

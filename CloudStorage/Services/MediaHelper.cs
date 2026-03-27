@@ -86,19 +86,6 @@ public static class MediaHelper
         if (string.IsNullOrWhiteSpace(path) || Directory.Exists(path)) return;
         Directory.CreateDirectory(path);
     }
-    
-    public static void AddMediaToAlbum(MediaAlbum album, IEnumerable<MediaObject> mediaObjects)
-    {
-        var existingItems = new HashSet<Guid>(album.MediaObjects.Select(x => x.Id));
-
-        foreach (var mediaObject in mediaObjects)
-        {
-            if (existingItems.Add(mediaObject.Id))
-            {
-                album.MediaObjects.Add(mediaObject);
-            }
-        }
-    }
 }
 
 public class Base64Image

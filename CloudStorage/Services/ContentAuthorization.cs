@@ -1,79 +1,43 @@
-﻿namespace CloudStorage.Services;
+﻿using System.Collections.Concurrent;
+
+namespace CloudStorage.Services;
 
 public class ContentAuthorization
 {
-    private Dictionary<Guid, AuthorizationKeys> UserKeys { get; set; } = new();
-    private readonly ReaderWriterLockSlim dictLock = new();
+    private ConcurrentDictionary<string, AuthorizationKeys> UserKeys { get; } = new();
 
-    public string GenerateKeyForUser(Guid userId)
+    public string GenerateKeyForUser(string userId)
     {
         var key = GenerateKey();
-
-        dictLock.EnterWriteLock();
+        
         var authKeys = GetAuthorizationKeysForUser(userId);
         if (authKeys != null)
         {
-            try
-            {
-                authKeys.AddKey(key);
-            }
-            finally
-            {
-                dictLock.ExitWriteLock();
-            }
+            authKeys.PushKey(key);
         }
         else
         {
-            try
-            {
-                UserKeys.Add(userId, new AuthorizationKeys().AddKey(key));
-            }
-            finally
-            {
-                dictLock.ExitWriteLock();
-            }
+            UserKeys.TryAdd(userId, new AuthorizationKeys().PushKey(key));
         }
 
         return key;
     }
 
-    public void RemoveKeyForUser(Guid userId)
+    public void RemoveKeyForUser(string userId)
     {
-        dictLock.EnterWriteLock();
-        try
-        {
-            UserKeys.Remove(userId);
-        }
-        finally
-        {
-            dictLock.ExitWriteLock();
-        }
+        UserKeys.Remove(userId,  out _);
     }
 
-    public bool ValidKey(Guid userId, string key)
+    public bool ValidKey(string userId, string key)
     {
         if (string.IsNullOrWhiteSpace(key)) return false;
-        dictLock.EnterReadLock();
-        try
-        {
-            var authKeys = GetAuthorizationKeysForUser(userId);
-            if (authKeys == null)
-                return false;
-
-            return authKeys.Validate(key);
-        }
-        finally
-        {
-            dictLock.ExitReadLock();
-        }
+        var authKeys = GetAuthorizationKeysForUser(userId);
+        return authKeys != null && authKeys.Validate(key);
     }
 
-    private AuthorizationKeys GetAuthorizationKeysForUser(Guid userId) 
+    private AuthorizationKeys GetAuthorizationKeysForUser(string userId)
     {
-        if (UserKeys.TryGetValue(userId, out var keys))
-            return keys;
-
-        return null;
+        return UserKeys.TryGetValue(userId, out var keys) ? keys : null;
     }
 
     private static string GenerateKey()
@@ -92,7 +56,7 @@ public class AuthorizationKeys
     private Key CurrentKey { get; set; }
     private Key PreviousKey { get; set; }
 
-    public AuthorizationKeys AddKey(string keyValue)
+    public AuthorizationKeys PushKey(string keyValue)
     {
         PreviousKey = CurrentKey;
         CurrentKey = new Key(keyValue);

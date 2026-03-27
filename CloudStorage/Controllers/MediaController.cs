@@ -1,4 +1,4 @@
-﻿using CloudStorage.Interfaces.Media;
+﻿using CloudStorage.Models.Media;
 using CloudStorage.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -9,187 +9,224 @@ namespace CloudStorage.Controllers;
 [Authorize]
 [ApiController]
 [Route("api/[controller]")]
-public class MediaController(
-    IMediaService mediaService,
-    IUserService userService,
-    ContentAuthorization contentAuthorization)
+public class MediaController(IMediaService mediaService)
     : ControllerBase
 {
-    private const string SnapshotContentType = "image/jpg";
-
     [HttpPost("search")]
-    public async Task<IActionResult> SearchMediaObjectsAsync([FromBody]MediaObjectFilter filter)
+    public async Task<IActionResult> SearchMediaObjectsAsync([FromBody] MediaEntryQuery query)
     {
-        var user = await userService.GetUserAsync(User);
-        if (user == null) return Unauthorized();
-        filter.UserId = user.Id;
-        var mediaObjects = await mediaService.GetMediaObjectsAsync(filter);
-        var result = mediaObjects.Select(x => new MediaObjectViewModel(x));
-        return new JsonResult(result);
+        try
+        {
+            var entries = await mediaService.GetMediaEntriesAsync(query);
+            return Ok(entries.Select(MediaEntryViewModel.FromDomain));
+        }
+        catch (Exception)
+        {
+            return StatusCode(500, "An unexpected error occurred.");
+        }
     }
 
-    [HttpGet("snapshot/{id:guid}")]
-    public async Task<IActionResult> GetSnapshotAsync(Guid id)
+    [HttpGet("snapshot/{id}")]
+    public async Task<IActionResult> GetSnapshotAsync(string id)
     {
-        var user = await userService.GetUserAsync(User);
-        if (user == null) return Unauthorized();
-        var mediaObject = await mediaService.GetMediaObjectByIdAsync(id);
-        if (mediaObject == null) return NotFound();
-        if (mediaObject.OwnerId != user.Id) return Forbid();
-        
-        var stream = await mediaService.GetSnapshotStreamAsync(id);
-        if (stream == null) return NotFound();
-        return File(stream, SnapshotContentType);
+        try
+        {
+            var mediaEntry = await mediaService.GetMediaEntryByIdAsync(id);
+            var result = await mediaService.GetSnapshotStreamAsync(mediaEntry);
+            return result == null ? NotFound() : File(result.Stream, result.ContentType);
+        }
+        catch (Exception)
+        {
+            return StatusCode(500, "An unexpected error occurred.");
+        }
     }
 
-    [HttpGet("{id:guid}")]
-    public async Task<IActionResult> GetMediaContentAsync(Guid id)
+    [HttpGet("{id}")]
+    public async Task<IActionResult> GetMediaContentAsync(string id)
     {
-        var user = await userService.GetUserAsync(User);
-        if (user == null) return Unauthorized();
-        var mediaObject = await mediaService.GetMediaObjectByIdAsync(id);
-        if (mediaObject == null) return NotFound();
-        if (mediaObject.OwnerId != user.Id) return Forbid();
-        
-        var stream = await mediaService.GetMediaStreamAsync(id);
-        if (stream == null) return NotFound();
-        
-        return File(stream, mediaObject.ContentType);
+        try
+        {
+            var mediaEntry = await mediaService.GetMediaEntryByIdAsync(id);
+            var result = mediaService.GetMediaStream(mediaEntry);
+            return result == null ? NotFound() : File(result.Stream, result.ContentType);
+        }
+        catch (Exception)
+        {
+            return StatusCode(500, "An unexpected error occurred.");
+        }
     }
 
     [HttpGet("access-key")]
-    public async Task<IActionResult> SetAccessKeyCookie()
+    public IActionResult SetAccessKeyCookie()
     {
-        var user = await userService.GetUserAsync(User);
         var cookieOptions = new CookieOptions
         {
             HttpOnly = true,
             Expires = DateTime.Now.AddMinutes(2),
             Path = "/api/content"
         };
-        var key = contentAuthorization.GenerateKeyForUser(user.Id);
-        Response.Cookies.Append(CookieNames.ContentKey, key, cookieOptions);
+        try
+        {
+            var key = mediaService.GenerateContentAccessKey();
+            Response.Cookies.Append(CookieNames.ContentKey, key, cookieOptions);
 
-        return Ok();
+            return NoContent();
+        }
+        catch (Exception)
+        {
+            return StatusCode(500, "An unexpected error occurred.");
+        }
     }
 
     [HttpDelete("access-key")]
-    public async Task<IActionResult> RemoveAccessKey()
+    public IActionResult RemoveAccessKey()
     {
-        var user = await userService.GetUserAsync(User);
-        contentAuthorization.RemoveKeyForUser(user.Id);
-
-        return Ok();
-    }
-    
-
-    [HttpPost("favorite")]
-    public async Task<IActionResult> ToggleFavoriteAsync([FromBody] Identifiable body)
-    {
-        var user = await userService.GetUserAsync(User);
-        if (user == null) return Unauthorized();
-        if (body == null) return BadRequest();
-        var mediaObject = await mediaService.GetMediaObjectByIdAsync(body.Id);
-        if (mediaObject == null) return NotFound();
-        if (mediaObject.OwnerId != user.Id) return Forbid();
         try
         {
-            var result = await mediaService.ToggleFavorite(mediaObject.Id);
-            if (result == null) return NotFound();
+            mediaService.RemoveContentAccessKey();
+            return NoContent();
+        }
+        catch (Exception)
+        {
+            return StatusCode(500, "An unexpected error occurred.");
+        }
+    }
+
+    [HttpPut("favorite/{id}")]
+    public async Task<IActionResult> ToggleFavoriteAsync(string id)
+    {
+        try
+        {
+            var result = await mediaService.ToggleFavorite(id);
+            if (result == null)
+                return NotFound();
             return Ok(result);
         }
-        catch (Exception e)
+        catch (Exception)
         {
-            return BadRequest(e.Message);
+            return StatusCode(500, "An unexpected error occurred.");
         }
     }
 
     [HttpPost("upload"), DisableRequestSizeLimit]
     public async Task<IActionResult> UploadAsync([FromForm] IEnumerable<IFormFile> files)
     {
-        var user = await userService.GetUserAsync(User);
-        if (user == null) return Unauthorized();
         try
         {
-            var mediaObjects = await mediaService.UploadMediaFilesAsync(files, user.Id);
-            if (mediaObjects == null)
+            var mediaEntries = await mediaService.UploadMediaFilesAsync(files);
+            if (mediaEntries == null)
                 throw new Exception("Unable to upload files.");
             
-            return new JsonResult(mediaObjects.Select(x => new MediaObjectViewModel(x)));
+            return Ok(mediaEntries.Select(MediaEntryViewModel.FromDomain));
         }
-        catch (Exception e)
+        catch (Exception)
         {
-            Console.WriteLine(e.Message);
-            return StatusCode(500, "Unable to process data.");
+            return StatusCode(500, "An unexpected error occurred.");
         }
     }
 
     [HttpPost("new-album")]
     public async Task<IActionResult> CreateAlbumAsync([FromBody] MediaAlbumViewModel album)
     {
-        if (string.IsNullOrWhiteSpace(album?.Name)) return BadRequest();
-        var user = await userService.GetUserAsync(User);
-        if (user == null) return Unauthorized();
-        await mediaService.CreateAlbumAsync(user.Id, album.Name);
-        return new JsonResult(album.Name);
+        try
+        {
+            if (string.IsNullOrWhiteSpace(album?.Name))
+                return BadRequest();
+            await mediaService.CreateAlbumAsync(album.Name);
+            return Ok(album.Name);
+        }
+        catch (Exception)
+        {
+            return StatusCode(500, "An unexpected error occurred.");
+        }
     }
 
     [HttpGet("all-albums")]
     public async Task<IActionResult> GetUserAlbumsAsync()
     {
-        var user = await userService.GetUserAsync(User);
-        if (user == null) return Unauthorized();
-        var albums = await mediaService.GetAllUserAlbumsAsync(user.Id);
-        var result = albums.Select(album => new MediaAlbumViewModel(album));
-        return new JsonResult(result);
+        try
+        {
+            var albums = await mediaService.GetAlbumsAsync();
+            return Ok(albums.Select(MediaAlbumViewModel.FromDomain));
+        }
+        catch (Exception)
+        {
+            return StatusCode(500, "An unexpected error occurred.");
+        }
     }
 
     [HttpPost("album-add")]
     public async Task<IActionResult> AddMediaToAlbumAsync([FromBody] MediaToAlbumViewModel viewModel)
     {
-        var user = await userService.GetUserAsync(User);
-        if (user == null) return Unauthorized();
-        await mediaService.AddMediaToAlbumAsync(user.Id, viewModel.MediaObjectsIds, viewModel.AlbumsIds);
-        return Ok();
+        try
+        {
+            if (viewModel?.AlbumsIds == null || viewModel.MediaObjectsIds == null)
+                return BadRequest();
+            await mediaService.AddToAlbumAsync(viewModel.MediaObjectsIds, viewModel.AlbumsIds);
+            return Ok();
+        }
+        catch (Exception)
+        {
+            return StatusCode(500, "An unexpected error occurred.");
+        }
     }
 
     [HttpGet("unique-album-name")]
     public async Task<IActionResult> CheckAlbumUniqueName(string name)
     {
-        if (string.IsNullOrWhiteSpace(name)) return BadRequest();
-        var user = await userService.GetUserAsync(User);
-        if (user == null) return Unauthorized();
-        var isUnique = await mediaService.UniqueAlbumNameAsync(user.Id, name);
-        return new JsonResult(isUnique);
+        var exists = await mediaService.AlbumExistsAsync(name);
+        return Ok(!exists);
     }
 
     [HttpGet("album")]
     public async Task<IActionResult> GetAlbumContentAsync(string name)
     {
-        var user = await userService.GetUserAsync(User);
-        if (user == null) return Unauthorized();
-        var mediaObjects = await mediaService.GetAlbumContentAsync(user.Id, name);
-        var result = mediaObjects.Select(x => new MediaObjectViewModel(x));
-        return new JsonResult(result);
+        try
+        {
+            if (string.IsNullOrWhiteSpace(name))
+                return BadRequest("Invalid album name.");
+            var mediaEntries = await mediaService.GetAlbumContentAsync(name);
+            return Ok(mediaEntries.Select(MediaEntryViewModel.FromDomain));
+        }
+        catch (InvalidOperationException e)
+        {
+            return BadRequest(e.Message);
+        }
+        catch (Exception)
+        {
+            return StatusCode(500, "An unexpected error occurred.");
+        }
     }
 
     [HttpDelete]
-    public async Task<IActionResult> DeleteMediaAsync([FromBody] MediaObjectFilter filter, bool permanent = false)
+    public async Task<IActionResult> DeleteMediaAsync([FromBody] MediaEntryQuery query, bool permanent = false)
     {
-        var user = await userService.GetUserAsync(User);
-        if (user == null) return Unauthorized();
-        filter.UserId = user.Id;
-        var deleteResult = await mediaService.DeleteMediaObjectsAsync(user.Id, filter, permanent);
-        return new JsonResult(deleteResult);
+        if (query?.Ids == null)
+            return BadRequest("Invalid query.");
+        try
+        {
+            await mediaService.DeleteMediaEntriesAsync(query.Ids, permanent);
+            return NoContent();
+        }
+        catch (Exception)
+        {
+            return StatusCode(500, "An unexpected error occurred.");
+        }
     }
 
     [HttpPost("restore")]
-    public async Task<IActionResult> RestoreMediaAsync([FromBody] MediaObjectFilter filter)
+    public async Task<IActionResult> RestoreMediaAsync([FromBody] MediaEntryQuery query)
     {
-        var user = await userService.GetUserAsync(User);
-        if (user == null) return Unauthorized();
-        filter.UserId = user.Id;
-        await mediaService.RestoreMediaObjectsAsync(filter);
-        return Ok();
+        if (query?.Ids == null)
+            return BadRequest("Invalid query.");
+        try
+        {
+            await mediaService.RestoreMediaEntriesAsync(query.Ids);
+            return Ok();
+        }
+        catch (Exception)
+        {
+            return StatusCode(500, "An unexpected error occurred.");
+        }
     }
 }

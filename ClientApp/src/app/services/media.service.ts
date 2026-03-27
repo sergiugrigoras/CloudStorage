@@ -43,8 +43,8 @@ export class MediaService {
   }
 
   toggleFavorite(id: string) {
-    const url = buildUrl(API_ENDPOINTS.MEDIA.BASE, API_ENDPOINTS.MEDIA.FAVORITE);
-    return this.http.post<boolean>(url, { id }, HTTP_OPTIONS_CONTENT_JSON);
+    const url = buildUrl(API_ENDPOINTS.MEDIA.BASE, API_ENDPOINTS.MEDIA.FAVORITE, id);
+    return this.http.put<boolean>(url, null, HTTP_OPTIONS_CONTENT_JSON);
   }
 
   upload(formData: FormData): Observable<HttpEvent<MediaObject[]>> {

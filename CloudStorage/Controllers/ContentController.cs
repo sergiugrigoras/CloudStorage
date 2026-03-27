@@ -1,22 +1,31 @@
-﻿using CloudStorage.Interfaces.Media;
-using CloudStorage.Services;
+﻿using CloudStorage.Services;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CloudStorage.Controllers;
 
 [Route("api/[controller]")]
-public class ContentController(IMediaService mediaService, ContentAuthorization contentAuthorization)
+public class ContentController(IMediaService mediaService)
     : ControllerBase
 {
-    [HttpGet("{id:guid}")]
-    public async Task<IActionResult> GetMediaContentAsync(Guid id)
+    [HttpGet("{id}")]
+    public async Task<IActionResult> GetMediaContentAsync(string id)
     {
-        var mediaObject = await mediaService.GetMediaObjectByIdAsync(id);
-        if (mediaObject == null) return NotFound();
-        var accessKey = Request.Cookies[CookieNames.ContentKey];
-        if (!contentAuthorization.ValidKey(mediaObject.OwnerId, accessKey)) return Forbid();
-        var stream = await mediaService.GetMediaStreamAsync(id);
-        if (stream == null) return NotFound();
-        return File(stream, mediaObject.ContentType, enableRangeProcessing: true);
+        try
+        {
+            var mediaEntry = await mediaService.GetMediaEntryForContentDeliveryAsync(id);
+            if (mediaEntry == null)
+                return NotFound();
+            
+            var accessKey = Request.Cookies[CookieNames.ContentKey];
+            if (!mediaService.ValidateContentAccessKey(mediaEntry.UserId.ToString(), accessKey))
+                return Forbid();
+            
+            var result = mediaService.GetMediaStream(mediaEntry);
+            return result == null ? NotFound() : File(result.Stream, result.ContentType, enableRangeProcessing: true);
+        }
+        catch (Exception)
+        {
+            return StatusCode(500, "An unexpected error occurred.");
+        }
     }
 }

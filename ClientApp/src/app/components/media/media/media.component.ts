@@ -632,8 +632,8 @@ export class MediaComponent implements OnInit, OnDestroy, AfterViewInit {
           this.snackBar.open(`An error occurred.`, 'Ok', SNACKBAR_OPTIONS);
           return EMPTY;
         }),
-        tap((result) => {
-          this.allMediaObjects.update((value) => [...value.filter((x) => !result.includes(x.id))]);
+        tap(() => {
+          this.allMediaObjects.update((value) => [...value.filter((x) => !ids.includes(x.id))]);
           this.refreshPageContent.next();
         })
       )

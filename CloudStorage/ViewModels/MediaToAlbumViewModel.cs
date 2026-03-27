@@ -2,11 +2,7 @@
 {
     public class MediaToAlbumViewModel
     {
-        public IEnumerable<Guid> AlbumsIds { get; set; }
-        public IEnumerable<Guid> MediaObjectsIds { get; set; }
-        public MediaToAlbumViewModel()
-        {
-
-        }
+        public IEnumerable<string> AlbumsIds { get; set; }
+        public IEnumerable<string> MediaObjectsIds { get; set; }
     }
 }

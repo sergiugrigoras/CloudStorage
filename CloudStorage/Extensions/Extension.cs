@@ -1,6 +1,7 @@
 ﻿using System.IdentityModel.Tokens.Jwt;
 using System.Linq.Expressions;
 using System.Security.Claims;
+using MongoDB.Bson;
 
 namespace CloudStorage.Extensions;
 
@@ -31,6 +32,17 @@ public static class Extension
                 return newValue;
             return base.Visit(node);
         }
+    }
+
+    public static List<ObjectId> ToObjectIdList(this IEnumerable<string> ids)
+    {
+        var result = new List<ObjectId>();
+        foreach (var id in ids)
+        {
+            if (ObjectId.TryParse(id, out var objectId))
+                result.Add(objectId);
+        }
+        return result;
     }
 
     public static string AdminEmail(this IConfiguration configuration) =>

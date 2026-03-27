@@ -17,17 +17,17 @@ public partial class AppDbContext : DbContext
     public virtual DbSet<ResetToken> ResetTokens { get; set; }
     public virtual DbSet<User> Users { get; set; }
     public virtual DbSet<MediaObject> MediaObjects { get; set; }
-    public virtual DbSet<MediaAlbum> MediaAlbums { get; set; }
+    public virtual DbSet<MediaAlbumLegacy> MediaAlbums { get; set; }
     
     public virtual DbSet<InviteCode> InviteCodes { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        modelBuilder.Entity<MediaAlbum>(entity =>
+        modelBuilder.Entity<MediaAlbumLegacy>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("PK__MediaAlb__3214EC0794FF9D8D");
 
-            entity.ToTable("MediaAlbum");
+            entity.ToTable("MediaAlbumLegacy");
 
             entity.Property(e => e.Id).ValueGeneratedNever();
             entity.Property(e => e.CreateDate).HasColumnType("datetime");
@@ -72,7 +72,7 @@ public partial class AppDbContext : DbContext
             entity.HasMany(d => d.MediaAlbums).WithMany(p => p.MediaObjects)
                 .UsingEntity<Dictionary<string, object>>(
                     "MediaObjectAlbum",
-                    r => r.HasOne<MediaAlbum>().WithMany()
+                    r => r.HasOne<MediaAlbumLegacy>().WithMany()
                         .HasForeignKey("MediaAlbumId")
                         .HasConstraintName("FK_MediaObjectAlbum_MediaAlbum"),
                     l => l.HasOne<MediaObject>().WithMany()
