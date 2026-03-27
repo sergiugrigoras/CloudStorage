@@ -62,10 +62,6 @@ public class UserService(AppDbContext context, IConfiguration configuration) : I
             Email = email,
             Password = BC.HashPassword(password),
             Disabled = false,
-            FileSystemObjects =
-            [
-                new FileSystemObject { Name = "root", IsFolder = true, Date = DateTime.UtcNow }
-            ]
         };
         await context.Users.AddAsync(user);
         await context.SaveChangesAsync();

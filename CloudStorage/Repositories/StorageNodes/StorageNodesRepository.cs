@@ -11,7 +11,7 @@ public interface IStorageNodeRepository
     Task<StorageNode> GetOneAsync(FilterDefinition<StorageNode> filter, Guid userId);
     Task<List<StorageNode>> GetManyAsync(Guid userId);
     Task<List<StorageNode>> GetManyAsync(FilterDefinition<StorageNode> filter, Guid userId);
-    Task<long?> GetFilesSizeAsync(FilterDefinition<StorageNode> filter, Guid userId);
+    Task<long?> GetFilesSizeAsync( Guid userId);
     Task CreateNodeAsync(StorageNode node, Guid userId);
     Task<StorageNode> UpdateOneAsync(FilterDefinition<StorageNode> filter, Guid userId, UpdateDefinition<StorageNode> update);
     Task BulkWriteAsync(Dictionary<ObjectId, UpdateDefinition<StorageNode>> updates, Guid userId);
@@ -44,12 +44,14 @@ public class StorageNodeRepository(IMongoDatabase db): IStorageNodeRepository
         return _collection.Find(Builders<StorageNode>.Filter.And(userFilter, filter)).ToListAsync();
     }
 
-    public Task<long?> GetFilesSizeAsync(FilterDefinition<StorageNode> filter, Guid userId)
+    public Task<long?> GetFilesSizeAsync(Guid userId)
     {
         var userFilter = Builders<StorageNode>.Filter.Eq(x => x.OwnerId, userId);
+        var fileFilter = Builders<StorageNode>.Filter.Eq(x => x.IsFolder, false);
+        var filter = Builders<StorageNode>.Filter.And(userFilter, fileFilter);
         return _collection
             .Aggregate()
-            .Match(Builders<StorageNode>.Filter.And(userFilter, filter))
+            .Match(filter)
             .Group(x => 1, g => g.Sum(x => x.FileSize))
             .FirstOrDefaultAsync();
     }

@@ -54,4 +54,9 @@ public static class Extension
         configuration.GetValue<string>("AesSettings:Key");
     public static string AesIv(this IConfiguration configuration) =>
         configuration.GetValue<string>("AesSettings:IV");
+
+    public static string StorageSize(this IConfiguration configuration) =>
+        configuration.GetValue<string>("Storage:Size");
+    public static string StorageUrl(this IConfiguration configuration) =>
+        configuration.GetValue<string>("Storage:Url");
 }

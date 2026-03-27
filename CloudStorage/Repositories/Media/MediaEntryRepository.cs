@@ -32,6 +32,9 @@ public interface IMediaEntryRepository
     );
     
     Task<MediaEntry?> GetByHashAsync(string hash, Guid userId);
+    
+    Task<long?> GetFilesSizeAsync(Guid userId);
+    
     Task<MediaEntry> UpdateAsync(MediaEntry entry, Guid userId);
 
     Task<MediaEntry> SetFavoriteAsync(ObjectId id, Guid userId, bool favorite);
@@ -83,6 +86,13 @@ public class MediaEntryRepository(IMongoDatabase db) : IMediaEntryRepository
         var hashFilter = Builders<MediaEntry>.Filter.Eq(x => x.Hash, hash);
         return await _collection.Find(Builders<MediaEntry>.Filter.And(userFilter, hashFilter)).FirstOrDefaultAsync();
     }
+
+    public Task<long?> GetFilesSizeAsync(Guid userId) =>
+        _collection
+            .Aggregate()
+            .Match(Builders<MediaEntry>.Filter.Eq(x => x.UserId, userId))
+            .Group(x => 1, g => g.Sum(x => x.FileSize))
+            .FirstOrDefaultAsync();
 
     public Task<MediaEntry> UpdateAsync(MediaEntry entry, Guid userId)
     {

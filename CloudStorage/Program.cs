@@ -95,8 +95,6 @@ using (var scope = app.Services.CreateScope())
 if (app.Environment.IsDevelopment())
 {
     app.UseDeveloperExceptionPage();
-    if (inMemoryDb)
-        app.SeedInMemoryDb();
 }
 app.UseCors("EnableCORS");
 app.UseForwardedHeaders(new ForwardedHeadersOptions

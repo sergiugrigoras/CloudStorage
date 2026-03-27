@@ -28,13 +28,9 @@ public class User
     public DateTime? RefreshTokenExpiryTime { get; set; }
     public bool Disabled { get; set; }
     public DateTime? LastActive { get; set; }
-
-    public virtual ICollection<FileSystemObject> FileSystemObjects { get; set; } = [];
+    
     
     public virtual ICollection<ResetToken> ResetTokens { get; } = [];
-
-    public virtual ICollection<MediaObject> MediaObjects { get; set; } = [];
-    public virtual ICollection<MediaAlbumLegacy> MediaAlbums { get; set; } = [];
 }
 
 public class AccessToken(string token, AccessTokenType tokenType)
