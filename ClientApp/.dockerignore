@@ -1,0 +1,30 @@
+# Dependencies
+ClientApp/node_modules/
+
+# Angular build output
+ClientApp/dist/
+
+# Git
+.git/
+.gitignore
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Environment / secrets
+**/appsettings*.json
+*.env
+.env*
+
+# dotnet
+CloudStorage/bin/
+CloudStorage/obj/
+
+# Docker
+Dockerfile
+.dockerignore

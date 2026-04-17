@@ -1,8 +1,8 @@
 #node build
-FROM node:lts-alpine3.22 AS node
+FROM node:22-alpine3.22 AS node
 WORKDIR /app
 COPY ./ClientApp/package*.json ./
-RUN npm install
+RUN npm ci
 COPY ./ClientApp .
 RUN npm run build
 
@@ -23,7 +23,7 @@ ENV ASPNETCORE_URLS=http://+:5000
 
 WORKDIR /app
 COPY --from=base /app/publish .
-COPY --from=node /app/dist ./wwwroot
+COPY --from=node /app/dist/browser ./wwwroot
 # no appsettings files
 RUN rm -f ./appsettings*.json
 EXPOSE 5000
