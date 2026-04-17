@@ -9,18 +9,20 @@ namespace CloudStorage.Models.Expense;
 public class ExpenseEntry
 {
     [BsonId]
-    public ObjectId Id { get; set; }
+    [BsonRepresentation(BsonType.ObjectId)]
+    public string Id { get; set; }
     
     public string Description { get; set; }
     public decimal Amount { get; set; }
     public DateTime Date { get; set; }
     
-    [BsonRepresentation(BsonType.String)]
-    public Guid UserId { get; set; }
+    [BsonRepresentation(BsonType.ObjectId)]
+    public string UserId { get; set; }
     
-    public ObjectId CategoryId { get; set; }
-    
-    public ObjectId PaymentMethodId { get; set; }
+    [BsonRepresentation(BsonType.ObjectId)]
+    public string CategoryId { get; set; }
+    [BsonRepresentation(BsonType.ObjectId)]
+    public string PaymentMethodId { get; set; }
 }
 
 public class ExpenseViewModel
@@ -41,12 +43,12 @@ public class ExpenseViewModel
         if (expenseEntry == null) return null;
         return new ExpenseViewModel
         {
-            Id = expenseEntry.Id.ToString(),
+            Id = expenseEntry.Id,
             Description = expenseEntry.Description,
             Amount = expenseEntry.Amount,
             Date = DateTime.SpecifyKind(expenseEntry.Date, DateTimeKind.Utc),
-            CategoryId = expenseEntry.CategoryId.ToString(),
-            PaymentMethodId = expenseEntry.PaymentMethodId.ToString()
+            CategoryId = expenseEntry.CategoryId,
+            PaymentMethodId = expenseEntry.PaymentMethodId
         };
     }
 
@@ -54,12 +56,12 @@ public class ExpenseViewModel
     {
         return new ExpenseEntry
         {
-            Id = ObjectId.TryParse(Id, out var id) ? id : ObjectId.Empty,
+            Id = Id,
             Amount = Amount,
             Description = Description,
             Date = Date,
-            CategoryId = ObjectId.TryParse(CategoryId, out var categoryId) ? categoryId : ObjectId.Empty,
-            PaymentMethodId = ObjectId.TryParse(PaymentMethodId, out var paymentMethodId) ? paymentMethodId : ObjectId.Empty
+            CategoryId = CategoryId,
+            PaymentMethodId = PaymentMethodId
         };
     }
 }
@@ -68,8 +70,8 @@ public class ExpenseFilter : IEntityFilter<ExpenseEntry>
 {
     public DateTime? StartDate { get; set; }
     public DateTime? EndDate { get; set; }
-    public ICollection<ObjectId> CategoryIds { get; set; }
-    public Expression<Func<ExpenseEntry, bool>> ToExpression(Guid userId)
+    public ICollection<string> CategoryIds { get; set; }
+    public Expression<Func<ExpenseEntry, bool>> ToExpression(string userId)
     {
         Expression<Func<ExpenseEntry, bool>> expression = x => x.UserId == userId;
         if (StartDate.HasValue)

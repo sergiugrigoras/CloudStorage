@@ -8,7 +8,7 @@ namespace CloudStorage.Services;
 
 public interface IStorageService
 {
-    Task<StorageInfo> GetUsedStorage();
+    Task<StorageInfo> GetUsedStorage(string userId = null);
 }
 
 public class StorageService(ICurrentUser currentUser, IConfiguration configuration, IStorageNodeRepository storageNodeRepository, IMediaEntryRepository mediaEntryRepository): IStorageService
@@ -19,10 +19,10 @@ public class StorageService(ICurrentUser currentUser, IConfiguration configurati
     private readonly IConfiguration _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
     
     private const long DefaultStorageSize = 100L * 1024 * 1024; // 100MB
-    public async Task<StorageInfo> GetUsedStorage()
+    public async Task<StorageInfo> GetUsedStorage(string userId = null)
     {
-        var driveSize = await _nodeRepository.GetFilesSizeAsync(_currentUser.UserId) ?? 0L;
-        var mediaSize = await _mediaEntryRepository.GetFilesSizeAsync(_currentUser.UserId) ?? 0L;
+        var driveSize = await _nodeRepository.GetFilesSizeAsync(userId ?? _currentUser.UserId) ?? 0L;
+        var mediaSize = await _mediaEntryRepository.GetFilesSizeAsync(userId ?? _currentUser.UserId) ?? 0L;
         var storageSize = ParseStorageSize(_configuration.StorageSize()) ?? DefaultStorageSize;
         
         return new StorageInfo(mediaSize, driveSize, storageSize);

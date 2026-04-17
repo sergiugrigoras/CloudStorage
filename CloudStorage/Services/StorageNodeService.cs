@@ -11,11 +11,11 @@ namespace CloudStorage.Services;
 public interface IStorageNodeService
 {
     Task<StorageNode> RenameAsync(StorageNode node);
-    Task DeleteAsync(List<ObjectId> nodeIds);
+    Task DeleteAsync(List<string> nodeIds);
     Task<StorageNode> CreateAsync(StorageNode node);
-    Task<StorageNode> StoreFileAsync(IFormFile file, ObjectId? parentId);
-    Task<NodeDownloadStream> DownloadNodesAsync(List<ObjectId> nodeIds);
-    Task<List<StorageNode>> MoveNodesAsync(List<ObjectId> rootIds, ObjectId? destinationNodeId);
+    Task<StorageNode> StoreFileAsync(IFormFile file, string parentId);
+    Task<NodeDownloadStream> DownloadNodesAsync(List<string> nodeIds);
+    Task<List<StorageNode>> MoveNodesAsync(List<string> rootIds, string destinationNodeId);
     Task<List<StorageNode>> GetNodesAsync();
 }
 public class StorageNodeService(ICurrentUser currentUser, IConfiguration configuration, IStorageNodeRepository nodeRepository) : IStorageNodeService
@@ -70,7 +70,7 @@ public class StorageNodeService(ICurrentUser currentUser, IConfiguration configu
         return $"{baseName}({nextNumber})";
     }
 
-    public async Task DeleteAsync(List<ObjectId> nodeIds)
+    public async Task DeleteAsync(List<string> nodeIds)
     {
         if (nodeIds == null || nodeIds.Count == 0) return;
             
@@ -114,7 +114,7 @@ public class StorageNodeService(ICurrentUser currentUser, IConfiguration configu
         return await _nodeRepository.UpdateOneAsync(BuildNodeIdFilter(node.Id), _currentUser.UserId, UpdateNameDefinition(node.Name));
     }
 
-    public async Task<StorageNode> StoreFileAsync(IFormFile file, ObjectId? parentId)
+    public async Task<StorageNode> StoreFileAsync(IFormFile file, string? parentId)
     {
         var storageFileName = await SaveFileToStorageAsync(file, _currentUser.UserId);
         if (storageFileName == null)
@@ -139,7 +139,7 @@ public class StorageNodeService(ICurrentUser currentUser, IConfiguration configu
         return await CreateAsync(node);
     }
         
-    private static FilterDefinition<StorageNode> BuildNodeIdFilter(ObjectId id) => Builders<StorageNode>.Filter.Eq(x => x.Id, id);
+    private static FilterDefinition<StorageNode> BuildNodeIdFilter(string id) => Builders<StorageNode>.Filter.Eq(x => x.Id, id);
 
     private static FilterDefinition<StorageNode> BuildUniqueNodeFilter(StorageNode node)
     {
@@ -162,9 +162,9 @@ public class StorageNodeService(ICurrentUser currentUser, IConfiguration configu
         );
     }
     
-    private static FilterDefinition<StorageNode> BuildSubtreeFilter(IEnumerable<ObjectId> rootNodeIds)
+    private static FilterDefinition<StorageNode> BuildSubtreeFilter(IEnumerable<string> rootNodeIds)
     {
-        var nodeIds = rootNodeIds as ObjectId[] ?? rootNodeIds.ToArray();
+        var nodeIds = rootNodeIds as string[] ?? rootNodeIds.ToArray();
         return Builders<StorageNode>.Filter.Or(
             Builders<StorageNode>.Filter.In(x => x.Id, nodeIds),
             Builders<StorageNode>.Filter.AnyIn(x => x.Path, nodeIds));
@@ -173,13 +173,13 @@ public class StorageNodeService(ICurrentUser currentUser, IConfiguration configu
     private static UpdateDefinition<StorageNode> UpdateNameDefinition(string name) =>
         Builders<StorageNode>.Update.Set(n => n.Name, name);
 
-    private static UpdateDefinition<StorageNode> UpdatePathDefinition(List<ObjectId> path) =>
+    private static UpdateDefinition<StorageNode> UpdatePathDefinition(List<string> path) =>
         Builders<StorageNode>.Update.Set(n => n.Path, path);
         
-    private static UpdateDefinition<StorageNode> UpdateParentDefinition(ObjectId? parentId) =>
+    private static UpdateDefinition<StorageNode> UpdateParentDefinition(string? parentId) =>
         Builders<StorageNode>.Update.Set(n => n.ParentId, parentId);
         
-    private async Task<string> SaveFileToStorageAsync(IFormFile file, Guid userId)
+    private async Task<string> SaveFileToStorageAsync(IFormFile file, string userId)
     {
         try
         {
@@ -204,7 +204,7 @@ public class StorageNodeService(ICurrentUser currentUser, IConfiguration configu
 
     }
 
-    public async Task<NodeDownloadStream> DownloadNodesAsync(List<ObjectId> nodeIds)
+    public async Task<NodeDownloadStream> DownloadNodesAsync(List<string> nodeIds)
     {
         var nodesToDownload = await _nodeRepository
             .GetManyAsync(BuildSubtreeFilter(nodeIds), _currentUser.UserId)
@@ -266,7 +266,7 @@ public class StorageNodeService(ICurrentUser currentUser, IConfiguration configu
         }
     }
         
-    public async Task<List<StorageNode>> MoveNodesAsync(List<ObjectId> rootIds, ObjectId? destinationNodeId)
+    public async Task<List<StorageNode>> MoveNodesAsync(List<string> rootIds, string? destinationNodeId)
     {
         if (rootIds == null || rootIds.Count == 0) return [];
         var destinationNodeFilter = Builders<StorageNode>.Filter.Eq(x => x.Id, destinationNodeId);
@@ -285,7 +285,7 @@ public class StorageNodeService(ICurrentUser currentUser, IConfiguration configu
             );
             
         var moveResult = new List<StorageNode>();
-        var nodesToUpdate = new Dictionary<ObjectId, UpdateDefinition<StorageNode>>();
+        var nodesToUpdate = new Dictionary<string, UpdateDefinition<StorageNode>>();
         foreach (var rootId in rootIds)
         {
             if (!nodesToMove.TryGetValue(rootId, out var rootNode))
@@ -318,7 +318,7 @@ public class StorageNodeService(ICurrentUser currentUser, IConfiguration configu
         return moveResult;
     }
 
-    private Task<StorageNode> MoveNodeAsync(StorageNode node, ObjectId? newParentId, List<ObjectId> newPath,
+    private Task<StorageNode> MoveNodeAsync(StorageNode node, string newParentId, List<string> newPath,
         IReadOnlyCollection<StorageNode> siblings)
     {
         var update = UpdatePathDefinition(newPath).Set(n => n.ParentId, newParentId);
@@ -352,5 +352,5 @@ public class StorageNodeService(ICurrentUser currentUser, IConfiguration configu
 
     public Task<List<StorageNode>> GetNodesAsync() => _nodeRepository.GetManyAsync(_currentUser.UserId);
         
-    private string GetStorageLocation(Guid userId) => Path.GetFullPath(Path.Combine(_storageUrl, userId.ToString("N"), DriveDirName));
+    private string GetStorageLocation(string userId) => Path.GetFullPath(Path.Combine(_storageUrl, userId, DriveDirName));
 }

@@ -1,3 +1,4 @@
+using CloudStorage.Models;
 using CloudStorage.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -21,9 +22,9 @@ public class StorageController(IUserService userService, IStorageService storage
     
     [Authorize(Roles = Roles.Admin)]
     [HttpGet("user-info")]
-    public async Task<IActionResult> GetUserDiskInfo(Guid id)
+    public async Task<IActionResult> GetUserDiskInfo(string id)
     {
-        var storageInfo = await _storageService.GetUsedStorage();
+        var storageInfo = await _storageService.GetUsedStorage(id);
         return storageInfo == null ? StatusCode(500, "Unable to retrieve storage info.") : Ok(storageInfo);
     }
 }

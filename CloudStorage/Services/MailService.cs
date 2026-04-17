@@ -3,6 +3,9 @@ using System.Net.Mail;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using CloudStorage.Models;
+using CloudStorage.Models.Settings;
+using Microsoft.Extensions.Options;
 
 namespace CloudStorage.Services;
 
@@ -11,43 +14,12 @@ public interface IMailService
     Task SendEmailAsync(MailAddress address, string subject, string body);
 }
 
-public class MailService(IConfiguration configuration) : IMailService
+public class MailService(MailerSendClient mailerSend, IOptions<MailerSendSettings> options) : IMailService
 {
-    private readonly IConfiguration _configuration =
-        configuration ?? throw new ArgumentNullException(nameof(configuration));
+    private readonly string _fromAddress = options.Value.Postmaster;
 
-    public async Task SendEmailAsync(MailAddress address, string subject, string body)
-    {
-        try
-        {
-            var url = _configuration.GetValue<string>("MailerSend:Url");
-            var token = _configuration.GetValue<string>("MailerSend:Token");
-            var fromAddress = _configuration.GetValue<string>("MailerSend:Postmaster");
-            
-            var httpClient = new HttpClient();
-            httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
-
-            var payload = new
-            {
-                from = new { email = fromAddress, name = "Cloud Storage" },
-                to = new[]
-                {
-                    new { email = address.Address, name = address.DisplayName }
-                },
-                subject,
-                html = body,
-            };
-
-            var content = new StringContent(JsonSerializer.Serialize(payload));
-            content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
-
-            await httpClient.PostAsync($"{url}/email", content);
-        }
-        catch (Exception e)
-        {
-            Console.WriteLine(e.Message);
-        }
-    }
+    public Task SendEmailAsync(MailAddress to, string subject, string body) =>
+        mailerSend.SendEmailAsync(_fromAddress, to, subject, body);
 }
 
 public class DevMailService : IMailService
@@ -90,7 +62,7 @@ public static class EmailHelper
         @"^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$",
         RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
-    public static string GeneratePasswordResetEmailBody(string name, string resetLink)
+    public static string GeneratePasswordResetEmailBody(string resetLink)
     {
         var year = DateTime.Now.Year;
         var body = $"""
@@ -124,7 +96,7 @@ public static class EmailHelper
                                             <td style="padding:28px;">
                                                 <h1 style="margin:0 0 12px 0;font-size:20px;color:#0f1724;">Reset your password</h1>
                                                 <p style="margin:0 0 18px 0;color:#475569;line-height:1.5;">
-                                                    Hello {name},
+                                                    Hello,
                                                 </p>
 
                                                 <p style="margin:0 0 24px 0;color:#475569;line-height:1.5;">
@@ -235,7 +207,7 @@ public static class EmailHelper
                                                 </table>
 
                                                 <p style="font-size:16px;font-weight:600;color:#2563eb;margin:0 0 24px 0;">
-                                                    Invite Code: {inviteCode}
+                                                    Invite CodeHash: {inviteCode}
                                                 </p>
                                             </td>
                                         </tr>

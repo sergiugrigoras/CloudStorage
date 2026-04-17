@@ -95,7 +95,7 @@ export class AdminComponent implements OnInit {
           const index = this.users.findIndex((x) => x.id === result.id);
           if (index >= 0) {
             this.users[index] = result;
-            this._snackBar.open(`User ${user.username} successfully updated.`, 'Ok', {
+            this._snackBar.open(`User ${user.name} successfully updated.`, 'Ok', {
               duration: 3000,
             });
           }

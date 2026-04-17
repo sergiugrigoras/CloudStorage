@@ -57,7 +57,7 @@ public class PaymentMethodController(IExpenseService expenseService)  : Controll
         {
             var update = new PaymentMethod
             {
-                Id = ObjectId.TryParse(paymentMethodViewModel.Id,  out var id) ? id : ObjectId.Empty,
+                Id = paymentMethodViewModel.Id,
                 Name = paymentMethodViewModel.Name,
                 IsActive = paymentMethodViewModel.IsActive,
             };

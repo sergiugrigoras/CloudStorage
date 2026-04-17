@@ -14,7 +14,7 @@ public class DevCookieOptionsProvider : ICookieOptionsProvider
             HttpOnly = true,
             Secure = false,
             SameSite = SameSiteMode.Lax,
-            Path = CookiePaths.RefreshTokenPath,
+            Path = CookiePaths.AuthController,
             Expires = DateTime.UtcNow.AddDays(1)
         };
     }
@@ -29,7 +29,7 @@ public class CookieOptionsProvider : ICookieOptionsProvider
             HttpOnly = true,
             Secure = true,
             SameSite = SameSiteMode.Strict,
-            Path = CookiePaths.RefreshTokenPath,
+            Path = CookiePaths.AuthController,
             Expires = DateTime.UtcNow.AddDays(7)
         };
     }
@@ -43,5 +43,5 @@ public static class CookieNames
 
 public static class CookiePaths
 {
-    public const string RefreshTokenPath = "/api/auth/refresh";
+    public const string AuthController = "/api/auth";
 }

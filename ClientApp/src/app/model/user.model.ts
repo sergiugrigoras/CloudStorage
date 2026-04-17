@@ -1,6 +1,6 @@
 export interface User {
   id: string;
-  username: string;
+  name: string;
   email: string;
   disabled: boolean;
   lastActive: string;

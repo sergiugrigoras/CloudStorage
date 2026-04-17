@@ -46,11 +46,11 @@ export class ResetPasswordComponent implements OnInit {
   private readonly _snackBar = inject(MatSnackBar);
   protected readonly twoFaToken: WritableSignal<string | null> = signal(null);
   resetToken = signal('');
-  resetTokenId = signal('');
+  resetEmail = signal('');
   protected readonly returnUrl = '/';
   protected readonly strongPasswordTooltip = PasswordValidators.strongPasswordTooltip;
-  protected readonly userIdentifierForm = new FormGroup({
-    userIdentifier: new FormControl('', Validators.required),
+  protected readonly emailForm = new FormGroup({
+    email: new FormControl('', [Validators.required, Validators.email]),
   });
 
   protected readonly newPasswordControl = new FormControl('', [
@@ -70,14 +70,14 @@ export class ResetPasswordComponent implements OnInit {
 
   ngOnInit(): void {
     this.resetToken.set(this.route.snapshot.queryParams['token'] || '');
-    this.resetTokenId.set(this.route.snapshot.queryParams['id'] || '');
+    this.resetEmail.set(this.route.snapshot.queryParams['email'] || '');
   }
 
   getResetToken() {
-    const identifier = (this.userIdentifierForm.get('userIdentifier')?.value || '').trim();
-    if (identifier === '') return;
+    const email = (this.emailForm.get('email')?.value || '').trim();
+    if (email === '') return;
     this.authService
-      .forgotPassword(identifier)
+      .forgotPassword(email)
       .pipe(
         catchError((error) => {
           if (error instanceof HttpErrorResponse) {
@@ -95,11 +95,11 @@ export class ResetPasswordComponent implements OnInit {
           }
           return EMPTY;
         }),
-        tap((response) => {
-          this._snackBar.open(`Instruction sent to ${response}`, 'Ok', { duration: 5000 });
+        tap(() => {
+          this._snackBar.open(`Instructions sent to ${email}`, 'Ok', { duration: 5000 });
         }),
         finalize(() => {
-          this.userIdentifierForm.reset();
+          this.emailForm.reset();
         })
       )
       .subscribe();
@@ -113,7 +113,7 @@ export class ResetPasswordComponent implements OnInit {
     }
 
     this.authService
-      .resetPassword(+this.resetTokenId(), this.resetToken(), newPassword)
+      .resetPassword(this.resetEmail(), this.resetToken(), newPassword)
       .pipe(
         catchError(() => {
           this._snackBar.open(`Invalid reset token.`, 'Ok', { duration: 5000 });

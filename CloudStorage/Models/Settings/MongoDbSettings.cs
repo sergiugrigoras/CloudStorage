@@ -1,4 +1,4 @@
-namespace CloudStorage.Models;
+namespace CloudStorage.Models.Settings;
 
 public class MongoDbSettings
 {

@@ -4,5 +4,5 @@ namespace CloudStorage.Interfaces;
 
 public interface IEntityFilter<TEntity>
 {
-    Expression<Func<TEntity, bool>> ToExpression(Guid userId);
+    Expression<Func<TEntity, bool>> ToExpression(string userId);
 }

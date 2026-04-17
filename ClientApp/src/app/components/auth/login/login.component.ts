@@ -42,8 +42,11 @@ export class LoginComponent implements OnInit {
   returnUrl: string = '';
 
   loginForm = new FormGroup({
-    userIdentifier: new FormControl('', Validators.required),
-    password: new FormControl('', Validators.required),
+    email: new FormControl('', {
+      nonNullable: true,
+      validators: [Validators.required, Validators.email],
+    }),
+    password: new FormControl('', { nonNullable: true, validators: Validators.required }),
   });
 
   constructor() {}
@@ -53,10 +56,8 @@ export class LoginComponent implements OnInit {
   }
 
   login() {
-    const identifier = this.loginForm.get('userIdentifier')?.value;
     const user: UserModel = {
-      username: String(identifier).includes('@') ? '' : identifier,
-      email: String(identifier).includes('@') ? identifier : '',
+      email: this.loginForm.get('email')?.value,
       password: this.loginForm.get('password')?.value,
     };
 

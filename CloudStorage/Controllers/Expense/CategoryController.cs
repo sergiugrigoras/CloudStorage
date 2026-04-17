@@ -54,7 +54,7 @@ public class CategoryController(IExpenseService expenseService)  : ControllerBas
         {
             var update = new Category
             {
-                Id = ObjectId.TryParse(categoryViewModel.Id, out var id) ? id: ObjectId.Empty,
+                Id = categoryViewModel.Id,
                 Name = categoryViewModel.Name,
                 Emoji = categoryViewModel.Emoji,
             };
@@ -70,11 +70,9 @@ public class CategoryController(IExpenseService expenseService)  : ControllerBas
     [HttpDelete]
     public async Task<IActionResult> DeleteCategoryAsync([FromQuery] string id)
     {
-        if (!ObjectId.TryParse(id, out var categoryId)) 
-            return BadRequest("Invalid id");
         try
         {
-            await _expenseService.DeleteUserCategoryAsync(categoryId);
+            await _expenseService.DeleteUserCategoryAsync(id);
             return NoContent();
         }
         catch
@@ -86,7 +84,7 @@ public class CategoryController(IExpenseService expenseService)  : ControllerBas
     [HttpGet("suggest")]
     public async Task<IActionResult> GenerateCategoryAsync(string text)
     {
-        var category = await _expenseService.SuggestCategoryIdAsync(text);
-        return new JsonResult(category);
+        var categoryId = await _expenseService.SuggestCategoryIdAsync(text);
+        return Ok(new { Id = categoryId });
     }
 }

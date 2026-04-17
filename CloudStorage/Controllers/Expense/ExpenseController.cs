@@ -70,11 +70,9 @@ public class ExpenseController(IExpenseService expenseService) : ControllerBase
     [HttpDelete]
     public async Task<IActionResult> DeleteExpenseAsync([FromQuery] string id)
     {
-        if (!ObjectId.TryParse(id, out var expenseId))
-            return BadRequest("Invalid id.");
         try
         {
-            await _expenseService.DeleteExpenseAsync(expenseId);
+            await _expenseService.DeleteExpenseAsync(id);
             return NoContent();
         }
         catch (Exception)

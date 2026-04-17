@@ -4,10 +4,9 @@ namespace CloudStorage.ViewModels;
 
 public class UserViewModel
 {
-    public Guid Id { get; set; }
+    public string Id { get; set; }
 
-    public string Username { get; set; }
-    
+    public string Name { get; set; }
     public string Email { get; set; }
     public bool Disabled { get; set; }
     public DateTime? LastActive { get; set; }
@@ -17,7 +16,7 @@ public class UserViewModel
         return new UserViewModel
         {
             Id = user.Id,
-            Username = user.Username,
+            Name = user.Name,
             Email = user.Email,
             Disabled = user.Disabled,
             LastActive =

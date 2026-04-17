@@ -73,7 +73,7 @@ export class ExpenseService {
     const options = {
       params: new HttpParams().set('text', text),
     };
-    return this.http.get<string>(url, options);
+    return this.http.get<{ id: string | null }>(url, options);
   }
 
   getPaymentMethods() {

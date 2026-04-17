@@ -1,9 +1,12 @@
+using System.Net.Http.Headers;
 using CloudStorage.Interfaces;
 using CloudStorage.Models;
+using CloudStorage.Models.Settings;
 using CloudStorage.Repositories.Expense;
 using CloudStorage.Repositories.Media;
 using CloudStorage.Repositories.Note;
 using CloudStorage.Repositories.StorageNodes;
+using CloudStorage.Repositories.User;
 using CloudStorage.Services;
 using Microsoft.Extensions.Options;
 using MongoDB.Driver;
@@ -12,13 +15,36 @@ namespace CloudStorage.Extensions;
 
 public static class ServiceExtension
 {
-    public static IServiceCollection RegisterServices(this IServiceCollection services,  IWebHostEnvironment environment)
+    public static IServiceCollection RegisterServices(this IServiceCollection services, ConfigurationManager configuration,  IWebHostEnvironment environment)
     {
+        services.Configure<GeminiSettings>(configuration.GetSection("GeminiAPI"));
+        services.Configure<MailerSendSettings>(configuration.GetSection("MailerSend"));
+        
+        services.AddHttpClient<GeminiClient>((sp, client) =>
+        {
+            var settings = sp.GetRequiredService<IOptions<GeminiSettings>>().Value;
+            client.BaseAddress = new Uri($"{settings.Url}?key={settings.Key}");
+            client.DefaultRequestHeaders.Accept.Add(
+                new MediaTypeWithQualityHeaderValue("application/json"));
+        });
+
+        services.AddScoped<IGeminiService, GeminiService>();
+        
+        services.AddHttpClient<MailerSendClient>((sp, client) =>
+        {
+            var settings = sp.GetRequiredService<IOptions<MailerSendSettings>>().Value;
+            client.BaseAddress = new Uri(settings.Url);
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", settings.Token);
+        });
+        
         services.AddSingleton<ContentAuthorization>();
         
         services.AddHttpContextAccessor();
         services.AddScoped<ICurrentUser, HttpCurrentUser>();
+        services.AddScoped<IClientIdAccessor, HttpClientIdAccessor>();
         
+        services.AddScoped<IUserRepository, UserRepository>();
+        services.AddScoped<IInviteRepository, InviteRepository>();
         services.AddScoped<ITokenService, TokenService>();
         services.AddScoped<IStorageNodeService, StorageNodeService>();
         services.AddScoped<IUserService, UserService>();
@@ -35,8 +61,8 @@ public static class ServiceExtension
         services.AddScoped<IMediaService, MediaService>();
         services.AddScoped<IStorageService, StorageService>();
 
-        services.AddHttpClient<GeminiService>();
-        services.AddScoped<IGeminiService, GeminiService>();
+        
+
 
         if (environment.IsProduction())
         {
@@ -45,7 +71,8 @@ public static class ServiceExtension
         }
         else
         {
-            services.AddScoped<IMailService>(s => new DevMailService());
+            services.AddScoped<IMailService, MailService>();
+            //services.AddScoped<IMailService>(s => new DevMailService());
             services.AddScoped<ICookieOptionsProvider, DevCookieOptionsProvider>();
         }
         

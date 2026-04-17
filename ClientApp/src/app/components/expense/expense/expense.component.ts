@@ -292,8 +292,10 @@ export class ExpenseComponent implements OnInit, OnDestroy {
           }
           return EMPTY;
         }),
-        tap((categoryId) => {
-          const category = this.availableCategories.find((x) => x.id === categoryId?.trim());
+        tap((suggestedCategory) => {
+          const category = this.availableCategories.find(
+            (x) => x.id === suggestedCategory.id?.trim()
+          );
           categoryControl.setValue(category?.id ?? null);
         })
       )

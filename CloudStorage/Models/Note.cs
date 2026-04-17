@@ -6,10 +6,11 @@ namespace CloudStorage.Models;
 public class Note
 {
     [BsonId]
-    public ObjectId Id { get; set; }
+    [BsonRepresentation(BsonType.ObjectId)]
+    public string Id { get; set; }
 
-    [BsonRepresentation(BsonType.String)]
-    public Guid UserId { get; set; }
+    [BsonRepresentation(BsonType.ObjectId)]
+    public string UserId { get; set; }
 
     public NoteType Type { get; set; }
 
@@ -53,7 +54,7 @@ public class NoteInputModel
         if (note == null) return null;
         return new Note
         {
-            Id = ObjectId.TryParse(note.Id, out var id) ? id : ObjectId.Empty,
+            Id = note.Id,
             Type = note.Type,
             Title = note.Title,
             Text = note.Type != NoteType.Text ? null : note.Text,
@@ -81,7 +82,7 @@ public class NoteViewModel
         if (note == null) return null;
         return new NoteViewModel
         {
-            Id = note.Id.ToString(),
+            Id = note.Id,
             Type = note.Type,
             Title = note.Title,
             Text = note.Type != NoteType.Text ? null : note.Text,

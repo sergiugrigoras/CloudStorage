@@ -8,26 +8,26 @@ namespace CloudStorage.Repositories.Expense;
 
 public interface IPaymentMethodRepository
 {
-    Task<List<PaymentMethod>> GetForUserAsync(Guid userId);
-    Task CreateAsync(PaymentMethod paymentMethod, Guid userId);
-    Task<PaymentMethod> UpdateAsync(PaymentMethod paymentMethod, Guid userId);
-    Task DeleteAsync(ObjectId id, Guid userId);
+    Task<List<PaymentMethod>> GetForUserAsync(string userId);
+    Task CreateAsync(PaymentMethod paymentMethod, string userId);
+    Task<PaymentMethod> UpdateAsync(PaymentMethod paymentMethod, string userId);
+    Task DeleteAsync(string id, string userId);
 }
 
 public class PaymentMethodRepository(IMongoDatabase db) : IPaymentMethodRepository
 {
     private readonly IMongoCollection<PaymentMethod> _collection = db.GetCollection<PaymentMethod>(MongoDbCollections.ExpensePaymentMethods);
     
-    public Task<List<PaymentMethod>> GetForUserAsync(Guid userId) =>
+    public Task<List<PaymentMethod>> GetForUserAsync(string userId) =>
         _collection.Find(x => x.UserId == userId).ToListAsync();
 
-    public Task CreateAsync(PaymentMethod paymentMethod, Guid userId)
+    public Task CreateAsync(PaymentMethod paymentMethod, string userId)
     {
         paymentMethod.UserId = userId;
         return _collection.InsertOneAsync(paymentMethod);
     }
 
-    public Task<PaymentMethod> UpdateAsync(PaymentMethod paymentMethod, Guid userId)
+    public Task<PaymentMethod> UpdateAsync(PaymentMethod paymentMethod, string userId)
     {
         var idFilter = Builders<PaymentMethod>.Filter.Eq(x => x.Id, paymentMethod.Id);
         var userFilter = Builders<PaymentMethod>.Filter.Eq(x => x.UserId, userId);
@@ -41,5 +41,5 @@ public class PaymentMethodRepository(IMongoDatabase db) : IPaymentMethodReposito
         return _collection.FindOneAndUpdateAsync(filter, update, option);
     }
 
-    public Task DeleteAsync(ObjectId id, Guid userId) => _collection.DeleteOneAsync(x => x.Id == id && x.UserId == userId);
+    public Task DeleteAsync(string id, string userId) => _collection.DeleteOneAsync(x => x.Id == id && x.UserId == userId);
 }

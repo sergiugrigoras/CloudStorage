@@ -1,5 +1,5 @@
 using System.Net.Mail;
-using System.Security.Claims;
+using CloudStorage.Models;
 using CloudStorage.Services;
 using CloudStorage.ViewModels;
 using Microsoft.AspNetCore.Authorization;
@@ -27,13 +27,22 @@ public class AdminController(IUserService userService, IMailService mailService)
     [HttpPatch("update-user")]
     public async Task<IActionResult> UpdateUserAsync([FromBody] UserViewModel userViewModel)
     {
-        var currentUser = await _userService.GetUserAsync(HttpContext.User);
-        if (userViewModel.Id == currentUser.Id) return BadRequest("Cannot disable your own account");
-        var dbUser = await _userService.GetUserByIdAsync(userViewModel.Id);
-        if (dbUser == null) return NotFound();
-        dbUser.Disabled = userViewModel.Disabled;
-        await _userService.UpdateUserAsync(dbUser);
-        return new JsonResult(UserViewModel.FromDomain(dbUser));
+        try
+        {
+            var result = await _userService.SetUserDisabledAsync(userViewModel.Id, userViewModel.Disabled);
+            if (result == null)
+                return NotFound();
+            var response = UserViewModel.FromDomain(result);
+            return Ok(response);
+        }
+        catch (InvalidOperationException e)
+        {
+            return BadRequest(e.Message);
+        }
+        catch (Exception)
+        {
+            return StatusCode(500, "An unexpected error occurred.");
+        }
     }
 
     [HttpPost("invite-user")]
@@ -49,6 +58,10 @@ public class AdminController(IUserService userService, IMailService mailService)
             const string subject = EmailHelper.InviteSubject;
             await _mailService.SendEmailAsync(new MailAddress(email), subject, emailBody);
             return Ok();
+        }
+        catch (InvalidOperationException e)
+        {
+            return BadRequest(e.Message);
         }
         catch (Exception e)
         {

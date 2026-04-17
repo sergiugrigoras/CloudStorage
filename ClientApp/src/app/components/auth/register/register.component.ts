@@ -48,25 +48,36 @@ export class RegisterComponent implements OnInit, OnDestroy {
   private readonly snackBar = inject(MatSnackBar);
 
   protected readonly passwordMismatchErrorStateMatcher = new PasswordMismatchErrorStateMatcher();
-  protected readonly usernameControl = new FormControl(
+  protected readonly nameControl = new FormControl(
     '',
-    [Validators.required, UsernameValidators.checkPattern],
-    UsernameValidators.checkUnique(this.authService)
+    {
+      nonNullable: true,
+      validators: [Validators.required, UsernameValidators.checkPattern],
+    }
+    // UsernameValidators.checkUnique(this.authService)
   );
   protected readonly emailControl = new FormControl(
     '',
-    [Validators.required, Validators.email],
-    UsernameValidators.checkUnique(this.authService)
+    {
+      nonNullable: true,
+      validators: [Validators.required, Validators.email],
+    }
+    // UsernameValidators.checkUnique(this.authService)
   );
-  protected readonly inviteCodeControl = new FormControl('');
-  protected readonly passwordControl = new FormControl('', [
-    Validators.required,
-    PasswordValidators.strongPasswordValidator,
-  ]);
-  protected readonly confirmPasswordControl = new FormControl('', Validators.required);
+  protected readonly inviteCodeControl = new FormControl('', { nonNullable: true });
+  protected readonly passwordControl = new FormControl('', {
+    nonNullable: true,
+    validators: [Validators.required, PasswordValidators.strongPasswordValidator],
+  });
+
+  protected readonly confirmPasswordControl = new FormControl('', {
+    nonNullable: true,
+    validators: [Validators.required],
+  });
+
   registerForm = new FormGroup(
     {
-      username: this.usernameControl,
+      username: this.nameControl,
       email: this.emailControl,
       inviteCode: this.inviteCodeControl,
       password: this.passwordControl,
@@ -93,11 +104,11 @@ Length 5-32.`;
     const inviteCode = this.route.snapshot.queryParams['inviteCode'];
     const email = this.route.snapshot.queryParams['email'];
 
-    this.usernameControl.statusChanges
+    this.nameControl.statusChanges
       .pipe(
         takeUntil(this.destroy$),
         tap(() => {
-          this.usernameErrors.set(this.usernameControl.errors);
+          this.usernameErrors.set(this.nameControl.errors);
         })
       )
       .subscribe();
@@ -134,7 +145,7 @@ Length 5-32.`;
       return;
     }
     const user: UserModel = {
-      username: this.usernameControl.value,
+      name: this.nameControl.value,
       email: this.emailControl.value,
       password: this.passwordControl.value,
     };
@@ -155,7 +166,7 @@ Length 5-32.`;
   }
 
   private readonly usernameErrors = signal<ValidationErrors | null | undefined>(
-    this.usernameControl.errors
+    this.nameControl.errors
   );
 
   protected readonly usernameError = computed(() => {

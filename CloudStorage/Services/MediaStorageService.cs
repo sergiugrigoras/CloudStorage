@@ -4,10 +4,10 @@ namespace CloudStorage.Services;
 
 public interface IMediaStorageService
 {
-    string GetUserMediaFilesDirectory(Guid userId);
-    string GetUserSnapshotsDirectory(Guid userId);
-    Task<IEnumerable<PendingMediaFile>> StoreFilesAsync(IEnumerable<IFormFile> formFiles, Guid userId);
-    void DeleteMediaFiles(IEnumerable<MediaEntry> mediaEntries, Guid userId);
+    string GetUserMediaFilesDirectory(string userId);
+    string GetUserSnapshotsDirectory(string userId);
+    Task<IEnumerable<PendingMediaFile>> StoreFilesAsync(IEnumerable<IFormFile> formFiles, string userId);
+    void DeleteMediaFiles(IEnumerable<MediaEntry> mediaEntries, string userId);
 }
 
 public class MediaStorageService(IConfiguration configuration) : IMediaStorageService
@@ -18,22 +18,22 @@ public class MediaStorageService(IConfiguration configuration) : IMediaStorageSe
     
     private readonly string _storageDirectory = configuration.GetValue<string>("Storage:Url");
 
-    private string GetUserMediaRootDirectory(Guid userId) =>
-        Path.GetFullPath(Path.Combine(_storageDirectory, userId.ToString(), MediaRootDirectory));
+    private string GetUserMediaRootDirectory(string userId) =>
+        Path.GetFullPath(Path.Combine(_storageDirectory, userId, MediaRootDirectory));
 
-    private void EnsureUserDirectoriesExist(Guid userId)
+    private void EnsureUserDirectoriesExist(string userId)
     {
         MediaHelper.CreateDirectoryIfNotExists(GetUserMediaFilesDirectory(userId));
         MediaHelper.CreateDirectoryIfNotExists(GetUserSnapshotsDirectory(userId));
     }
 
-    public string GetUserMediaFilesDirectory(Guid userId) =>
+    public string GetUserMediaFilesDirectory(string userId) =>
         Path.GetFullPath(Path.Combine(GetUserMediaRootDirectory(userId), MediaFileDirectory));
 
-    public string GetUserSnapshotsDirectory(Guid userId) =>
+    public string GetUserSnapshotsDirectory(string userId) =>
         Path.GetFullPath(Path.Combine(GetUserMediaRootDirectory(userId), SnapshotDirectory));
 
-    public async Task<IEnumerable<PendingMediaFile>> StoreFilesAsync(IEnumerable<IFormFile> formFiles, Guid userId)
+    public async Task<IEnumerable<PendingMediaFile>> StoreFilesAsync(IEnumerable<IFormFile> formFiles, string userId)
     {
         var pendingMediaFiles = new Dictionary<string, PendingMediaFile>();
         var userMediaFolder = GetUserMediaFilesDirectory(userId);
@@ -70,7 +70,7 @@ public class MediaStorageService(IConfiguration configuration) : IMediaStorageSe
         return pendingMediaFiles.Values;
     }
 
-    public void DeleteMediaFiles(IEnumerable<MediaEntry> mediaEntries, Guid userId)
+    public void DeleteMediaFiles(IEnumerable<MediaEntry> mediaEntries, string userId)
     {
         var mediaFilesFolder = GetUserMediaFilesDirectory(userId);
         var snapshotsFolder = GetUserSnapshotsDirectory(userId);

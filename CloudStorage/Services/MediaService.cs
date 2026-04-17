@@ -59,26 +59,16 @@ public class MediaService(
     private SemaphoreSlim SnapshotSemaphore { get; } = new(10);
     private static string _ffmpegTmpFolder = GlobalFFOptions.Current.TemporaryFilesFolder;
 
-    public Task<MediaEntry> GetMediaEntryByIdAsync(string id)
-    {
-        if (!ObjectId.TryParse(id, out var objectId))
-            throw new ArgumentException("Invalid ObjectId.", nameof(id));
+    public Task<MediaEntry> GetMediaEntryByIdAsync(string id) =>
+        _mediaEntryRepository.GetOneAsync(id, _currentUser.UserId);
 
-        return _mediaEntryRepository.GetOneAsync(objectId, _currentUser.UserId);
-    }
-
-    public Task<MediaEntry> GetMediaEntryForContentDeliveryAsync(string id)
-    {
-        if (!ObjectId.TryParse(id, out var objectId))
-            throw new ArgumentException("Invalid ObjectId.", nameof(id));
-
-        return _mediaEntrySystemRepository.GetOneAsync(objectId);
-    }
+    public Task<MediaEntry> GetMediaEntryForContentDeliveryAsync(string id) =>
+        _mediaEntrySystemRepository.GetOneAsync(id);
 
     public Task<List<MediaEntry>> GetMediaEntriesAsync(MediaEntryQuery query)
     {
         ArgumentNullException.ThrowIfNull(query);
-        return _mediaEntryRepository.SearchAsync(query.Favorite, query.Deleted, query.Ids?.ToObjectIdList(),
+        return _mediaEntryRepository.SearchAsync(query.Favorite, query.Deleted, query.Ids,
             _currentUser.UserId);
     }
 
@@ -215,7 +205,7 @@ public class MediaService(
     public Task AddToAlbumAsync(IEnumerable<string> mediaIds, IEnumerable<string> albumIds)
     {
         if (mediaIds == null || albumIds == null) return Task.CompletedTask;
-        return _mediaAlbumRepository.AddMediaEntriesToAlbumsAsync(mediaIds.ToObjectIdList(), albumIds.ToObjectIdList(),
+        return _mediaAlbumRepository.AddMediaEntriesToAlbumsAsync(mediaIds, albumIds,
             _currentUser.UserId);
     }
 
@@ -233,7 +223,7 @@ public class MediaService(
 
     public async Task DeleteMediaEntriesAsync(IEnumerable<string> ids, bool permanent)
     {
-        var mediaEntries = await _mediaEntryRepository.SearchAsync(null, null, ids.ToObjectIdList(), _currentUser.UserId);
+        var mediaEntries = await _mediaEntryRepository.SearchAsync(null, null, ids, _currentUser.UserId);
     
         if (permanent)
         {
@@ -248,11 +238,11 @@ public class MediaService(
     }
 
     public Task RestoreMediaEntriesAsync(IEnumerable<string> ids) =>
-        _mediaEntryRepository.SetDeletedAsync(ids.ToObjectIdList(), _currentUser.UserId, false);
+        _mediaEntryRepository.SetDeletedAsync(ids, _currentUser.UserId, false);
 
     public string GenerateContentAccessKey() =>
-        _contentAuthorization.GenerateKeyForUser(_currentUser.UserId.ToString());
+        _contentAuthorization.GenerateKeyForUser(_currentUser.UserId);
 
-    public void RemoveContentAccessKey() => _contentAuthorization.RemoveKeyForUser(_currentUser.UserId.ToString());
+    public void RemoveContentAccessKey() => _contentAuthorization.RemoveKeyForUser(_currentUser.UserId);
     public bool ValidateContentAccessKey(string userId, string key) => _contentAuthorization.ValidKey(userId, key);
 }

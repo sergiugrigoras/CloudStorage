@@ -1,5 +1,5 @@
 #node build
-FROM node:current-alpine3.20 AS node
+FROM node:lts-alpine3.22 AS node
 WORKDIR /app
 COPY ./ClientApp/package*.json ./
 RUN npm install
@@ -17,16 +17,9 @@ RUN dotnet publish -c Release -o /app/publish
 
 # serve stage
 FROM mcr.microsoft.com/dotnet/aspnet:8.0
-#VOLUME /app/database
-#VOLUME /app/storage
 RUN apt-get update -qq && apt-get install ffmpeg -y
 
 ENV ASPNETCORE_URLS=http://+:5000
-#ENV CloudStorage_Jwt__lifetime=5
-#ENV CloudStorage_Jwt__issuer="http://localhost"
-#ENV CloudStorage_Storage__Url="/app/storage"
-#ENV CloudStorage_Storage__Size=5368709120
-#ENV CloudStorage_Database__Sqlite="/app/database/cs.db"
 
 WORKDIR /app
 COPY --from=base /app/publish .

@@ -12,7 +12,7 @@ import { MatFormField, MatLabel, MatInput } from '@angular/material/input';
 export class ProfileComponent {
   private readonly authService = inject(AuthService);
   profileForm = new FormGroup({
-    username: new FormControl(this.authService.getUserNameFromJwtToken()),
+    name: new FormControl(this.authService.getUserNameFromJwtToken()),
     email: new FormControl(this.authService.getEmailFromJwtToken()),
     roles: new FormControl(this.authService.getRolesFromJwtToken()),
   });

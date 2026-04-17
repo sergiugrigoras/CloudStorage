@@ -8,8 +8,36 @@ public sealed class MongoDbInitializer(IMongoDatabase db) : IHostedService
 {
     public async Task StartAsync(CancellationToken ct)
     {
+        await InitializeUserCollectionAsync(ct);
+        await InitializeInviteCollectionAsync(ct);
         await InitializeExpenseCategoriesCollectionAsync(ct);
         await InitializeStorageNodesCollectionAsync(ct);
+    }
+
+    private async Task InitializeUserCollectionAsync(CancellationToken ct)
+    {
+        var collection = db.GetCollection<User>(MongoDbCollections.Users);
+
+        var caseInsensitive = new Collation("en", strength: CollationStrength.Secondary);
+
+        var emailIndex = new CreateIndexModel<User>(
+            Builders<User>.IndexKeys.Ascending(x => x.Email),
+            new CreateIndexOptions { Unique = true, Collation = caseInsensitive });
+        
+        await collection.Indexes.CreateOneAsync(emailIndex, cancellationToken: ct);
+    }
+    
+    private async Task InitializeInviteCollectionAsync(CancellationToken ct)
+    {
+        var collection = db.GetCollection<Invite>(MongoDbCollections.InviteCodes);
+
+        var caseInsensitive = new Collation("en", strength: CollationStrength.Secondary);
+
+        var emailIndex = new CreateIndexModel<Invite>(
+            Builders<Invite>.IndexKeys.Ascending(x => x.Email),
+            new CreateIndexOptions { Unique = true, Collation = caseInsensitive });
+        
+        await collection.Indexes.CreateOneAsync(emailIndex, cancellationToken: ct);
     }
 
     public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
@@ -77,4 +105,6 @@ public static class MongoDbCollections
     public const string StorageNodes =  "storage_nodes";
     public const string MediaEntries =  "media_entries";
     public const string MediaAlbums =  "media_albums";
+    public const string Users =  "app_users";
+    public const string InviteCodes =  "invite_codes";
 }

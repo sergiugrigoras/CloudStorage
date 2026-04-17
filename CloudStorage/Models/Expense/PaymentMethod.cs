@@ -9,13 +9,14 @@ namespace CloudStorage.Models.Expense;
 public class PaymentMethod
 {
     [BsonId]
-    public ObjectId Id { get; set; }
+    [BsonRepresentation(BsonType.ObjectId)]
+    public string Id { get; set; }
     
     public string Name { get; set; }
     public bool IsActive { get; set; }
     
-    [BsonRepresentation(BsonType.String)]
-    public Guid UserId { get; set; }
+    [BsonRepresentation(BsonType.ObjectId)]
+    public string UserId { get; set; }
 }
 
 public class PaymentMethodViewModel
@@ -25,7 +26,7 @@ public class PaymentMethodViewModel
         if (paymentMethod == null) return null;
         return new PaymentMethodViewModel
         {
-            Id =  paymentMethod.Id.ToString(),
+            Id =  paymentMethod.Id,
             Name = paymentMethod.Name,
             IsActive = paymentMethod.IsActive,
         };

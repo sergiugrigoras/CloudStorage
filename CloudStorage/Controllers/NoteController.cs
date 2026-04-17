@@ -64,11 +64,9 @@ public class NoteController(INoteService noteService) : ControllerBase
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteNote(string id)
     {
-        if (!ObjectId.TryParse(id, out var noteId))
-            return BadRequest("Invalid id.");
         try
         {
-            await _noteService.DeleteAsync(noteId);
+            await _noteService.DeleteAsync(id);
             return NoContent();
         }
         catch (Exception)

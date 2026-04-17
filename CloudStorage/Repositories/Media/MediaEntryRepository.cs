@@ -1,4 +1,3 @@
-#nullable enable
 using CloudStorage.Models.Media;
 using CloudStorage.Services;
 using MongoDB.Bson;
@@ -8,7 +7,7 @@ namespace CloudStorage.Repositories.Media;
 
 public interface IMediaEntrySystemRepository
 {
-    Task<MediaEntry> GetOneAsync(ObjectId id);
+    Task<MediaEntry> GetOneAsync(string id);
 }
 
 public class MediaEntrySystemRepository(IMongoDatabase db) : IMediaEntrySystemRepository
@@ -16,40 +15,40 @@ public class MediaEntrySystemRepository(IMongoDatabase db) : IMediaEntrySystemRe
     private readonly IMongoCollection<MediaEntry> _collection = 
         db.GetCollection<MediaEntry>(MongoDbCollections.MediaEntries);
 
-    public Task<MediaEntry> GetOneAsync(ObjectId id) =>
+    public Task<MediaEntry> GetOneAsync(string id) =>
         _collection.Find(Builders<MediaEntry>.Filter.Eq(x => x.Id, id)).FirstOrDefaultAsync();
 }
 
 public interface IMediaEntryRepository
 {
-    Task<MediaEntry> GetOneAsync(ObjectId id, Guid userId);
+    Task<MediaEntry> GetOneAsync(string id, string userId);
 
     Task<List<MediaEntry>> SearchAsync(
         bool? favorite,
         bool? deleted,
-        IReadOnlyCollection<ObjectId>? ids,
-        Guid userId
+        IEnumerable<string> ids,
+        string userId
     );
     
-    Task<MediaEntry?> GetByHashAsync(string hash, Guid userId);
+    Task<MediaEntry?> GetByHashAsync(string hash, string userId);
     
-    Task<long?> GetFilesSizeAsync(Guid userId);
+    Task<long?> GetFilesSizeAsync(string userId);
     
-    Task<MediaEntry> UpdateAsync(MediaEntry entry, Guid userId);
+    Task<MediaEntry> UpdateAsync(MediaEntry entry, string userId);
 
-    Task<MediaEntry> SetFavoriteAsync(ObjectId id, Guid userId, bool favorite);
-    Task SetDeletedAsync(IEnumerable<ObjectId> ids, Guid userId, bool deleted);
+    Task<MediaEntry> SetFavoriteAsync(string id, string userId, bool favorite);
+    Task SetDeletedAsync(IEnumerable<string> ids, string userId, bool deleted);
     
-    Task CreateAsync(MediaEntry entry, Guid userId);
+    Task CreateAsync(MediaEntry entry, string userId);
     
-    Task DeleteManyAsync(IEnumerable<ObjectId> ids, Guid userId);
+    Task DeleteManyAsync(IEnumerable<string> ids, string userId);
 }
 
 public class MediaEntryRepository(IMongoDatabase db) : IMediaEntryRepository
 {
     private readonly IMongoCollection<MediaEntry> _collection = db.GetCollection<MediaEntry>(MongoDbCollections.MediaEntries);
     
-    public Task<MediaEntry> GetOneAsync(ObjectId id, Guid userId)
+    public Task<MediaEntry> GetOneAsync(string id, string userId)
     {
         var userFilter = Builders<MediaEntry>.Filter.Eq(x => x.UserId, userId);
         var idFilter = Builders<MediaEntry>.Filter.Eq(x => x.Id, id);
@@ -59,8 +58,8 @@ public class MediaEntryRepository(IMongoDatabase db) : IMediaEntryRepository
     public Task<List<MediaEntry>> SearchAsync(
         bool? favorite,
         bool? deleted,
-        IReadOnlyCollection<ObjectId>? ids,
-        Guid userId
+        IEnumerable<string> ids,
+        string userId
     )
     {
         var filters = new List<FilterDefinition<MediaEntry>>
@@ -80,21 +79,21 @@ public class MediaEntryRepository(IMongoDatabase db) : IMediaEntryRepository
         return _collection.Find(Builders<MediaEntry>.Filter.And(filters)).ToListAsync();
     }
 
-    public async Task<MediaEntry?> GetByHashAsync(string hash, Guid userId)
+    public async Task<MediaEntry> GetByHashAsync(string hash, string userId)
     {
         var userFilter = Builders<MediaEntry>.Filter.Eq(x => x.UserId, userId);
         var hashFilter = Builders<MediaEntry>.Filter.Eq(x => x.Hash, hash);
         return await _collection.Find(Builders<MediaEntry>.Filter.And(userFilter, hashFilter)).FirstOrDefaultAsync();
     }
 
-    public Task<long?> GetFilesSizeAsync(Guid userId) =>
+    public Task<long?> GetFilesSizeAsync(string userId) =>
         _collection
             .Aggregate()
             .Match(Builders<MediaEntry>.Filter.Eq(x => x.UserId, userId))
             .Group(x => 1, g => g.Sum(x => x.FileSize))
             .FirstOrDefaultAsync();
 
-    public Task<MediaEntry> UpdateAsync(MediaEntry entry, Guid userId)
+    public Task<MediaEntry> UpdateAsync(MediaEntry entry, string userId)
     {
         var userFilter = Builders<MediaEntry>.Filter.Eq(x => x.UserId, userId);
         var idFilter = Builders<MediaEntry>.Filter.Eq(x => x.Id, entry.Id);
@@ -114,7 +113,7 @@ public class MediaEntryRepository(IMongoDatabase db) : IMediaEntryRepository
         return _collection.FindOneAndUpdateAsync(Builders<MediaEntry>.Filter.And(userFilter, idFilter), update, option);
     }
 
-    public Task<MediaEntry> SetFavoriteAsync(ObjectId id, Guid userId, bool favorite)
+    public Task<MediaEntry> SetFavoriteAsync(string id, string userId, bool favorite)
     {
         var filter = Builders<MediaEntry>.Filter.And(
             Builders<MediaEntry>.Filter.Eq(x => x.Id, id),
@@ -132,7 +131,7 @@ public class MediaEntryRepository(IMongoDatabase db) : IMediaEntryRepository
         return _collection.FindOneAndUpdateAsync(filter, update, options);
     }
 
-    public Task SetDeletedAsync(IEnumerable<ObjectId> ids, Guid userId, bool deleted)
+    public Task SetDeletedAsync(IEnumerable<string> ids, string userId, bool deleted)
     {
         var filter = Builders<MediaEntry>.Filter.And(
             Builders<MediaEntry>.Filter.In(x => x.Id, ids),
@@ -145,13 +144,13 @@ public class MediaEntryRepository(IMongoDatabase db) : IMediaEntryRepository
         return _collection.UpdateManyAsync(filter, update);
     }
 
-    public Task CreateAsync(MediaEntry entry, Guid userId)
+    public Task CreateAsync(MediaEntry entry, string userId)
     {
         entry.UserId = userId;
         return _collection.InsertOneAsync(entry);
     }
 
-    public Task DeleteManyAsync(IEnumerable<ObjectId> ids, Guid userId)
+    public Task DeleteManyAsync(IEnumerable<string> ids, string userId)
     {
         var filter = Builders<MediaEntry>.Filter.And(
             Builders<MediaEntry>.Filter.In(x => x.Id, ids),

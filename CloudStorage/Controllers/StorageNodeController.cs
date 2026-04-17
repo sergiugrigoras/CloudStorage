@@ -85,8 +85,7 @@ public class StorageNodeController(IStorageNodeService storageNodeService, IUser
         try
         {
             var deleteList = request
-                .Select(x => ObjectId.TryParse(x, out var id) ? id : ObjectId.Empty)
-                .Where(x => x != ObjectId.Empty)
+                .Where(x => !string.IsNullOrWhiteSpace(x))
                 .ToList();
             await _storageNodeService.DeleteAsync(deleteList);
             return NoContent();
@@ -105,11 +104,9 @@ public class StorageNodeController(IStorageNodeService storageNodeService, IUser
         try
         {
             var moveList = request.NodeIds
-                .Select(x => ObjectId.TryParse(x, out var id) ? id : ObjectId.Empty)
-                .Where(x => x != ObjectId.Empty)
+                .Where(x => !string.IsNullOrWhiteSpace(x))
                 .ToList();
-            var hasDestinationNode = ObjectId.TryParse(request.DestinationNodeId, out var destinationNodeId);
-            var result = await _storageNodeService.MoveNodesAsync(moveList, hasDestinationNode ? destinationNodeId : null);
+            var result = await _storageNodeService.MoveNodesAsync(moveList, request.DestinationNodeId);
             return  Ok(result.Select(StorageNodeViewModel.FromDomain));
         }
         catch (Exception)
@@ -137,8 +134,7 @@ public class StorageNodeController(IStorageNodeService storageNodeService, IUser
         {
             try
             {
-                var hasDestinationNode = ObjectId.TryParse(uploadModel.NodeId, out var parentId);
-                var node = await _storageNodeService.StoreFileAsync(file, hasDestinationNode ? parentId : null);
+                var node = await _storageNodeService.StoreFileAsync(file, uploadModel.NodeId);
                 result.Add(StorageNodeViewModel.FromDomain(node));
             }
             catch
@@ -158,8 +154,7 @@ public class StorageNodeController(IStorageNodeService storageNodeService, IUser
         try
         {
             var downloadList = request.NodeIds
-                .Select(x => ObjectId.TryParse(x, out var id) ? id : ObjectId.Empty)
-                .Where(x => x != ObjectId.Empty)
+                .Where(x => !string.IsNullOrWhiteSpace(x))
                 .ToList();
             
             var result = await _storageNodeService.DownloadNodesAsync(downloadList);

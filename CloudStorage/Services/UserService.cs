@@ -1,179 +1,230 @@
 ﻿using BC = BCrypt.Net.BCrypt;
-using Microsoft.EntityFrameworkCore;
 using System.IdentityModel.Tokens.Jwt;
+using System.Security.Authentication;
 using System.Security.Claims;
 using System.Security.Cryptography;
+using CloudStorage.Exceptions;
 using CloudStorage.Extensions;
 using CloudStorage.Models;
+using CloudStorage.Repositories.User;
 using Microsoft.IdentityModel.Tokens;
+using MongoDB.Driver;
 using OtpNet;
 
 namespace CloudStorage.Services;
 
 public interface IUserService
 {
-    Task<User> GetUserAsync(ClaimsPrincipal principal);
-    Task<User> GetUserByNameAsync(string name);
-    Task<User> GetUserByEmailAsync(string email);
-    Task<User> GetUserByIdAsync(Guid id);
-    Task UpdateUserAsync(User user);
-    Task UpdateRefreshTokenAsync(Guid userId, string refreshToken);
-    Task<User> CreateUserAsync(string username, string email, string password);
-    Task<List<Claim>> GetUserClaimsAsync(Guid userId);
-    Task<ResetToken> CreatePasswordResetTokenAsync(Guid userId, string token);
-    Task<User> ResetPasswordWithTokenAsync(int tokenId, string tokenValue, string newPassword);
-    Task ChangePasswordAsync(Guid userId, string oldPassword, string newPassword);
-    Task<bool> ValidateInviteCodeAsync(string code, string email);
-    Task<string> CreateInviteCodeAsync(string email);
+    // -------------------------
+    // Authentication
+    // -------------------------
+    Task<User> AuthenticateAsync(string email, string password);
+    Task<User> ValidateTwoFactorLoginAsync(string token, string code);
+    Task<TokenResult> GenerateAccessTokenAsync(User user, AccessTokenType tokenType);
+    Task<User> GetUserFromExpiredTokenAsync(string expiredToken, string refreshToken);
+    Task ClearRefreshTokenAsync(string expiredToken, string refreshToken);
+
+    // -------------------------
+    // User Management
+    // -------------------------
+    Task<User> CreateUserAsync(string name, string email, string password);
+    Task<User> SetUserDisabledAsync(string userId, bool disabled);
     Task<List<User>> GetAllUsersAsync();
-    string GeneratePasswordResetToken();
-    Task<string> GenerateTwoFaSecretAsync(Guid userId);
-    Task<bool> VerifyTotpCodeAsync(Guid userId, string code);
-    Task<bool> ToggleTwoFaAsync(Guid userId, string code);
+
+    // -------------------------
+    // Password Management
+    // -------------------------
+    Task<string> CreatePasswordResetTokenForUserAsync(string email);
+    Task<User> ResetPasswordWithTokenAsync(string email, string tokenValue, string newPassword);
+    Task ChangePasswordAsync(string oldPassword, string newPassword);
+
+    // -------------------------
+    // Two-Factor Authentication
+    // -------------------------
+    Task<TotpSetupResult> GenerateTwoFaSecretAsync();
+    Task<bool> ToggleTwoFaAsync(string password, string code);
+    Task<bool> IsTwoFactorEnabledAsync();
+
+    // -------------------------
+    // Invitations
+    // -------------------------
+    Task<string> CreateInviteCodeAsync(string email);
+    Task<bool> ValidateInviteCodeAsync(string code, string email);
 }
 
-public class UserService(AppDbContext context, IConfiguration configuration) : IUserService
+public class UserService(IClientIdAccessor clientIdAccessor,ICurrentUser currentUser, IConfiguration configuration, IUserRepository userRepository, IInviteRepository inviteRepository, ITokenService tokenService) : IUserService
 {
+    private readonly IClientIdAccessor _clientIdAccessor =
+        clientIdAccessor ?? throw new ArgumentNullException(nameof(clientIdAccessor));
+    
+    private readonly ICurrentUser _currentUser = 
+        currentUser ?? throw new ArgumentNullException(nameof(currentUser));
+    
     private readonly IConfiguration _configuration =
         configuration ?? throw new ArgumentNullException(nameof(configuration));
-
-    public async Task UpdateRefreshTokenAsync(Guid userId, string refreshToken)
+    
+    private readonly IUserRepository _userRepository =
+        userRepository ?? throw new ArgumentNullException(nameof(userRepository));
+    
+    private readonly IInviteRepository _inviteRepository =
+        inviteRepository ?? throw new ArgumentNullException(nameof(inviteRepository));
+    
+    private readonly ITokenService _tokenService =
+        tokenService ?? throw new ArgumentNullException(nameof(tokenService));
+    
+    public async Task<User> CreateUserAsync(string name, string email, string password)
     {
-        var user = await context.Users.FirstOrDefaultAsync(x => x.Id == userId);
-        if (user == null)
-            throw new InvalidOperationException("User not found");
-        
-        user.RefreshToken = refreshToken;
-        user.RefreshTokenExpiryTime = refreshToken != null ? DateTime.UtcNow.AddDays(7) : null;
-        await context.SaveChangesAsync();
-    }
-
-    public async Task<User> CreateUserAsync(string username, string email, string password)
-    {
-        if (await GetUserByNameAsync(username) != null || await GetUserByEmailAsync(email) != null)
+        try
         {
-            throw new InvalidOperationException("User already registered");
+            var user = new User
+            {
+                Name = name.Trim(),
+                Email = email.ToLower().Trim(),
+                PasswordHash = BC.HashPassword(password),
+                Disabled = false,
+            };
+
+            await _userRepository.CreateAsync(user);
+            return user;
         }
-
-        var user = new User
+        catch (MongoWriteException ex) when (ex.WriteError.Category == ServerErrorCategory.DuplicateKey)
         {
-            Id = Guid.NewGuid(),
-            Username = username,
-            Email = email,
-            Password = BC.HashPassword(password),
-            Disabled = false,
-        };
-        await context.Users.AddAsync(user);
-        await context.SaveChangesAsync();
-
-        return user;
+            throw new DuplicateUserException("Email is already registered");
+        }
     }
 
-    public async Task<ResetToken> CreatePasswordResetTokenAsync(Guid userId, string token)
+    public async Task ClearRefreshTokenAsync(string expiredToken, string refreshToken)
     {
-        var userHasUnexpiredToken = await context.ResetTokens.AnyAsync(x => x.UserId == userId && x.ExpirationDate >= DateTime.UtcNow && x.TokenUsed == false);
-        if (userHasUnexpiredToken) throw new InvalidOperationException("Unable to create reset token");
-        var resetToken = new ResetToken
+        var user = await GetUserFromExpiredTokenAsync(expiredToken, refreshToken);
+        await _userRepository.UpdateRefreshTokenAsync(user.Id, null, null);
+    }
+
+    public async Task<string> CreatePasswordResetTokenForUserAsync(string email)
+    {
+        email = email?.Trim();
+        var token = GeneratePasswordResetToken();
+        var resetToken = new PendingResetToken
         {
-            UserId = userId,
             TokenHash = BC.HashPassword(token),
-            ExpirationDate = DateTime.UtcNow.AddMinutes(15)
+            ExpiresAt = DateTime.UtcNow.AddMinutes(15)
         };
-
-        await context.ResetTokens.AddAsync(resetToken);
-        await context.SaveChangesAsync();
-        return resetToken;
-    }
-
-    public async Task<User> GetUserByEmailAsync(string email)
-    {
-        if (email == null)
-        {
-            return null;
-        }
-        var user = await context.Users.FirstOrDefaultAsync(x => x.Email.ToLower() == email.ToLower());
-        return user;
-    }
-
-    public async Task<User> GetUserByNameAsync(string name)
-    {
-        if (name == null) return null;
-        var user = await context.Users.FirstOrDefaultAsync(x => x.Username.ToLower() == name.ToLower());
-        return user;
-    }
-
-    public async Task<List<Claim>> GetUserClaimsAsync(Guid userId)
-    {
-        var user = await context.Users.FirstOrDefaultAsync(x => x.Id == userId);
-        if (user == null)
-            throw new InvalidOperationException("User not found");
         
+        await _userRepository.UpdatePasswordResetTokenAsync(email, resetToken);
+        return token;
+    }
+
+
+    private Task<User> GetCurrentUserAsync() =>
+        _userRepository.GetOneByIdAsync(_currentUser.UserId);
+
+    private Task<User> GetUserByEmailAsync(string email) =>
+        string.IsNullOrWhiteSpace(email) ? null : _userRepository.GetOneByEmailAsync(email.Trim());
+
+    private List<Claim> BuildUserClaims(User user)
+    {
+        ArgumentNullException.ThrowIfNull(user);   
         var claims = new List<Claim>
         {
-            new(JwtRegisteredClaimNames.Name, user.Username),
+            new(JwtRegisteredClaimNames.Name, user.Name),
             new(JwtRegisteredClaimNames.Email, user.Email),
-            new(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
+            new(JwtRegisteredClaimNames.Sub, user.Id),
         };
         var isAdmin = string.Equals(user.Email, _configuration.AdminEmail(), StringComparison.OrdinalIgnoreCase);
-        claims.Add(new Claim(ClaimTypes.Role, isAdmin ? Roles.Admin : Roles.User));
+        claims.Add(new Claim(AppClaims.Role, isAdmin ? Roles.Admin : Roles.User));
         return claims;
     }
 
-    public async Task<User> GetUserAsync(ClaimsPrincipal principal)
+    private Task<User> GetUserFromPrincipalAsync(ClaimsPrincipal principal)
     {
-        var claim = principal.FindFirst(ClaimTypes.NameIdentifier);
-        if (!Guid.TryParse(claim?.Value, out var userId)) return null;
-        var user = await context.Users.FindAsync(userId);
+        var claim = principal.FindFirstValue(JwtRegisteredClaimNames.Sub);
+        return _userRepository.GetOneByIdAsync(claim);
+    }
+
+    public async Task<User> AuthenticateAsync(string email, string password)
+    {
+        var user = await _userRepository.GetOneByEmailAsync(email);
+        
+        if (user == null || !BC.Verify(password, user.PasswordHash))
+            throw new AuthenticationException("Invalid user or password");
+        
+        if (user.Disabled)
+            throw new AuthenticationException("Account is Disabled");
+        
         return user;
     }
 
-    public async Task UpdateUserAsync(User user)
+    public async Task<User> ValidateTwoFactorLoginAsync(string token, string code)
     {
-        context.Users.Update(user);
-        await context.SaveChangesAsync();
+        var clientId = _clientIdAccessor.ClientId;
+        
+        var principal = _tokenService.ValidateTwoFaToken(token);
+
+        var user = await GetUserFromPrincipalAsync(principal);
+        
+        if (user == null)
+            throw new InvalidOperationException("User not found");
+        
+        var claimClientId = principal.FindFirst(AppClaims.ClientId)?.Value;
+        if (claimClientId == null ||
+            !string.Equals(claimClientId, clientId, StringComparison.OrdinalIgnoreCase))
+            throw new SecurityTokenException("Token was not issued for this client.");
+        
+        if (!VerifyTotpCode(user.TotpSecret, code))
+            throw new UnauthorizedAccessException("Invalid TOTP code.");
+
+        return user;
+    }
+
+    public async Task<User> SetUserDisabledAsync(string userId, bool disabled)
+    {
+        var currentUser = await GetCurrentUserAsync();
+        if (currentUser.Id == userId)
+            throw new InvalidOperationException("Cannot disable your own account");
+
+        return await _userRepository.UpdateDisabledAsync(userId, disabled);
     }
 
     public async Task<bool> ValidateInviteCodeAsync(string code, string email)
     {
-        if (string.IsNullOrWhiteSpace(code) || string.IsNullOrWhiteSpace(email)) return false;
-        var inviteCode = await context.InviteCodes.FirstOrDefaultAsync(x => x.Email.ToLower() == email.ToLower() && x.Date == null);
-        if (inviteCode == null || !BC.Verify(code.ToUpper(), inviteCode.Code)) return false;
-        inviteCode.Date = DateTime.UtcNow;
-        await context.SaveChangesAsync();
+        if (string.IsNullOrWhiteSpace(code) || string.IsNullOrWhiteSpace(email)) 
+            return false;
+
+        email = email.Trim();
+        var inviteCode = await _inviteRepository.GetOneByEmailAsync(email);
+        if (inviteCode == null || !BC.Verify(code.ToUpper(), inviteCode.CodeHash))
+            return false;
+        
+        await _inviteRepository.UpdateDateAsync(email, DateTime.UtcNow);
         return true;
     }
 
     public async Task<string> CreateInviteCodeAsync(string email)
     {
-        var userExists = await GetUserByEmailAsync(email);
-        if (userExists != null) throw new Exception("User already registered");
-        await RemoveExistingInviteCodes(email);
+        email = email.Trim();
+        var user = await GetUserByEmailAsync(email);
+        if (user != null)
+            throw new InvalidOperationException("Email is already registered.");
+
         var code = GenerateInviteCode(6);
-        var inviteCode = new InviteCode
-        {
-            Id = Guid.NewGuid(),
-            Email = email,
-            Code = BC.HashPassword(code),
-            Date = null
-        };
-        await context.InviteCodes.AddAsync(inviteCode);
-        await context.SaveChangesAsync();
+        var codeHash = BC.HashPassword(code);
+    
+        var existingInvite = await _inviteRepository.GetOneByEmailAsync(email);
+        if (existingInvite != null)
+            await _inviteRepository.UpdateCodeAsync(email, codeHash);
+        else
+            await _inviteRepository.CreateAsync(new Invite
+            {
+                Email = email,
+                CodeHash = codeHash,
+                Date = null
+            });
+    
         return code;
     }
+    
+    public Task<List<User>> GetAllUsersAsync() => _userRepository.GetUserListAsync();
 
-    private async Task RemoveExistingInviteCodes(string email)
-    {
-        var inviteCodes = await context.InviteCodes
-            .Where(x => x.Email.ToLower() == email.ToLower() && x.Date == null)
-            .ToListAsync();
-        if (inviteCodes.Count == 0) return;
-        context.RemoveRange(inviteCodes);
-        await context.SaveChangesAsync();
-    }
-
-    public async Task<List<User>> GetAllUsersAsync() => await context.Users.ToListAsync();
-
-    public string GeneratePasswordResetToken()
+    private string GeneratePasswordResetToken()
     {
         var randomNumber = new byte[32];
         using (var rng = RandomNumberGenerator.Create())
@@ -184,48 +235,99 @@ public class UserService(AppDbContext context, IConfiguration configuration) : I
         return Base64UrlEncoder.Encode(randomNumber);
     }
 
-    public async Task<string> GenerateTwoFaSecretAsync(Guid userId)
+    public async Task<TotpSetupResult> GenerateTwoFaSecretAsync()
     {
-        var user = await context.Users.FirstOrDefaultAsync(x => x.Id == userId);
+        var user = await GetCurrentUserAsync();
         if (user == null)
             throw new InvalidOperationException("User not found");
+        if (user.TwoFaEnabled)
+            throw new InvalidOperationException("Two-Factor Authentication Enabled");
         
         var secretKey = KeyGeneration.GenerateRandomKey(20);
         var base32Secret = Base32Encoding.ToString(secretKey);
         
-        user.TotpSecret = EncryptString(base32Secret, GetAesKey(), GetAesIv());
-        await context.SaveChangesAsync();
-
-        return base32Secret;
+        var totpSecret = EncryptString(base32Secret, GetAesKey(), GetAesIv());
+        await _userRepository.UpdateTotpSecretAsync(user.Id, totpSecret);
+        
+        return new TotpSetupResult(base32Secret, user.Email);
     }
 
-    public async Task<bool> VerifyTotpCodeAsync(Guid userId, string code)
+    private bool VerifyTotpCode(string totpSecret, string code)
     {
-        var user = await context.Users.FirstOrDefaultAsync(x => x.Id == userId);
-        if (user == null) throw new InvalidOperationException("User not found");
-        
-        var decryptedSecret = DecryptString(user.TotpSecret, GetAesKey(), GetAesIv());
+        var decryptedSecret = DecryptString(totpSecret, GetAesKey(), GetAesIv());
         var secretBytes = Base32Encoding.ToBytes(decryptedSecret);
 
         var totp = new Totp(secretBytes);
         return totp.VerifyTotp(code, out _, VerificationWindow.RfcSpecifiedNetworkDelay);
     }
 
-    public async Task<bool> ToggleTwoFaAsync(Guid userId, string code)
+    public async Task<bool> ToggleTwoFaAsync(string password, string code)
     {
-        var user = await context.Users.FirstOrDefaultAsync(x => x.Id == userId);
+        var user = await GetCurrentUserAsync();
+        
         if (user == null)
             throw new InvalidOperationException("User not found");
         
-        var validCode = await VerifyTotpCodeAsync(userId, code);
-        if (!validCode)
-            throw new InvalidOperationException("Invalid code");
+        if (!BC.Verify(password, user.PasswordHash))
+            throw new UnauthorizedAccessException("Invalid password.");
+        
+        if (!VerifyTotpCode(user.TotpSecret, code))
+            throw new UnauthorizedAccessException("Invalid code");
 
-        user.TwoFaEnabled = !user.TwoFaEnabled;
-        await context.SaveChangesAsync();
+        var newState = !user.TwoFaEnabled;
+        await _userRepository.UpdateTwoFaAsync(user.Id, newState);
+    
+        return newState;
+    }
+
+    public async Task<bool> IsTwoFactorEnabledAsync()
+    {
+        var user = await GetCurrentUserAsync();
+        
+        if (user == null)
+            throw new InvalidOperationException("User not found");
+        
         return user.TwoFaEnabled;
     }
-    
+
+    public async Task<TokenResult> GenerateAccessTokenAsync(User user, AccessTokenType tokenType)
+    {
+        var claims = BuildUserClaims(user);
+        string refreshToken = null;
+
+        if (tokenType == AccessTokenType.Authentication)
+        {
+            refreshToken = _tokenService.GenerateRefreshToken();
+            var utcNow = DateTime.UtcNow;
+            await _userRepository.UpdateRefreshTokenAsync(user.Id, refreshToken, utcNow.AddDays(7));
+            await _userRepository.UpdateLastActiveAsync(user.Id, utcNow);
+        }
+        else if (tokenType == AccessTokenType.TwoFactorAuthentication)
+        {
+            var clientId = _clientIdAccessor.ClientId ?? throw new InvalidOperationException("Client ID is missing.");
+            claims.Add(new Claim(AppClaims.ClientId, clientId));
+        }
+
+        var token = _tokenService.GenerateAccessToken(claims, tokenType);
+        return new TokenResult(token, refreshToken);
+    }
+
+    public async Task<User> GetUserFromExpiredTokenAsync(string expiredToken, string refreshToken)
+    {
+        var principal = _tokenService.GetPrincipalFromExpiredToken(expiredToken); // throws SecurityTokenException
+        var user = await GetUserFromPrincipalAsync(principal);
+        if (user == null)
+            throw new InvalidOperationException("User not found");
+        if (user.RefreshToken != refreshToken)
+            throw new InvalidRefreshTokenException("Invalid refresh token.");
+        if (user.RefreshTokenExpiryTime <= DateTime.UtcNow)
+            throw new InvalidRefreshTokenException("Refresh token has expired.");
+        if (user.Disabled)
+            throw new UnauthorizedAccessException("Account is disabled.");
+        
+        return user;
+    }
+
     private static string GenerateInviteCode(int length = 6)
     {
         var random = new Random();
@@ -236,51 +338,38 @@ public class UserService(AppDbContext context, IConfiguration configuration) : I
         return new string(code);
     }
 
-    public async Task<User> ResetPasswordWithTokenAsync(int tokenId, string tokenValue, string newPassword)
+    public async Task<User> ResetPasswordWithTokenAsync(string email, string tokenValue, string newPassword)
     {
         if (string.IsNullOrEmpty(newPassword))
-            throw new ArgumentException("New password cannot be empty");
-        
-        var resetToken = await context.ResetTokens
-            .Include(x => x.User)
-            .FirstOrDefaultAsync(x => x.Id == tokenId);
-        if (resetToken?.User == null || !ValidPasswordResetToken(resetToken, tokenValue))
-            throw new InvalidOperationException("Invalid reset token");
-        if (resetToken.User.Disabled)
-            throw new InvalidOperationException("Account is Disabled");
-        
-        resetToken.TokenUsed = true;
-        resetToken.User.Password = BC.HashPassword(newPassword);
-        await context.SaveChangesAsync();
-        return resetToken.User;
-    }
-
-    private static bool ValidPasswordResetToken(ResetToken resetToken, string tokenValue)
-    {
-        return resetToken != null && resetToken.ExpirationDate > DateTime.UtcNow && !resetToken.TokenUsed &&
-               BC.Verify(tokenValue, resetToken.TokenHash);
-    }
+            throw new ArgumentException("New password cannot be empty.");
     
-    public async Task ChangePasswordAsync(Guid userId, string oldPassword, string newPassword)
-    {
-        var user = context.Users.FirstOrDefault(x => x.Id == userId);
-        if (user == null) 
-            throw new InvalidOperationException("User not found");
-        
-        if (string.IsNullOrEmpty(newPassword))
-            throw new ArgumentException("New password cannot be empty");
-        
-        if (!BC.Verify(oldPassword, user.Password))
-            throw new InvalidOperationException("Invalid password");
-        
-        user.Password = BC.HashPassword(newPassword);
-        await context.SaveChangesAsync();
+        var user = await _userRepository.GetOneByEmailAsync(email);
+        if (user == null || !ValidPasswordResetToken(user.PasswordResetToken, tokenValue))
+            throw new InvalidOperationException("Invalid or expired reset token.");
+        if (user.Disabled)
+            throw new UnauthorizedAccessException("Account is disabled.");
+
+        return await _userRepository.UpdatePasswordAndResetTokenAsync(user.Id, BC.HashPassword(newPassword));
     }
 
-    public async Task<User> GetUserByIdAsync(Guid id)
+    private static bool ValidPasswordResetToken(PendingResetToken pendingResetToken, string tokenValue) =>
+        pendingResetToken != null &&
+        pendingResetToken.ExpiresAt > DateTime.UtcNow &&
+        BC.Verify(tokenValue, pendingResetToken.TokenHash);
+    
+    public async Task ChangePasswordAsync(string oldPassword, string newPassword)
     {
-        var user = await context.Users.FindAsync(id);
-        return user;
+        if (string.IsNullOrEmpty(newPassword))
+            throw new ArgumentException("New password cannot be empty.");
+
+        var user = await GetCurrentUserAsync();
+        if (user == null)
+            throw new InvalidOperationException("User not found.");
+    
+        if (!BC.Verify(oldPassword, user.PasswordHash))
+            throw new UnauthorizedAccessException("Invalid password.");
+    
+        await _userRepository.UpdatePasswordAndResetTokenAsync(user.Id, BC.HashPassword(newPassword));
     }
     
     private static string EncryptString(string plainText, byte[] key, byte[] iv)

@@ -7,16 +7,19 @@ namespace CloudStorage.Models;
 public class StorageNode
 {
     [BsonId]
-    public ObjectId Id { get; set; }
+    [BsonRepresentation(BsonType.ObjectId)]
+    public string Id { get; set; }
 
-    public List<ObjectId> Path { get; set; } = [];
+    [BsonRepresentation(BsonType.ObjectId)]
+    public List<string> Path { get; set; } = [];
     
     public string Name { get; set; }
     public string Extension { get; set; } 
     
     public bool IsFolder { get; set; }
     
-    public ObjectId? ParentId { get; set; }
+    [BsonRepresentation(BsonType.ObjectId)]
+    public string ParentId { get; set; }
     
     public string FileName { get; set; }
 
@@ -24,8 +27,8 @@ public class StorageNode
 
     public DateTime? Date { get; set; }
 
-    [BsonRepresentation(BsonType.String)]
-    public Guid OwnerId { get; set; }
+    [BsonRepresentation(BsonType.ObjectId)]
+    public string OwnerId { get; set; }
     
     [BsonIgnore]
     public string FullName => IsFolder ? Name : Name + (Extension ?? string.Empty);
@@ -46,11 +49,11 @@ public class StorageNodeInputModel
         
         return new StorageNode
         {
-            Id = ObjectId.TryParse(Id, out var id) ? id : ObjectId.Empty,
+            Id = Id,
             Name = FileNameSanitizer.Sanitize(nameAndExtension.Name),
             Extension = nameAndExtension.Extension,
             IsFolder = IsFolder,
-            ParentId = ObjectId.TryParse(ParentId, out var  parentId) ? parentId : null,
+            ParentId = ParentId,
         };
     }
 
@@ -129,11 +132,11 @@ public class StorageNodeViewModel
         
         return new StorageNodeViewModel
         {
-            Id = node.Id.ToString(),
+            Id = node.Id,
             Name = node.Name,
             Extension = node.Extension,
             IsFolder = node.IsFolder,
-            ParentId = node.ParentId != null ? node.ParentId.ToString() : null,
+            ParentId = node.ParentId,
             FileSize = node.FileSize,
             Date = node.Date
         };

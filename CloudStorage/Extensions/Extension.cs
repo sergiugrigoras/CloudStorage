@@ -34,17 +34,6 @@ public static class Extension
         }
     }
 
-    public static List<ObjectId> ToObjectIdList(this IEnumerable<string> ids)
-    {
-        var result = new List<ObjectId>();
-        foreach (var id in ids)
-        {
-            if (ObjectId.TryParse(id, out var objectId))
-                result.Add(objectId);
-        }
-        return result;
-    }
-
     public static string AdminEmail(this IConfiguration configuration) =>
         configuration.GetValue<string>("Authorization:AdminEmail");
     public static bool InviteOnly(this IConfiguration configuration) =>

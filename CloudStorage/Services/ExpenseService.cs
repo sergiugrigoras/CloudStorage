@@ -13,12 +13,12 @@ public interface IExpenseService
     ExpenseEntry CreateExpense(decimal amount, string description, DateTime date, string categoryId, string paymentMethodId); 
     Task<ExpenseEntry> AddExpenseAsync(ExpenseEntry expenseEntry);
     Task<ExpenseEntry> UpdateExpenseAsync(ExpenseEntry expenseEntry);
-    Task DeleteExpenseAsync(ObjectId id);
+    Task DeleteExpenseAsync(string id);
     Task<List<ExpenseEntry>> GetExpensesAsync(ExpenseFilter filter);
     
     Task<Category> AddUserCategoryAsync(Category category);
     Task<Category> UpdateUserCategoryAsync(Category category);
-    Task DeleteUserCategoryAsync(ObjectId id);
+    Task DeleteUserCategoryAsync(string id);
     Task<List<Category>> GetCategoriesAsync();
     
     Task<PaymentMethod> AddPaymentMethodAsync(PaymentMethod paymentMethod);
@@ -42,8 +42,8 @@ public partial class ExpenseService(ICurrentUser currentUser, IGeminiService gem
         return new ExpenseEntry
         {
             Description = description,
-            CategoryId = ObjectId.TryParse(categoryId, out var catId) ? catId : ObjectId.Empty,
-            PaymentMethodId = ObjectId.TryParse(paymentMethodId, out var pmId) ? pmId : ObjectId.Empty,
+            CategoryId = categoryId,
+            PaymentMethodId = paymentMethodId,
             Amount = amount,
             Date = date.Date,
         };
@@ -58,14 +58,14 @@ public partial class ExpenseService(ICurrentUser currentUser, IGeminiService gem
     public Task<ExpenseEntry> UpdateExpenseAsync(ExpenseEntry expenseEntry) =>
         _expenseRepository.UpdateAsync(expenseEntry, _currentUser.UserId);
 
-    public async Task DeleteExpenseAsync(ObjectId id) => await _expenseRepository.DeleteAsync(id, _currentUser.UserId);
+    public async Task DeleteExpenseAsync(string id) => await _expenseRepository.DeleteAsync(id, _currentUser.UserId);
 
     public Task<List<ExpenseEntry>> GetExpensesAsync(ExpenseFilter filter) =>
         _expenseRepository.GetManyAsync(filter, _currentUser.UserId);
     
     public Task<List<Category>> GetCategoriesAsync() => _categoryRepository.GetForUserAsync(_currentUser.UserId);
 
-    public Task<Category> GetCategoryAsync(ObjectId id, Guid userId) => _categoryRepository.GetAsync(id, userId);
+    public Task<Category> GetCategoryAsync(string id, string userId) => _categoryRepository.GetAsync(id, userId);
 
     public async Task<Category> AddUserCategoryAsync(Category category)
     {
@@ -76,7 +76,7 @@ public partial class ExpenseService(ICurrentUser currentUser, IGeminiService gem
     public Task<Category> UpdateUserCategoryAsync(Category category) =>
         _categoryRepository.UpdateAsync(category, _currentUser.UserId);
 
-    public Task DeleteUserCategoryAsync(ObjectId id) => _categoryRepository.DeleteAsync(id, _currentUser.UserId);
+    public Task DeleteUserCategoryAsync(string id) => _categoryRepository.DeleteAsync(id, _currentUser.UserId);
     
     public async Task<PaymentMethod> AddPaymentMethodAsync(PaymentMethod paymentMethod)
     {
@@ -112,7 +112,7 @@ public partial class ExpenseService(ICurrentUser currentUser, IGeminiService gem
             var part = geminiResponse.Candidates.FirstOrDefault()?.Content.Parts.FirstOrDefault();
             var id = NewLineRegex().Replace(part?.Text ?? string.Empty, "");
 
-            return categoryMap.TryGetValue(id, out var category) ? category.Id.ToString() : null;
+            return categoryMap.TryGetValue(id, out var category) ? category.Id : null;
         }
         catch
         {

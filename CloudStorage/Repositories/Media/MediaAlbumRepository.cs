@@ -7,48 +7,48 @@ namespace CloudStorage.Repositories.Media;
 
 public interface IMediaAlbumRepository
 {
-    Task<List<MediaAlbum>> GetAlbumsAsync(Guid userId);
-    Task<MediaAlbum> GetAlbumByNameAsync(string name, Guid userId);
-    Task<bool> ExistsAsync(string name, Guid userId);
-    Task CreateAsync(MediaAlbum album, Guid userId);
-    Task<MediaAlbum> UpdateAsync(MediaAlbum album, Guid userId);
-    Task PullMediaEntriesAsync(IEnumerable<ObjectId> mediaEntryIds, Guid userId);
+    Task<List<MediaAlbum>> GetAlbumsAsync(string userId);
+    Task<MediaAlbum> GetAlbumByNameAsync(string name, string userId);
+    Task<bool> ExistsAsync(string name, string userId);
+    Task CreateAsync(MediaAlbum album, string userId);
+    Task<MediaAlbum> UpdateAsync(MediaAlbum album, string userId);
+    Task PullMediaEntriesAsync(IEnumerable<string> mediaEntryIds, string userId);
 
-    Task<UpdateResult> AddMediaEntriesToAlbumsAsync(IEnumerable<ObjectId> mediaEntryIds, IEnumerable<ObjectId> albumIds, Guid userId);
+    Task<UpdateResult> AddMediaEntriesToAlbumsAsync(IEnumerable<string> mediaEntryIds, IEnumerable<string> albumIds, string userId);
 }
 
 public class MediaAlbumRepository(IMongoDatabase db): IMediaAlbumRepository
 {
     private readonly IMongoCollection<MediaAlbum> _collection = db.GetCollection<MediaAlbum>(MongoDbCollections.MediaAlbums);
 
-    public Task<List<MediaAlbum>> GetAlbumsAsync(Guid userId)
+    public Task<List<MediaAlbum>> GetAlbumsAsync(string userId)
     {
         var userFilter = Builders<MediaAlbum>.Filter.Eq(x => x.UserId, userId);
         return _collection.Find(userFilter).ToListAsync();
     }
 
-    public Task<MediaAlbum> GetAlbumByNameAsync(string name, Guid userId)
+    public Task<MediaAlbum> GetAlbumByNameAsync(string name, string userId)
     {
         var userFilter = Builders<MediaAlbum>.Filter.Eq(x => x.UserId, userId);
         var nameFilter = Builders<MediaAlbum>.Filter.Eq(x => x.Name, name);
         return _collection.Find(Builders<MediaAlbum>.Filter.And(userFilter, nameFilter)).FirstOrDefaultAsync();
     }
 
-    public Task<bool> ExistsAsync(string name, Guid userId)
+    public Task<bool> ExistsAsync(string name, string userId)
     {
         var userFilter = Builders<MediaAlbum>.Filter.Eq(x => x.UserId, userId);
         var nameFilter = Builders<MediaAlbum>.Filter.Eq(x => x.Name, name);
         return _collection.Find(Builders<MediaAlbum>.Filter.And(userFilter, nameFilter)).AnyAsync();
     }
 
-    public Task CreateAsync(MediaAlbum album, Guid userId)
+    public Task CreateAsync(MediaAlbum album, string userId)
     {
         album.UserId = userId;
         album.CreateDate = DateTime.UtcNow;
         return _collection.InsertOneAsync(album);
     }
 
-    public Task<MediaAlbum> UpdateAsync(MediaAlbum album, Guid userId)
+    public Task<MediaAlbum> UpdateAsync(MediaAlbum album, string userId)
     {
         var userFilter = Builders<MediaAlbum>.Filter.Eq(x => x.UserId, userId);
         var idFilter = Builders<MediaAlbum>.Filter.Eq(x => x.Id, album.Id);
@@ -62,7 +62,7 @@ public class MediaAlbumRepository(IMongoDatabase db): IMediaAlbumRepository
         return _collection.FindOneAndUpdateAsync(Builders<MediaAlbum>.Filter.And(userFilter, idFilter), update, option);
     }
 
-    public Task PullMediaEntriesAsync(IEnumerable<ObjectId> mediaEntryIds, Guid userId)
+    public Task PullMediaEntriesAsync(IEnumerable<string> mediaEntryIds, string userId)
     {
         var idList = mediaEntryIds.ToList();
         var filter = Builders<MediaAlbum>.Filter.And(
@@ -74,9 +74,9 @@ public class MediaAlbumRepository(IMongoDatabase db): IMediaAlbumRepository
     }
 
     public Task<UpdateResult> AddMediaEntriesToAlbumsAsync(
-        IEnumerable<ObjectId> mediaEntryIds,
-        IEnumerable<ObjectId> albumIds,
-        Guid userId)
+        IEnumerable<string> mediaEntryIds,
+        IEnumerable<string> albumIds,
+        string userId)
     {
         var filter = Builders<MediaAlbum>.Filter.And(
             Builders<MediaAlbum>.Filter.Eq(x => x.UserId, userId),

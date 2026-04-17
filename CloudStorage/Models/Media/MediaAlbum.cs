@@ -7,13 +7,16 @@ namespace CloudStorage.Models.Media;
 public class MediaAlbum
 {
     [BsonId]
-    public ObjectId Id { get; set; }
+    [BsonRepresentation(BsonType.ObjectId)]
+    public string Id { get; set; }
     public string Name { get; set; }
-    [BsonRepresentation(BsonType.String)]
-    public Guid UserId { get; set; }
+    
+    [BsonRepresentation(BsonType.ObjectId)]
+    public string UserId { get; set; }
     public DateTime CreateDate { get; set; }
     public DateTime? LastUpdate { get; set; }
-    public List<ObjectId> MediaEntries { get; set; } = [];
+    [BsonRepresentation(BsonType.ObjectId)]
+    public List<string> MediaEntries { get; set; } = [];
 }
 
 public class MediaAlbumViewModel
@@ -28,7 +31,7 @@ public class MediaAlbumViewModel
     {
         return new MediaAlbumViewModel
         {
-            Id = domain.Id.ToString(),
+            Id = domain.Id,
             Name = domain.Name,
             CreateDate = domain.CreateDate,
             LastUpdate = domain.LastUpdate,

@@ -59,7 +59,11 @@ export class AuthService {
 
   logout() {
     const url = buildUrl(API_ENDPOINTS.AUTH.BASE, API_ENDPOINTS.AUTH.REVOKE);
-    return this.http.delete(url).pipe(
+    const body: AccessToken = {
+      token: this.getJwtToken() ?? '',
+      tokenType: TokenType.Authentication,
+    };
+    return this.http.delete(url, { body }).pipe(
       finalize(() => {
         this.doLogoutUser();
         void this.router.navigate(['/']);
@@ -106,22 +110,17 @@ export class AuthService {
     return this.http.post(url, body, HTTP_OPTIONS_CONTENT_JSON);
   }
 
-  forgotPassword(identifier: string) {
-    const body: UserModel = {
-      username: String(identifier).includes('@') ? '' : identifier,
-      email: String(identifier).includes('@') ? identifier : '',
-      password: '',
-    };
+  forgotPassword(email: string) {
     const url = buildUrl(API_ENDPOINTS.AUTH.BASE, API_ENDPOINTS.AUTH.FORGOT_PASSWORD);
-    return this.http.post<string>(url, body, HTTP_OPTIONS_CONTENT_JSON);
+    return this.http.post(url, { email }, HTTP_OPTIONS_CONTENT_JSON);
   }
 
-  resetPassword(tokenId: number, token: string, newPassword: string) {
+  resetPassword(email: string, token: string, newPassword: string) {
     const url = buildUrl(API_ENDPOINTS.AUTH.BASE, API_ENDPOINTS.AUTH.RESET_PASSWORD);
     return this.http.post<AccessToken>(
       url,
       {
-        tokenId,
+        email,
         token,
         newPassword,
       },
@@ -131,7 +130,7 @@ export class AuthService {
 
   getUserNameFromJwtToken(): string {
     const token = this.getJwtToken();
-    if (token) return this.jwtHelper.decodeToken(token).unique_name;
+    if (token) return this.jwtHelper.decodeToken(token).name;
     else return '';
   }
 

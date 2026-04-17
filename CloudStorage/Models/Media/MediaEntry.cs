@@ -1,4 +1,3 @@
-#nullable enable
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 
@@ -7,7 +6,8 @@ namespace CloudStorage.Models.Media;
 public class MediaEntry
 {
     [BsonId]
-    public ObjectId Id { get; set; }
+    [BsonRepresentation(BsonType.ObjectId)]
+    public string Id { get; set; }
     public string UploadFileName { get; set; }
     public string ContentType { get; set; }
     public string Hash { get; set; }
@@ -17,8 +17,8 @@ public class MediaEntry
     public long? FileSize { get; set; }
     public bool Favorite { get; set; }
     public bool MarkedForDeletion { get; set; }
-    [BsonRepresentation(BsonType.String)]
-    public Guid UserId { get; set; }
+    [BsonRepresentation(BsonType.ObjectId)]
+    public string UserId { get; set; }
     [BsonIgnore]
     public string SnapshotFile => Hash + ".jpg";
     [BsonIgnore]
@@ -41,7 +41,7 @@ public class MediaEntryViewModel
     {
         return new MediaEntryViewModel
         {
-            Id = domain.Id.ToString(),
+            Id = domain.Id,
             UploadFileName = domain.UploadFileName,
             ContentType = domain.ContentType,
             Hash = domain.Hash,
@@ -58,7 +58,7 @@ public class MediaEntryQuery
 {
     public bool? Favorite { get; set; }
     public bool? Deleted { get; set; }
-    public IEnumerable<string>? Ids { get; set; }
+    public IEnumerable<string> Ids { get; set; }
 }
 
 public record MediaFileResult(Stream Stream, string ContentType);

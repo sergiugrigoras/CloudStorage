@@ -8,23 +8,23 @@ namespace CloudStorage.Repositories.StorageNodes;
 
 public interface IStorageNodeRepository
 {
-    Task<StorageNode> GetOneAsync(FilterDefinition<StorageNode> filter, Guid userId);
-    Task<List<StorageNode>> GetManyAsync(Guid userId);
-    Task<List<StorageNode>> GetManyAsync(FilterDefinition<StorageNode> filter, Guid userId);
-    Task<long?> GetFilesSizeAsync( Guid userId);
-    Task CreateNodeAsync(StorageNode node, Guid userId);
-    Task<StorageNode> UpdateOneAsync(FilterDefinition<StorageNode> filter, Guid userId, UpdateDefinition<StorageNode> update);
-    Task BulkWriteAsync(Dictionary<ObjectId, UpdateDefinition<StorageNode>> updates, Guid userId);
-    Task DeleteNodesAsync(IEnumerable<ObjectId> nodeIds, Guid userId);
+    Task<StorageNode> GetOneAsync(FilterDefinition<StorageNode> filter, string userId);
+    Task<List<StorageNode>> GetManyAsync(string userId);
+    Task<List<StorageNode>> GetManyAsync(FilterDefinition<StorageNode> filter, string userId);
+    Task<long?> GetFilesSizeAsync( string userId);
+    Task CreateNodeAsync(StorageNode node, string userId);
+    Task<StorageNode> UpdateOneAsync(FilterDefinition<StorageNode> filter, string userId, UpdateDefinition<StorageNode> update);
+    Task BulkWriteAsync(Dictionary<string, UpdateDefinition<StorageNode>> updates, string userId);
+    Task DeleteNodesAsync(IEnumerable<string> nodeIds, string userId);
     
-    Task<bool> ExistsAsync(FilterDefinition<StorageNode> filter, Guid userId);
+    Task<bool> ExistsAsync(FilterDefinition<StorageNode> filter, string userId);
 }
 
 public class StorageNodeRepository(IMongoDatabase db): IStorageNodeRepository
 {
     private readonly IMongoCollection<StorageNode> _collection = db.GetCollection<StorageNode>(MongoDbCollections.StorageNodes);
 
-    public Task<StorageNode> GetOneAsync(FilterDefinition<StorageNode> filter, Guid userId)
+    public Task<StorageNode> GetOneAsync(FilterDefinition<StorageNode> filter, string userId)
     {
         var userFilter = Builders<StorageNode>.Filter.Eq(x => x.OwnerId, userId);
         return _collection.Find(Builders<StorageNode>.Filter.And(userFilter, filter))
@@ -32,19 +32,19 @@ public class StorageNodeRepository(IMongoDatabase db): IStorageNodeRepository
             .FirstOrDefaultAsync();
     }
     
-    public Task<List<StorageNode>> GetManyAsync(Guid userId)
+    public Task<List<StorageNode>> GetManyAsync(string userId)
     {
         var userFilter = Builders<StorageNode>.Filter.Eq(x => x.OwnerId, userId);
         return _collection.Find(userFilter).ToListAsync();
     }
 
-    public Task<List<StorageNode>> GetManyAsync(FilterDefinition<StorageNode> filter, Guid userId)
+    public Task<List<StorageNode>> GetManyAsync(FilterDefinition<StorageNode> filter, string userId)
     {
         var userFilter = Builders<StorageNode>.Filter.Eq(x => x.OwnerId, userId);
         return _collection.Find(Builders<StorageNode>.Filter.And(userFilter, filter)).ToListAsync();
     }
 
-    public Task<long?> GetFilesSizeAsync(Guid userId)
+    public Task<long?> GetFilesSizeAsync(string userId)
     {
         var userFilter = Builders<StorageNode>.Filter.Eq(x => x.OwnerId, userId);
         var fileFilter = Builders<StorageNode>.Filter.Eq(x => x.IsFolder, false);
@@ -56,21 +56,21 @@ public class StorageNodeRepository(IMongoDatabase db): IStorageNodeRepository
             .FirstOrDefaultAsync();
     }
 
-    public Task CreateNodeAsync(StorageNode node, Guid userId)
+    public Task CreateNodeAsync(StorageNode node, string userId)
     {
         node.OwnerId = userId;
         node.Date = DateTime.UtcNow;
         return _collection.InsertOneAsync(node);
     }
 
-    public Task<StorageNode> UpdateOneAsync(FilterDefinition<StorageNode> filter, Guid userId, UpdateDefinition<StorageNode> update)
+    public Task<StorageNode> UpdateOneAsync(FilterDefinition<StorageNode> filter, string userId, UpdateDefinition<StorageNode> update)
     {
         var userFilter = Builders<StorageNode>.Filter.Eq(x => x.OwnerId, userId);
         var option = new FindOneAndUpdateOptions<StorageNode> { ReturnDocument = ReturnDocument.After };
         return _collection.FindOneAndUpdateAsync(Builders<StorageNode>.Filter.And(userFilter, filter), update, option);
     }
 
-    public Task BulkWriteAsync(Dictionary<ObjectId, UpdateDefinition<StorageNode>> updates, Guid userId)
+    public Task BulkWriteAsync(Dictionary<string, UpdateDefinition<StorageNode>> updates, string userId)
     {
         var writeModels = updates
             .Select(kvp =>
@@ -88,14 +88,14 @@ public class StorageNodeRepository(IMongoDatabase db): IStorageNodeRepository
         return _collection.BulkWriteAsync(writeModels);
     }
 
-    public Task DeleteNodesAsync(IEnumerable<ObjectId> nodeIds, Guid userId)
+    public Task DeleteNodesAsync(IEnumerable<string> nodeIds, string userId)
     {
         var userFilter = Builders<StorageNode>.Filter.Eq(x => x.OwnerId, userId);
         var nodesFilter = Builders<StorageNode>.Filter.In(x => x.Id, nodeIds);
         return _collection.DeleteManyAsync(Builders<StorageNode>.Filter.And(userFilter, nodesFilter));
     }
 
-    public Task<bool> ExistsAsync(FilterDefinition<StorageNode> filter, Guid userId)
+    public Task<bool> ExistsAsync(FilterDefinition<StorageNode> filter, string userId)
     {
         var userFilter = Builders<StorageNode>.Filter.Eq(x => x.OwnerId, userId);
         return _collection.Find(Builders<StorageNode>.Filter.And(filter, userFilter)).AnyAsync();
