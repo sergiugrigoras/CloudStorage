@@ -12,15 +12,12 @@
     "noFallthroughCasesInSwitch": true,
     "sourceMap": true,
     "declaration": false,
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "importHelpers": true,
     "target": "ES2022",
     "module": "ES2022",
     "useDefineForClassFields": true,
-
     "types": ["@angular/localize", "node"],
-    "lib": ["ES2022", "DOM"],
-
     "paths": {
       "chart.js/dist/types/utils": ["node_modules/chart.js/dist/types/utils.d.ts"]
     }

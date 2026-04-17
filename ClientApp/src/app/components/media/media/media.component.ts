@@ -248,7 +248,7 @@ export class MediaComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   @HostListener('document:keydown', ['$event'])
-  private keyListener(event: KeyboardEvent) {
+  protected keyListener(event: KeyboardEvent) {
     switch (event.key) {
       case 'Escape': {
         this.closeDialog();

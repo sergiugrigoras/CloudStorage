@@ -1,4 +1,9 @@
-import { enableProdMode, ErrorHandler, importProvidersFrom } from '@angular/core';
+import {
+  enableProdMode,
+  ErrorHandler,
+  importProvidersFrom,
+  provideZoneChangeDetection,
+} from '@angular/core';
 import { environment } from './environments/environment';
 import { bootstrapApplication } from '@angular/platform-browser';
 import { AppComponent } from './app/app.component';
@@ -20,6 +25,7 @@ if (environment.production) {
 export const JWT_KEY = 'jwt';
 bootstrapApplication(AppComponent, {
   providers: [
+    provideZoneChangeDetection(),
     provideRouter(routes),
     provideHttpClient(withInterceptorsFromDi()),
     provideCharts(withDefaultRegisterables()),

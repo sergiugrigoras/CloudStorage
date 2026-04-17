@@ -177,8 +177,8 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
     return this.authService.getUserNameFromJwtToken();
   }
 
-  @HostListener('window:resize', ['$event'])
-  private getScreenSize() {
+  @HostListener('window:resize')
+  protected getScreenSize() {
     this.scrHeight = window.innerHeight;
     this.scrWidth = window.innerWidth;
     this.isLargeDevice.set(this.scrWidth >= 768);
