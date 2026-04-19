@@ -3,7 +3,14 @@
   <div>
     <mat-form-field>
       <mat-label>One-time password code</mat-label>
-      <input matInput [formControl]="totpControl" mask="000 000" type="tel" placeholder="123 456" />
+      <input
+        matInput
+        [formControl]="totpControl"
+        mask="000 000"
+        type="tel"
+        placeholder="123 456"
+        autocomplete="one-time-code"
+      />
     </mat-form-field>
   </div>
 </div>

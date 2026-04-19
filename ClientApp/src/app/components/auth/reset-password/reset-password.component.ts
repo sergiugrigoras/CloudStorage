@@ -1,7 +1,6 @@
 import { catchError, switchMap } from 'rxjs/operators';
 import { AuthService } from '../../../services/auth.service';
-import { HttpErrorResponse } from '@angular/common/http';
-import { Component, inject, OnInit, signal, WritableSignal } from '@angular/core';
+import { Component, ElementRef, inject, signal, ViewChild, WritableSignal } from '@angular/core';
 import {
   FormControl,
   FormGroup,
@@ -10,7 +9,7 @@ import {
   ReactiveFormsModule,
 } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { EMPTY, finalize, from, tap } from 'rxjs';
+import { EMPTY, finalize, from } from 'rxjs';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatFormField, MatLabel, MatInput, MatError, MatSuffix } from '@angular/material/input';
 import { MatButton } from '@angular/material/button';
@@ -39,27 +38,43 @@ import { MatTooltip } from '@angular/material/tooltip';
     MatTooltip,
   ],
 })
-export class ResetPasswordComponent implements OnInit {
+export class ResetPasswordComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly authService = inject(AuthService);
   private readonly _snackBar = inject(MatSnackBar);
+  @ViewChild('formRef') formRef!: ElementRef<HTMLFormElement>;
   protected readonly twoFaToken: WritableSignal<string | null> = signal(null);
-  resetToken = signal('');
-  resetEmail = signal('');
   protected readonly returnUrl = '/';
   protected readonly strongPasswordTooltip = PasswordValidators.strongPasswordTooltip;
-  protected readonly emailForm = new FormGroup({
-    email: new FormControl('', [Validators.required, Validators.email]),
+
+  protected readonly emailControl = new FormControl<string>(
+    this.route.snapshot.queryParams['email'] || '',
+    {
+      nonNullable: true,
+      validators: [Validators.required, Validators.email],
+    }
+  );
+  protected readonly tokenControl = new FormControl<string>(
+    this.route.snapshot.queryParams['token'] || '',
+    {
+      nonNullable: true,
+      validators: [Validators.required],
+    }
+  );
+  protected readonly newPasswordControl = new FormControl<string>('', {
+    nonNullable: true,
+    validators: [Validators.required, PasswordValidators.strongPasswordValidator],
+  });
+  protected readonly confirmNewPasswordControl = new FormControl<string>('', {
+    nonNullable: true,
+    validators: [Validators.required],
   });
 
-  protected readonly newPasswordControl = new FormControl('', [
-    Validators.required,
-    PasswordValidators.strongPasswordValidator,
-  ]);
-  protected readonly confirmNewPasswordControl = new FormControl('', Validators.required);
-  protected readonly passwordForm = new FormGroup(
+  protected readonly resetPasswordForm = new FormGroup(
     {
+      email: this.emailControl,
+      token: this.tokenControl,
       newPassword: this.newPasswordControl,
       confirmNewPassword: this.confirmNewPasswordControl,
     },
@@ -68,52 +83,17 @@ export class ResetPasswordComponent implements OnInit {
   protected readonly parentErrorMatcher = new PasswordMismatchErrorStateMatcher();
   constructor() {}
 
-  ngOnInit(): void {
-    this.resetToken.set(this.route.snapshot.queryParams['token'] || '');
-    this.resetEmail.set(this.route.snapshot.queryParams['email'] || '');
-  }
-
-  getResetToken() {
-    const email = (this.emailForm.get('email')?.value || '').trim();
-    if (email === '') return;
-    this.authService
-      .forgotPassword(email)
-      .pipe(
-        catchError((error) => {
-          if (error instanceof HttpErrorResponse) {
-            switch (error.status) {
-              case 404:
-                this._snackBar.open(`User not found.`, 'Ok', { duration: 5000 });
-                break;
-              case 400:
-                this._snackBar.open(`${error.error}`, 'Ok', { duration: 5000 });
-                break;
-              default:
-                this._snackBar.open(`An error occurred.`, 'Ok', { duration: 5000 });
-                break;
-            }
-          }
-          return EMPTY;
-        }),
-        tap(() => {
-          this._snackBar.open(`Instructions sent to ${email}`, 'Ok', { duration: 5000 });
-        }),
-        finalize(() => {
-          this.emailForm.reset();
-        })
-      )
-      .subscribe();
-  }
-
   resetPassword() {
-    this.passwordForm.markAllAsTouched();
-    const newPassword = this.newPasswordControl.value || '';
-    if (newPassword === '' || this.passwordForm.invalid || this.passwordForm.pending) {
+    if (this.resetPasswordForm.invalid || this.resetPasswordForm.pending) {
+      this.resetPasswordForm.markAllAsTouched();
       return;
     }
-
     this.authService
-      .resetPassword(this.resetEmail(), this.resetToken(), newPassword)
+      .resetPassword(
+        this.emailControl.value,
+        this.tokenControl.value,
+        this.newPasswordControl.value
+      )
       .pipe(
         catchError(() => {
           this._snackBar.open(`Invalid reset token.`, 'Ok', { duration: 5000 });
@@ -131,9 +111,16 @@ export class ResetPasswordComponent implements OnInit {
           return EMPTY;
         }),
         finalize(() => {
-          this.passwordForm.reset({ newPassword: '', confirmNewPassword: '' });
+          this.resetForm();
         })
       )
       .subscribe();
+  }
+
+  protected resetForm() {
+    this.formRef.nativeElement.reset();
+    this.emailControl.setValue(this.route.snapshot.queryParams['email'] || '', {
+      emitEvent: false,
+    });
   }
 }

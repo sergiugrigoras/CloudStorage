@@ -1,4 +1,12 @@
-import { Component, inject, OnInit, signal, WritableSignal } from '@angular/core';
+import {
+  Component,
+  ElementRef,
+  inject,
+  OnInit,
+  signal,
+  ViewChild,
+  WritableSignal,
+} from '@angular/core';
 import {
   FormControl,
   FormGroup,
@@ -44,10 +52,10 @@ import { MatTooltip } from '@angular/material/tooltip';
 export class SecurityComponent implements OnInit {
   private readonly authService = inject(AuthService);
   private readonly _snackBar = inject(MatSnackBar);
+  @ViewChild('formRef') formRef!: ElementRef<HTMLFormElement>;
   protected readonly isTwoFaEnabled: WritableSignal<boolean | null> = signal(null);
   protected readonly parentErrorMatcher = new PasswordMismatchErrorStateMatcher();
   protected readonly strongPasswordTooltip = PasswordValidators.strongPasswordTooltip;
-
   protected readonly twoFaForm = new FormGroup({
     password: new FormControl('', Validators.required),
     code: new FormControl('', [
@@ -56,6 +64,10 @@ export class SecurityComponent implements OnInit {
       Validators.maxLength(6),
     ]),
   });
+  protected readonly emailControl = new FormControl(
+    this.authService.getEmailFromJwtToken() ?? '',
+    Validators.required
+  );
   protected readonly oldPasswordControl = new FormControl('', Validators.required);
   protected readonly newPasswordControl = new FormControl('', [
     Validators.required,
@@ -95,11 +107,7 @@ export class SecurityComponent implements OnInit {
           return EMPTY;
         }),
         tap(() => {
-          this.passwordChangeForm.reset({
-            oldPassword: '',
-            newPassword: '',
-            confirmNewPassword: '',
-          });
+          this.resetPasswordChangeForm();
           this._snackBar.open(`Password has been changed successfully!`, 'Ok', { duration: 5000 });
         })
       )
@@ -189,5 +197,10 @@ export class SecurityComponent implements OnInit {
         })
       )
       .subscribe();
+  }
+
+  protected resetPasswordChangeForm() {
+    this.formRef.nativeElement.reset();
+    this.emailControl.setValue(this.authService.getEmailFromJwtToken() ?? '', { emitEvent: false });
   }
 }

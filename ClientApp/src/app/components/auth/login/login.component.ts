@@ -1,5 +1,4 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { UserModel } from '../../../interfaces/user.interface';
 import { Component, inject, OnInit, signal, WritableSignal } from '@angular/core';
 import {
   FormControl,
@@ -11,7 +10,7 @@ import {
 import { AuthService } from '../../../services/auth.service';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { MatFormField, MatLabel, MatInput } from '@angular/material/input';
+import { MatFormField, MatLabel, MatInput, MatError } from '@angular/material/input';
 import { MatButton } from '@angular/material/button';
 import { catchError, switchMap } from 'rxjs/operators';
 import { EMPTY, from } from 'rxjs';
@@ -31,6 +30,7 @@ import { LoginTwoFaComponent } from '../login-two-fa/login-two-fa.component';
     MatButton,
     RouterLink,
     LoginTwoFaComponent,
+    MatError,
   ],
 })
 export class LoginComponent implements OnInit {
@@ -41,12 +41,18 @@ export class LoginComponent implements OnInit {
   protected readonly twoFaToken: WritableSignal<string | null> = signal(null);
   returnUrl: string = '';
 
+  protected readonly emailControl = new FormControl('', {
+    nonNullable: true,
+    validators: [Validators.required, Validators.email],
+  });
+
+  protected readonly passwordControl = new FormControl('', {
+    nonNullable: true,
+    validators: Validators.required,
+  });
   loginForm = new FormGroup({
-    email: new FormControl('', {
-      nonNullable: true,
-      validators: [Validators.required, Validators.email],
-    }),
-    password: new FormControl('', { nonNullable: true, validators: Validators.required }),
+    email: this.emailControl,
+    password: this.passwordControl,
   });
 
   constructor() {}
@@ -56,13 +62,17 @@ export class LoginComponent implements OnInit {
   }
 
   login() {
-    const user: UserModel = {
-      email: this.loginForm.get('email')?.value,
-      password: this.loginForm.get('password')?.value,
-    };
+    if (this.loginForm.invalid || this.loginForm.pending) {
+      this.loginForm.markAllAsTouched();
+      return;
+    }
 
+    const payload = {
+      email: this.emailControl.value,
+      password: this.passwordControl.value,
+    };
     this.authService
-      .loginWithPassword(user)
+      .loginWithPassword(payload)
       .pipe(
         catchError((error: unknown) => {
           if (error instanceof HttpErrorResponse) {

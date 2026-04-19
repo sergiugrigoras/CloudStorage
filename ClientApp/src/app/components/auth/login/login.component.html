@@ -1,25 +1,30 @@
 @if (twoFaToken()) {
   <app-login-two-fa [token]="twoFaToken()" [navigate]="returnUrl"></app-login-two-fa>
 } @else {
-  <div [formGroup]="loginForm" class="elevated-form">
+  <form [formGroup]="loginForm" class="elevated-form login-form" (ngSubmit)="login()">
     <h3>Login</h3>
     <div>
       <mat-form-field>
         <mat-label>Email</mat-label>
-        <input matInput formControlName="email" type="email" />
+        <input matInput [formControl]="emailControl" type="email" autocomplete="username" />
+        <mat-error>Email is required.</mat-error>
       </mat-form-field>
     </div>
     <div>
       <mat-form-field>
         <mat-label>Password</mat-label>
-        <input matInput formControlName="password" type="password" />
+        <input
+          matInput
+          [formControl]="passwordControl"
+          type="password"
+          autocomplete="current-password"
+        />
+        <mat-error>Password is required.</mat-error>
       </mat-form-field>
     </div>
     <div>
-      <button type="button" matButton="filled" [disabled]="loginForm.invalid" (click)="login()">
-        Login
-      </button>
-      <button type="button" matButton="text" routerLink="/password/reset">Forgot password</button>
+      <button type="submit" matButton="filled">Login</button>
+      <button type="button" matButton="text" routerLink="/password/forgot">Forgot password</button>
     </div>
-  </div>
+  </form>
 }

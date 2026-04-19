@@ -1,9 +1,9 @@
-<div [formGroup]="registerForm" class="elevated-form register-form">
+<form [formGroup]="registerForm" class="elevated-form register-form" (ngSubmit)="register()">
   <h3>Register</h3>
   <div>
     <mat-form-field>
       <mat-label>Name</mat-label>
-      <input matInput [formControl]="nameControl" type="text" />
+      <input matInput [formControl]="nameControl" type="text" autocomplete="off" />
       <mat-icon matSuffix [matTooltip]="usernameTooltip" matTooltipClass="multiline-tooltip">
         help_outline
       </mat-icon>
@@ -15,7 +15,7 @@
   <div>
     <mat-form-field>
       <mat-label>Email</mat-label>
-      <input matInput [formControl]="emailControl" type="email" />
+      <input matInput [formControl]="emailControl" type="email" autocomplete="off" />
       <mat-error>
         {{ emailError() }}
       </mat-error>
@@ -30,13 +30,14 @@
         type="text"
         mask="SSS SSS"
         [patterns]="inviteCodePatterns"
+        autocomplete="off"
       />
     </mat-form-field>
   </div>
   <div>
     <mat-form-field>
       <mat-label>Password</mat-label>
-      <input matInput [formControl]="passwordControl" type="password" />
+      <input matInput [formControl]="passwordControl" type="password" autocomplete="new-password" />
       <mat-icon matSuffix [matTooltip]="strongPasswordTooltip" matTooltipClass="multiline-tooltip">
         help_outline
       </mat-icon>
@@ -55,6 +56,7 @@
         [formControl]="confirmPasswordControl"
         type="password"
         [errorStateMatcher]="passwordMismatchErrorStateMatcher"
+        autocomplete="new-password"
       />
       <mat-error>{{
         confirmPasswordControl.errors?.['required']
@@ -64,7 +66,7 @@
     </mat-form-field>
   </div>
   <div>
-    <button type="button" matButton="filled" (click)="register()">Register</button>
-    <button type="button" matButton="text" (click)="registerForm.reset()">Reset</button>
+    <button type="submit" matButton="filled">Register</button>
+    <button type="button" matButton="text" (click)="resetForm()">Reset</button>
   </div>
-</div>
+</form>

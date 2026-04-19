@@ -47,9 +47,9 @@ export class AuthService {
     return this.http.post<boolean>(url, body, HTTP_OPTIONS_CONTENT_JSON);
   }
 
-  loginWithPassword(user: UserModel): Observable<AccessToken> {
+  loginWithPassword(loginRequest: { email: string; password: string }): Observable<AccessToken> {
     const url = buildUrl(API_ENDPOINTS.AUTH.BASE, API_ENDPOINTS.AUTH.LOGIN);
-    return this.http.post<AccessToken>(url, user);
+    return this.http.post<AccessToken>(url, loginRequest);
   }
 
   loginWithTwoFa(token: string, code: string) {

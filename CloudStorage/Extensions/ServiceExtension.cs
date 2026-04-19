@@ -71,8 +71,7 @@ public static class ServiceExtension
         }
         else
         {
-            services.AddScoped<IMailService, MailService>();
-            //services.AddScoped<IMailService>(s => new DevMailService());
+            services.AddScoped<IMailService>(s => new DevMailService());
             services.AddScoped<ICookieOptionsProvider, DevCookieOptionsProvider>();
         }
         

@@ -108,7 +108,7 @@ Length 5-32.`;
       .pipe(
         takeUntil(this.destroy$),
         tap(() => {
-          this.usernameErrors.set(this.nameControl.errors);
+          this.nameErrors.set(this.nameControl.errors);
         })
       )
       .subscribe();
@@ -165,16 +165,15 @@ Length 5-32.`;
       });
   }
 
-  private readonly usernameErrors = signal<ValidationErrors | null | undefined>(
+  private readonly nameErrors = signal<ValidationErrors | null | undefined>(
     this.nameControl.errors
   );
 
   protected readonly usernameError = computed(() => {
-    const errors = this.usernameErrors();
+    const errors = this.nameErrors();
     if (!errors) return '';
-    if (errors['required']) return 'Username is required.';
+    if (errors['required']) return 'Name is required.';
     if (errors['invalidPattern']) return 'Invalid username pattern.';
-    if (errors['shouldBeUnique']) return 'Username is already taken.';
     return '';
   });
 
@@ -190,4 +189,10 @@ Length 5-32.`;
     if (errors['shouldBeUnique']) return 'Email is already registered.';
     return '';
   });
+
+  protected resetForm() {
+    this.registerForm.reset();
+    this.registerForm.markAsPristine();
+    this.registerForm.markAsUntouched();
+  }
 }
