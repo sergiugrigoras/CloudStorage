@@ -28,8 +28,10 @@ docker build -t "$APP_NAME:$version" .
 
 echo "Tagging image..."
 docker tag "$APP_NAME:$version" "$REPO_NAME/$APP_NAME:$version"
+docker tag "$APP_NAME:$version" "$REPO_NAME/$APP_NAME:latest"
 
 echo "Pushing to repo..."
 docker push "$REPO_NAME/$APP_NAME:$version"
+docker push "$REPO_NAME/$APP_NAME:latest"
 
 echo "Done."
