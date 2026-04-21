@@ -7,7 +7,7 @@ import {
   HttpRequest,
 } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
-import { Observable, ReplaySubject, throwError } from 'rxjs';
+import { filter, Observable, ReplaySubject, throwError } from 'rxjs';
 import { catchError, switchMap, take } from 'rxjs/operators';
 import { AuthService } from './auth.service';
 import { buildUrl } from '../core/url-builder';
@@ -20,7 +20,7 @@ export class AuthInterceptor implements HttpInterceptor {
   private readonly clientIdService = inject(ClientIdService);
 
   private isRefreshing = false;
-  private newAccessTokenSubject = new ReplaySubject<string>(1);
+  private newAccessTokenSubject = new ReplaySubject<string | null>(1);
   private readonly _anonymousEndpoints = [
     buildUrl(API_ENDPOINTS.AUTH.BASE, API_ENDPOINTS.AUTH.LOGIN),
     buildUrl(API_ENDPOINTS.AUTH.BASE, API_ENDPOINTS.AUTH.REGISTER),
@@ -35,7 +35,11 @@ export class AuthInterceptor implements HttpInterceptor {
     buildUrl(API_ENDPOINTS.AUTH.BASE, API_ENDPOINTS.AUTH.LOGIN_2FA),
     buildUrl(API_ENDPOINTS.AUTH.BASE, API_ENDPOINTS.AUTH.RESET_PASSWORD),
   ];
-  private readonly _revokeEndpoint = buildUrl(API_ENDPOINTS.AUTH.BASE, API_ENDPOINTS.AUTH.REVOKE);
+
+  private readonly _noRefreshEndpoints = [
+    buildUrl(API_ENDPOINTS.AUTH.BASE, API_ENDPOINTS.AUTH.REVOKE),
+    buildUrl(API_ENDPOINTS.AUTH.BASE, API_ENDPOINTS.AUTH.REFRESH),
+  ];
   constructor() {}
 
   intercept(request: HttpRequest<unknown>, next: HttpHandler): Observable<HttpEvent<unknown>> {
@@ -50,7 +54,10 @@ export class AuthInterceptor implements HttpInterceptor {
 
     return next.handle(request).pipe(
       catchError((error: HttpErrorResponse) => {
-        if (error.status === 401 && !request.url.includes(this._revokeEndpoint)) {
+        if (
+          error.status === 401 &&
+          !this._noRefreshEndpoints.some((x) => request.url.includes(x))
+        ) {
           return this.handle401Error(request, next);
         }
 
@@ -66,6 +73,8 @@ export class AuthInterceptor implements HttpInterceptor {
       return this.authService.refreshToken().pipe(
         catchError((err) => {
           this.isRefreshing = false;
+          this.newAccessTokenSubject.next(null);
+          this.newAccessTokenSubject.complete();
           this.authService.logoutUser();
           return throwError(() => err);
         }),
@@ -77,6 +86,7 @@ export class AuthInterceptor implements HttpInterceptor {
       );
     } else {
       return this.newAccessTokenSubject.pipe(
+        filter((token) => token !== null),
         take(1),
         switchMap((token) => next.handle(this.addTokenToRequest(request, token)))
       );
